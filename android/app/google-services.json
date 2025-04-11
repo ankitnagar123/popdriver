@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145048760642",
+    "project_id": "mtaani-ride",
+    "storage_bucket": "mtaani-ride.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145048760642:android:1c90cd0100545fcb6558db",
+        "android_client_info": {
+          "package_name": "com.mtaani.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClqOeeTLB51E6kZXGmFjim3KwSE1no5kY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

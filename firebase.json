@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"mtaani-ride","appId":"1:145048760642:android:1c90cd0100545fcb6558db","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"mtaani-ride","configurations":{"android":"1:145048760642:android:1c90cd0100545fcb6558db","ios":"1:145048760642:ios:0d2be7058093df706558db"}}}}}}

@@ -1,0 +1,227 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:mtaanidriver/controller/permision_controller.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../Network/api_service.dart';
+import '../Network/urls.dart';
+import '../utils/polyline_handler.dart';
+import '../utils/shared_preferences.dart';
+import 'package:http/http.dart'as http;
+
+import 'auth_controller.dart';
+import 'booking_controller.dart';
+class HomeController extends GetxController {
+   SecureStorageService secure = SecureStorageService();
+
+   RxString arriveDriver = "".obs;
+   RxBool driverArriveValue = false.obs;
+   RxBool hide = false.obs;
+   RxInt selectedValueIndex = 0.obs;
+   var bookingIndex = -1.obs;
+   var polylineVariable = "".obs;
+   var polylineVariable1 = "".obs;
+   var polylineVariable2 = "".obs;
+   var cancelIndex = -1.obs;
+   RxBool onOff = false.obs;
+   var onOffCheck = "".obs;
+   RxBool painButton = false.obs;
+   var startLocation = LatLng(22.6832, 75.8576).obs;
+   var endLocation = LatLng(22.636383, 75.810692).obs;
+   late StreamSubscription<Position> streamSubscription;
+   PolylinePoints polylinePoints = PolylinePoints();
+   String googleAPiKey = "";
+   var markers = <Marker>[].obs;
+   List<LatLng> polylineCoordinates = [];
+   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
+   ApiService apiService = ApiService();
+   var googleMapController = Rx<GoogleMapController?>(null);
+
+   void setGoogleMapController(GoogleMapController controller) {
+      googleMapController.value = controller;
+   }
+
+   void updateCameraPosition(LatLng location) {
+      final controller = googleMapController.value;
+      if (controller != null) {
+         controller.animateCamera(CameraUpdate.newCameraPosition(
+            CameraPosition(
+               target: location,
+               zoom: 16,
+            ),
+         ));
+      }
+   }
+
+   @override
+   void onClose() {
+      stopListening();
+      super.onClose();
+   }
+
+   @override
+   void dispose() {
+      stopListening();
+      super.dispose();
+   }
+
+   // User location
+   getLocation() async {
+      bool serviceEnabled;
+      LocationPermission permission;
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+         await Geolocator.openLocationSettings();
+         return Future.error('Location services are disabled.');
+      }
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+         permission = await Geolocator.requestPermission();
+         if (permission == LocationPermission.denied) {
+            return Future.error('Location permissions are denied');
+         }
+      }
+      if (permission == LocationPermission.deniedForever) {
+         return Future.error(
+             'Location permissions are permanently denied, we cannot request permissions.');
+      }
+      startListening();
+   }
+
+   void startListening() {
+      streamSubscription = Geolocator.getPositionStream().listen((Position position) {
+         print("listening -----");
+         startLocation.value = LatLng(position.latitude, position.longitude);
+         updateMarker(position);
+         Data(position, Get.context!);
+      });
+   }
+
+   void stopListening() {
+      streamSubscription.cancel().then((_) {
+         Get.find<PermissionController>().mapSubscription!.cancel();
+         Get.find<PermissionController>().mapSubscription = null;
+         print("Position stream subscription cancelled");
+      }).catchError((error) {
+         print("Error cancelling position stream subscription: $error");
+      });
+   }
+
+   Future<void> updateMarker(Position position) async {
+      Uint8List imageData = await getMarkers();
+      markers.clear();
+      markers.add(Marker(
+         markerId: MarkerId("1"),
+         position: LatLng(position.latitude, position.longitude),
+         rotation: position.heading,
+         draggable: true,
+         zIndex: 2,
+         flat: true,
+         anchor: Offset(0.5, 0.5),
+         icon: BitmapDescriptor.fromBytes(imageData),
+      ));
+   }
+
+   Future<Uint8List> getMarkers() async {
+      ByteData byteData = await rootBundle.load("assets/images/imagemarker.png");
+      return byteData.buffer.asUint8List();
+   }
+
+   // User pickup Location Marker
+   Future<void> userPickupMarker(BuildContext context) async {
+      Uint8List imageData = await getMarker(context);
+      markers.add(Marker(
+         markerId: MarkerId("2"),
+         position: endLocation.value,
+         zIndex: 2,
+         infoWindow: InfoWindow(
+            title: 'User Current Location',
+         ),
+         icon: BitmapDescriptor.fromBytes(imageData),
+      ));
+   }
+
+   // User pickup Location Marker
+   Future<Uint8List> getMarker(BuildContext context) async {
+      ByteData byteData = await DefaultAssetBundle.of(context)
+          .load("assets/images/Picup_Marker.png");
+      return byteData.buffer.asUint8List();
+   }
+
+   // Update Driver latLong.....
+   void updateDriverLatLong(String lat, String long, String rotation, String status) async {
+      Map<String, dynamic> latlong = {
+         "driver_id": await secure.readData(secure.user_id),
+         'lat': lat,
+         "long": long,
+         'rotation': rotation,
+         'available_status': status,
+      };
+
+      log("update driver lat long ---->:$latlong");
+
+      try {
+         final response = await apiService.postData(URLS.DRIVER_LATLONG_UPDATE, latlong);
+         var jsonString = jsonDecode(response.body);
+         log("update driver latlong response ---->:$jsonString");
+         var result = jsonString['result'];
+         log("result------->:$result");
+      } catch (e) {
+         log('Exception-----', error: e.toString());
+      }
+   }
+
+   Future<void> Data(Position position, BuildContext context) async {
+
+      CameraPosition cameraPosition = CameraPosition(
+         target: LatLng(position.latitude, position.longitude),
+         zoom: 16,
+      );
+
+      googleMapController.value!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+
+      var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+      var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+      Get.find<AuthController>().loginCheck(loginKey.toString(), accessToken, context);
+
+      if (onOff.value == true) {
+         updateDriverLatLong(
+            position.latitude.toString(),
+            position.longitude.toString(),
+            position.heading.toString(),
+            "Available",
+         );
+      } else {
+         updateDriverLatLong("0", "0", "0", "UnAvailable");
+      }
+
+      BookingController controllers = Get.find<BookingController>();
+      startLocation.value = LatLng(position.latitude, position.longitude);
+      if (hide.value == false) {
+         // Do nothing if hide is false
+      } else {
+         if (controllers.useracceptmodel.bookingId != "") {
+            controllers.updateLatLongStartRide(
+               controllers.useracceptmodel.bookingId,
+               position.latitude.toString(),
+               position.longitude.toString(),
+            );
+         }
+      }
+
+      if (controllers.useracceptmodel.status != "") {
+         userPickupMarker(context);
+      }
+
+
+   }
+}

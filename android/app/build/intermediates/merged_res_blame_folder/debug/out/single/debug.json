@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/drawable-v21_launch_background.xml.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/drawable-v21/launch_background.xml"
+    },
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.mtaani.driver.mtaanidriver.app-merged_res-77:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.mtaani.driver.mtaanidriver.app-main-79:/mipmap-hdpi/ic_launcher.png"
+    }
+]
