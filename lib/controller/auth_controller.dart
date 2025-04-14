@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../Model/TaxiFetchCompanyModel.dart';
 import '../Model/membership_model.dart';
 import '../Network/urls.dart';
-import '../View/HomeView/membership_screen.dart';
+import '../View/HomeView/membership_view/membership_screen.dart';
 import '../route_helper/route_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:encrypt/encrypt.dart' as encrypt;
@@ -648,12 +648,14 @@ class AuthController extends GetxController {
   }
 
 
-  void buyMemberShip(String membership_id, String type,paymentType) async {
+  void buyMemberShip(String membershipId,amount ,contactNumber,String type,paymentType) async {
     memberShipLoader1.value = true;
 
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
-      "membership_id": membership_id,
+      "membership_id": membershipId,
+      "amount": amount,
+      "contact_number": contactNumber,
     };
     log("Payment Request Params: $map");
 
@@ -666,7 +668,7 @@ class AuthController extends GetxController {
           "Payment request sent successfully. Enter M-PESA PIN to complete.") {
         customSnackBar(jsonString['result'].toString());
         showPaymentProcessingDialog(Get.context!, () {
-          checkPaymentStatus(membership_id, type,paymentType);
+          checkPaymentStatus(membershipId, type,paymentType);
         });
         // 🔁 Wait 30 seconds before checking payment
        /* await Future.delayed(Duration(seconds: 30));

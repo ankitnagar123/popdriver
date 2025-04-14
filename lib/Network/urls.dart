@@ -54,6 +54,7 @@ class URLS {
   static const String DRIVER_WALLET_TRANSACTION_HISTORY = "fetch_driver_wallet_transaction_history.php";
   static const String DRIVER_WALLET_HISTORY_DOWNLOAD = "https://ride.mtaani.com/API/salary_exel_file.php";
   static const String add_driver_amount = "add_driver_amount.php";
+  static const String wallet_payment_driver_main = "wallet_payment_driver.php";
   static const String add_driver_withdraw_request = "add_driver_withdraw_request.php";
 
 

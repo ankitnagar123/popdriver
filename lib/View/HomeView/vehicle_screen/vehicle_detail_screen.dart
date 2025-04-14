@@ -13,7 +13,7 @@ import 'package:intl/intl.dart';
 
 import '../../../utils/snackBar.dart';
 import '../../../utils/text_field.dart';
-import '../membership_screen.dart';
+import '../membership_view/membership_screen.dart';
 
 class VehicleDetail extends StatefulWidget {
   const VehicleDetail({Key? key}) : super(key: key);

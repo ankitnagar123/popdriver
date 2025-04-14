@@ -70,30 +70,30 @@ class ProfileController extends GetxController{
       var result = jsonString['result'];
       if(result == "successfully"){
 
-        String image = jsonString["Image"];
-        String name = jsonString["first_name"];
-        String lastname = jsonString["last_name"];
-        String email = jsonString["email"];
-        String country = jsonString["country_code"];
-        String flag = jsonString["flag"];
-        String contact = jsonString["contact"];
-        String licenceimage = jsonString["licence_image"];
-        String licencedate = jsonString["expiry_date"];
-        String registrationimage = jsonString["identity_image"];
-        String registrationdate = jsonString["identity_expiry_date"];
-        String fitnessimage = jsonString["rc_image"];
-        String fitnessdate = jsonString["rc_expiry_date"];
-        String insuranceimage = jsonString["insurance_image"];
-        String insurancedate = jsonString["insurance_expiry_date"];
-        String idimage = jsonString["id_proof_image"];
-        String idExpirydate = jsonString["id_expiry_date"];
-        String make = jsonString["vehicle_make"];
-        String model = jsonString["vehicle_number"];
-        String vehicle_year = jsonString["vehicle_year"];
-        String vehicle_colour = jsonString["vehicle_colour"];
-        String car_id = jsonString["car_id"];
-        String invite = jsonString["invite_code"];
-        String membership_id = jsonString["membership_id"];
+        String image = jsonString["Image"].toString();
+        String name = jsonString["first_name"].toString();
+        String lastname = jsonString["last_name"].toString();
+        String email = jsonString["email"].toString();
+        String country = jsonString["country_code"].toString();
+        String flag = jsonString["flag"].toString();
+        String contact = jsonString["contact"].toString();
+        String licenceimage = jsonString["licence_image"].toString();
+        String licencedate = jsonString["expiry_date"].toString();
+        String registrationimage = jsonString["identity_image"].toString();
+        String registrationdate = jsonString["identity_expiry_date"].toString();
+        String fitnessimage = jsonString["rc_image"].toString();
+        String fitnessdate = jsonString["rc_expiry_date"].toString();
+        String insuranceimage = jsonString["insurance_image"].toString();
+        String insurancedate = jsonString["insurance_expiry_date"].toString();
+        String idimage = jsonString["id_proof_image"].toString();
+        String idExpirydate = jsonString["id_expiry_date"].toString();
+        String make = jsonString["vehicle_make"].toString();
+        String model = jsonString["vehicle_number"].toString();
+        String vehicle_year = jsonString["vehicle_year"].toString();
+        String vehicle_colour = jsonString["vehicle_colour"].toString();
+        String car_id = jsonString["car_id"].toString();
+        String invite = jsonString["invite_code"].toString();
+        String membership_id = jsonString["membership_id"].toString();
 
 
         Image.value = image;

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:dio/dio.dart'as DIO;
+import 'package:mtaanidriver/controller/auth_controller.dart';
 import '../../Model/print_model.dart';
 import '../../Model/wallet_history_model.dart';
 import '../../Network/api_service.dart';
@@ -17,7 +20,7 @@ class WalletController extends GetxController{
   DIO.Dio dioClient = DIO.Dio();
   SecureStorageService secure = SecureStorageService();
 
-  var imageString = Rxn<File>();
+  // var imageString = Rxn<File>();
 
   var walletFetchLoader = false.obs;
   var walletFetchHistoryLoader = false.obs;
@@ -196,38 +199,161 @@ class WalletController extends GetxController{
   }*/
 
   var balanceAddLoader = false.obs;
+  var checkPaymentLoader = false.obs;
   var withdrawLoader = false.obs;
 
-  void walletBalanceAdd(String price,File?file)async{
+  void addWalletAmountPaymentInitialize(String amount ,contactNumber,payReason,name,VoidCallback callback) async {
     balanceAddLoader.value = true;
 
-    DIO.FormData formData = DIO.FormData.fromMap({
-      "driver_id"  : await secure.readData(secure.user_id),
-      "amount"     : price,
-      "image"      : await DIO.MultipartFile.fromFile(file!.path,filename: file.path.split("/").last)
-    });
+    Map<String, dynamic> map = {
+      "driver_id": await secure.readData(secure.user_id),
+      "amount": amount,
+      "phone": contactNumber,
+      "name": name,
+      "payment_reason": payReason,
+    };
+    log("Payment Request Params: $map");
 
-    log("parameter ------ ${formData.fields}");
-
-    try{
-      final response = await apiService.multiPartFile(URLS.add_driver_amount, formData);
+    try {
+      final response = await apiService.postDatatoken(URLS.add_driver_amount, map);
       var jsonString = jsonDecode(response.data);
-      log("response --------$response");
-      var result = jsonString["result"];
-      if(result == "success"){
-        imageString.value = null;
-        balanceAddLoader.value = false;
-        customSnackBar("Coin Request Submitted".tr);
-      }else{
-        balanceAddLoader.value = false;
-        customSnackBar("Something Went Wrong".tr);
-      }
+      log("Payment Request Response: ${jsonString['result'].toString()}");
 
-    }catch(e){
+      if (jsonString['result'] == "Payment request sent successfully. Enter M-PESA PIN to complete.") {
+        callback();
+        customSnackBar(jsonString['result'].toString());
+        showPaymentProcessingDialog(Get.context!, () {
+          checkPaymentStatus(amount,contactNumber,payReason,name);
+        });
+        // 🔁 Wait 30 seconds before checking payment
+        /* await Future.delayed(Duration(seconds: 30));
+        await checkPaymentStatus(membership_id, type);*/
+      } else {
+        customSnackBar(jsonString['result'].toString());
+      }
+    } catch (e) {
+      log("Exception during payment request", error: e.toString());
+      customSnackBar("❌ Error initiating payment.");
+    } finally {
       balanceAddLoader.value = false;
-      log("Exception-----",error: e.toString());
     }
   }
+
+
+
+  Future<void> checkPaymentStatus(String amount ,contactNumber,payReason,name) async {
+    checkPaymentLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "driver_id": await secure.readData(secure.user_id),
+      "payment_type":"Wallet"
+    };
+    log("Check Payment Params: $map");
+
+    try {
+      final response = await apiService.postDatatoken(URLS.check_payment_status, map);
+      var jsonString = jsonDecode(response.data);
+      log("Payment Status Response: ${jsonString['result']}");
+
+      if (jsonString['result'] == "paid") {
+        customSnackBar("✅ Payment successful!");
+         addWalletAmountPaymentMain(amount,contactNumber,payReason,name,() {
+
+        },);
+      } else {
+        customSnackBar("⏳ Payment still pending. Try again later.");
+      }
+    } catch (e) {
+      log("Exception during payment status check", error: e.toString());
+      customSnackBar("❌ Error checking payment status.");
+    } finally {
+      checkPaymentLoader.value = false;
+    }
+  }
+
+  void addWalletAmountPaymentMain(String amount ,contactNumber,payReason,name,VoidCallback callback) async {
+    balanceAddLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "driver_id": await secure.readData(secure.user_id),
+      "amount": amount,
+      "phone": contactNumber,
+      "name": name,
+      "payment_reason": payReason,
+    };
+    log("Payment Request Params: $map");
+
+    try {
+      final response = await apiService.postDatatoken(URLS.wallet_payment_driver_main, map);
+      var jsonString = jsonDecode(response.data);
+      log("Payment Request Response: ${jsonString['result']}");
+
+      if (jsonString['result'].toString() == "success") {
+        callback();
+        customSnackBar(jsonString['result'].toString());
+
+        // 🔁 Wait 30 seconds before checking payment
+        /* await Future.delayed(Duration(seconds: 30));
+        await checkPaymentStatus(membership_id, type);*/
+      } else {
+        customSnackBar(jsonString['result'].toString());
+      }
+    } catch (e) {
+      log("Exception during payment request", error: e.toString());
+      customSnackBar("❌ Error initiating payment.");
+    } finally {
+      balanceAddLoader.value = false;
+    }
+  }
+
+
+
+
+  void showPaymentProcessingDialog(BuildContext context, VoidCallback onComplete) {
+    int secondsLeft = 30;
+    Timer? timer;
+
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) {
+        timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+          if (secondsLeft == 0) {
+            t.cancel();
+            Navigator.of(context).pop(); // Close the dialog
+            onComplete(); // Trigger payment check
+          } else {
+            secondsLeft--;
+          }
+        });
+
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text("Processing Payment"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Please enter your M-PESA PIN on your phone."),
+                SizedBox(height: 8),
+                Text("Checking payment in $secondsLeft seconds..."),
+              ],
+            ),
+          );
+        });
+      },
+    ).then((_) {
+      timer?.cancel(); // Cancel if dialog closed early
+    });
+  }
+
+
+
+
+
+
 
   void withdrawalBalance(String amount,email,account_holder_name,account_number)async{
     withdrawLoader.value = true;

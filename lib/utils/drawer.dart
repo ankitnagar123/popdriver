@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'package:mtaanidriver/utils/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../View/HomeView/membership_screen.dart';
+import '../View/HomeView/membership_view/membership_screen.dart';
 import '../controller/auth_controller.dart';
 import '../controller/booking_controller.dart';
 import '../controller/home_screen_controller.dart';

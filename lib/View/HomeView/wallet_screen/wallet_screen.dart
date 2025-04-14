@@ -24,11 +24,16 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  TextEditingController amtController = TextEditingController();
   WalletController controller = Get.put(WalletController());
+
+  TextEditingController amtController = TextEditingController();
   TextEditingController accountNumberCtr = TextEditingController();
   TextEditingController nameCtr = TextEditingController();
   TextEditingController emailCtr = TextEditingController();
+  TextEditingController mobileController = TextEditingController();
+  TextEditingController emailController = TextEditingController();
+  TextEditingController reasonController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -40,6 +45,7 @@ class _WalletScreenState extends State<WalletScreen> {
           accountNumberCtr.text =
               Get.find<AuthController>().accountNumber.value;
           emailCtr.text = Get.find<AuthController>().email.value;
+          mobileController.text = Get.find<AuthController>().contacts.value;
         }
       });
       controller.walletFetch();
@@ -50,21 +56,24 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: MyColors.primary,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-           Get.arguments =="drawer"? InkWell(
-              onTap: () {
-                Get.back();
-              },
-              child: Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-              ),
-            ):SizedBox(),
+            Get.arguments == "drawer"
+                ? InkWell(
+                    onTap: () {
+                      Get.back();
+                    },
+                    child: Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                    ),
+                  )
+                : SizedBox(),
             Center(
                 child: Text(
               "Wallet".tr,
@@ -98,33 +107,39 @@ class _WalletScreenState extends State<WalletScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         SizedBox(
-                          height: 10,
+                          height: 15,
                         ),
-                        Icon(
-                          Icons.account_balance_wallet,
-                          size: 100,
-                          color: MyColors.primary,
+                        Row(
+                          spacing: 10,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet,
+                              size: 50,
+                              color: MyColors.primary,
+                            ),
+                            Text(
+                              controller.walletBalance.value == ""
+                                  ? "KSh 0"
+                                  : "KSh ${controller.walletBalance.value}",
+                              style: TextStyle(
+                                  color: MyColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18),
+                            ),
+                          ],
                         ),
                         // Text("Your wallet amount is"),
                         SizedBox(
                           height: 10,
                         ),
-                        Text(
-                          controller.walletBalance.value == ""
-                              ? "${"J\$0"}"
-                              : "KSh ${controller.walletBalance.value}",
-                          style: TextStyle(color: MyColors.black),
-                        ),
-                        SizedBox(
-                          height: 20,
-                        ),
+
                       ],
                     ),
                   ),
                   Divider(
-                    color: MyColors.black,
-                    height: 10,
-                    thickness: 1,
+                    color: Colors.grey.shade300,
+                    height: 15,
                   ),
                   SizedBox(
                     height: 10,
@@ -146,6 +161,9 @@ class _WalletScreenState extends State<WalletScreen> {
                             child: Text(
                               "Coin Request".tr,
                               style: TextStyle(
+                                fontWeight: controller.buttonColor.value == true
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 fontSize: 13,
                                 color: MyColors.white,
                                 fontFamily: "Poppins",
@@ -163,6 +181,10 @@ class _WalletScreenState extends State<WalletScreen> {
                             child: Text(
                               "Withdrawal Request".tr,
                               style: TextStyle(
+                                fontWeight:
+                                    controller.buttonColor.value == false
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                 fontSize: 13,
                                 color: MyColors.white,
                                 fontFamily: "Poppins",
@@ -174,151 +196,102 @@ class _WalletScreenState extends State<WalletScreen> {
                   SizedBox(
                     height: 10,
                   ),
-                  Visibility(
+                  Card(
+                    color: Colors.white,
+                    margin: EdgeInsets.all(10),
+                    child: Visibility(
                       visible: controller.buttonColor.value,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 15),
-                            child: Text(
-                              "Add Amount".tr,
-                              style: TextStyle(
-                                  color: MyColors.DarkBlue, fontSize: 14),
-                            ),
-                          ),
-                          Container(
-                            height: 50,
-                            width: context.width,
-                            padding: const EdgeInsets.only(left: 10),
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                  10,
-                                ),
-                                color: MyColors.TextField,
-                                border: Border.all(
-                                    color: MyColors.TextField, width: 1)),
-                            child: TextFormField(
-                              toolbarOptions: ToolbarOptions(
-                                copy: true,
-                                cut: true,
-                                paste: false,
-                                selectAll: false,
-                              ),
-                              enableInteractiveSelection: false,
+                      child: Form(
+                        key: _formKey,
+                        child: ListView(
+                          physics: NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          children: [
+                            _buildTextField(
                               controller: amtController,
+                              label: 'Amount (KES)',
                               keyboardType: TextInputType.number,
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(4),
-                              ],
-                              onChanged: (value) {
-                                // Agar pehla character 0 hai aur total length 1 hai, to text ko clear kar do
-                                if (value.length == 1 && value == "0") {
-                                  amtController.clear();
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter amount';
+                                }
+                                if (double.tryParse(value) == null ||
+                                    double.parse(value) <= 0) {
+                                  return 'Enter valid amount';
+                                }
+                                return null;
+                              },
+                            ),
+                            _buildTextField(
+                              controller: mobileController,
+                              label: 'Mobile Number',
+                              keyboardType: TextInputType.phone,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter mobile number';
+                                }
+                              /*  if (!RegExp(r'^\+254\d{9}$').hasMatch(value)) { // Updated regex
+                                  return 'Invalid Kenyan number'; // Updated error message
+                                }*/
+                                return null;
+                              },
+                            ),
+                            _buildTextField(
+                              controller: nameCtr,
+                              label: 'Full Names',
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your full name';
+                                }
+                                return null;
+                              },
+                            ),
+                            _buildTextField(
+                              controller: emailController,
+                              label: 'Email (Optional)',
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                if (value!.isNotEmpty &&
+                                    !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}')
+                                        .hasMatch(value)) {
+                                  return 'Enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            _buildTextField(
+                              controller: reasonController,
+                              label: 'Payment Reason',
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 20),
+                            /*ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                backgroundColor: Colors.teal,
+                              ),
+                              onPressed: () {
+                                if (_formKey.currentState!.validate()) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Processing Payment...'),
+                                    ),
+                                  );
+                                  // Payment logic yaha likh sakte ho.
                                 }
                               },
-                              decoration: InputDecoration(
-                                  counterText: "",
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  hintText: "Enter Amount".tr,
-                                  hintStyle: const TextStyle(
-                                      color: MyColors.DarkBlue, fontSize: 13)),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 15),
-                            child: Text(
-                              "Account Details:".tr,
-                              style: TextStyle(
-                                  color: MyColors.black, fontSize: 13),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 15),
-                                child: Text(
-                                  "Ac No.".tr,
-                                  style: TextStyle(
-                                      color: MyColors.DarkBlue, fontSize: 13),
-                                ),
+                              child: Text(
+                                'Make Payment',
+                                style: TextStyle(fontSize: 16),
                               ),
-                              SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                controller.adminAccount.value,
-                                style: TextStyle(
-                                    color: MyColors.DarkBlue, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              _showImagePicker(context);
-                            },
-                            child: Container(
-                                height: 100,
-                                width: context.width,
-                                padding: const EdgeInsets.only(left: 10),
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 15, vertical: 10),
-                                decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(
-                                      10,
-                                    ),
-                                    color: MyColors.TextField,
-                                    border: Border.all(
-                                        color: MyColors.TextField, width: 1)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      height: 10,
-                                    ),
-                                    controller.imageString.value == null
-                                        ? Icon(
-                                            Icons.add_photo_alternate_outlined,
-                                            color: MyColors.buttonColor,
-                                            size: 30,
-                                          )
-                                        : Icon(
-                                            Icons.check_circle,
-                                            color: Colors.green,
-                                            size: 30,
-                                          ),
-                                    SizedBox(
-                                      height: 10,
-                                    ),
-                                    controller.imageString.value == null
-                                        ? Text(
-                                            "Upload ScreenShot".tr,
-                                            style: TextStyle(
-                                              fontFamily: "Poppins",
-                                                color: MyColors.DarkBlue,
-                                                fontSize: 13),
-                                          )
-                                        : Text(
-                                            "Uploaded".tr,
-                                            style: TextStyle(
-                                              fontFamily: "Poppins",
-                                                color: MyColors.DarkBlue,
-                                                fontSize: 13),
-                                          ),
-                                  ],
-                                )),
-                          ),
-                        ],
-                      )),
+                            ),*/
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  /**/
                   Visibility(
                     visible: controller.buttonColor.value == false,
                     child: Padding(
@@ -413,16 +386,32 @@ class _WalletScreenState extends State<WalletScreen> {
                         return ElevatedButton(
                           style: ElevatedButton.styleFrom(
                               alignment: Alignment.center,
-                              maximumSize: Size(Get.width / 2, 50),
-                              backgroundColor: MyColors.primary),
+                              maximumSize: Size(Get.width / 1.1, 50),
+                              backgroundColor: MyColors.black),
                           onPressed: () {
-                            validation();
+                            if(controller.buttonColor.value = true){
+                              if (_formKey.currentState!.validate()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Processing Payment...'),
+                                  ),
+                                );
+                                controller.addWalletAmountPaymentInitialize(amtController.text,mobileController.text,reasonController.text,nameCtr.text,() {
+
+                                },);
+                              }
+                            }else{
+                              validation();
+                            }
                           },
                           child: Center(
-                            child: Text("Submit".tr,  style: TextStyle(
-                                fontFamily: "Poppins",
-                                color: MyColors.white,
-                                fontSize: 14),),
+                            child: Text(
+                              "Process".tr,
+                              style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  color: MyColors.white,
+                                  fontSize: 14),
+                            ),
                           ),
                         );
                       }
@@ -442,10 +431,13 @@ class _WalletScreenState extends State<WalletScreen> {
                           ? SizedBox(
                               height: Get.height / 3,
                               child: Center(
-                                child: Text("No Data Found".tr,  style: TextStyle(
-                                    fontFamily: "Poppins",
-                                    color: MyColors.black,
-                                    fontSize: 15),),
+                                child: Text(
+                                  "No Data Found".tr,
+                                  style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      color: MyColors.black,
+                                      fontSize: 15),
+                                ),
                               ),
                             )
                           : Column(
@@ -546,14 +538,14 @@ class _WalletScreenState extends State<WalletScreen> {
                                           return Center(
                                             child: myIndicator(),
                                           );
-                                        } else{
+                                        } else {
                                           return ElevatedButton(
                                             style: ElevatedButton.styleFrom(
                                                 backgroundColor:
-                                                MyColors.primary),
+                                                    MyColors.primary),
                                             onPressed: () {
                                               if (controller.startDate.value ==
-                                                  "Select" &&
+                                                      "Select" &&
                                                   controller.endDate.value ==
                                                       "") {
                                                 controller.printReceipt(
@@ -567,14 +559,16 @@ class _WalletScreenState extends State<WalletScreen> {
                                               }
                                             },
                                             child: Center(
-                                              child: Text("Print".tr,style: TextStyle(
-                                                  fontFamily: "Poppins",
-                                                  color: MyColors.white,
-                                                  fontSize: 12),),
+                                              child: Text(
+                                                "Print".tr,
+                                                style: TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    color: MyColors.white,
+                                                    fontSize: 12),
+                                              ),
                                             ),
                                           );
                                         }
-
                                       }),
                                     ),
                                   ],
@@ -590,8 +584,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                       return Card(
                                         elevation: 10.0,
                                         shape: RoundedRectangleBorder(
-                                          side:
-                                          BorderSide(
+                                          side: BorderSide(
                                               color: MyColors.primary,
                                               width: 1.0),
                                           borderRadius:
@@ -606,9 +599,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                               Text(
                                                 list.status,
                                                 style: TextStyle(
-                                                  fontSize: 13,
+                                                    fontSize: 13,
                                                     fontFamily: "Poppins",
-
                                                     color: Colors.grey,
                                                     fontWeight:
                                                         FontWeight.w700),
@@ -619,7 +611,6 @@ class _WalletScreenState extends State<WalletScreen> {
                                                   "Amount".tr,
                                                   style: TextStyle(
                                                       fontFamily: "Poppins",
-
                                                       color: Colors.grey,
                                                       fontWeight:
                                                           FontWeight.w400),
@@ -628,7 +619,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                               Text(
                                                 "Ride ID: ${list.bookingId}".tr,
                                                 style: TextStyle(
-                                                  fontFamily: "Poppins",
+                                                    fontFamily: "Poppins",
                                                     color: Colors.black,
                                                     fontWeight:
                                                         FontWeight.w500),
@@ -645,9 +636,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                                       Text(
                                                         "Balance:".tr,
                                                         style: TextStyle(
-                                                            fontFamily: "Poppins",
+                                                            fontFamily:
+                                                                "Poppins",
                                                             fontSize: 13,
-
                                                             color: Colors.black,
                                                             fontWeight:
                                                                 FontWeight
@@ -660,9 +651,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                                         "KSh ${list.driverEarning}",
                                                         style: TextStyle(
                                                             fontSize: 13,
-
-                                                            fontFamily: "Poppins",
-
+                                                            fontFamily:
+                                                                "Poppins",
                                                             color: MyColors
                                                                 .primary,
                                                             fontWeight:
@@ -675,9 +665,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                                     "KSh ${list.driverEarning}",
                                                     style: TextStyle(
                                                         fontSize: 13,
-
                                                         fontFamily: "Poppins",
-
                                                         color: MyColors.primary,
                                                         fontWeight:
                                                             FontWeight.w600),
@@ -691,7 +679,6 @@ class _WalletScreenState extends State<WalletScreen> {
                                                     style: TextStyle(
                                                         fontFamily: "Poppins",
                                                         fontSize: 12,
-
                                                         color: Colors.black,
                                                         fontWeight:
                                                             FontWeight.w400),
@@ -702,9 +689,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                                   Text(
                                                     list.time,
                                                     style: TextStyle(
-                                                      fontSize: 12,
+                                                        fontSize: 12,
                                                         fontFamily: "Poppins",
-
                                                         color: Colors.black,
                                                         fontWeight:
                                                             FontWeight.w400),
@@ -723,6 +709,34 @@ class _WalletScreenState extends State<WalletScreen> {
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: TextFormField(
+        cursorColor: MyColors.primary,
+        controller: controller,
+        keyboardType: keyboardType,
+        validator: validator,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          contentPadding: EdgeInsets.all(10),
+
+          labelText: label,
+          labelStyle: TextStyle(fontSize: 12,color: Colors.grey),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),borderSide: BorderSide(color: Colors.grey)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),borderSide: BorderSide(color: MyColors.primary)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8),borderSide: BorderSide(color: Colors.grey)),
+        ),
       ),
     );
   }
@@ -771,9 +785,9 @@ class _WalletScreenState extends State<WalletScreen> {
     } else {}
   }
 
-  final ImagePicker picker = ImagePicker();
+  // final ImagePicker picker = ImagePicker();
 
-  void takePhoto(ImageSource source) async {
+/*  void takePhoto(ImageSource source) async {
     final pickedFile = await picker.pickImage(source: source, imageQuality: 60);
     print("picked file -----$pickedFile");
     if (pickedFile != null) {
@@ -782,8 +796,9 @@ class _WalletScreenState extends State<WalletScreen> {
     } else {
       print('No image selected.');
     }
-  }
+  }*/
 
+/*
   void _showImagePicker(context) {
     showModalBottomSheet(
       context: context,
@@ -819,6 +834,7 @@ class _WalletScreenState extends State<WalletScreen> {
       },
     );
   }
+*/
 
   void validation() async {
     if (controller.buttonColor.value == false) {
@@ -845,11 +861,12 @@ class _WalletScreenState extends State<WalletScreen> {
     } else {
       if (amtController.text.isEmpty) {
         customSnackBar("Please enter amount".tr);
-      } else if (controller.imageString.value == null) {
+      }
+      /* else if (controller.imageString.value == null) {
         customSnackBar("Please upload screenshot".tr);
-      } else {
-        controller.walletBalanceAdd(
-            amtController.text, controller.imageString.value);
+      }*/
+      else {
+
         amtController.text = "";
         setState(() {
           amtController.clear();
