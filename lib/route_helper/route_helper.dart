@@ -16,7 +16,7 @@ import '../View/HomeView/drawer_tab_screen/invite_friend_screen.dart';
 import '../View/HomeView/drawer_tab_screen/my_ride_screen.dart';
 import '../View/HomeView/drawer_tab_screen/notification_screen.dart';
 import '../View/HomeView/drawer_tab_screen/rating_screen.dart';
-import '../View/HomeView/drawer_tab_screen/ride_history.dart';
+import '../View/HomeView/drawer_tab_screen/ride_history/ride_history.dart';
 import '../View/HomeView/home_screen.dart';
 import '../View/HomeView/message_screen.dart';
 import '../View/HomeView/profile_screens/edit_profile_screen.dart';

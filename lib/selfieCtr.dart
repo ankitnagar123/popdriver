@@ -89,8 +89,13 @@ class SelfieController extends GetxController {
 
         final homeController = Get.find<HomeController>();
         homeController.onOff.value = true;
-        homeController.onOffCheck.value = "set";
+        log("contoller.onOff.value---- Online Time${homeController.onOff.value}");
 
+        log("Controller onOff Value Set: ${homeController.onOff.value}");
+
+        // Print after setting the value
+        bool? status = await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS);
+        log("SharedPref after selfie upload — DRIVER_ONLINE_STATUS: $status");
         sendSelfieLoader1.value = false;
         callback();
       } else {

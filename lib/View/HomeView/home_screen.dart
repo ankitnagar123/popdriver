@@ -77,46 +77,20 @@ print("-----------message");
   Timer? timer2;*/
 
 
-
-/*  void getData() async {
-    if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == false) {
-      contoller.onOff.value = true;
-      log("onOff------------${contoller.onOff.value}");
-
-      controller.rideNowBooking();
-
-      var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-      var driverOnlineStatus = await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS);
-      log("message-----------$driverOnlineStatus");
-      var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-
-      authController.loginCheck(loginKey.toString(), accessToken, context);
-    }
-
-    setState(() {});
-    ctr.fetchDriverDetail();
-  }*/
-
   void getData() async {
-    bool? isOnline = await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS);
-    if (isOnline == false) {
+
+    if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
       contoller.onOff.value = true;
-      log("onOff------------${contoller.onOff.value}");
-
-      controller.rideNowBooking(); // <- Use the correct controller here
-
+      controller.rideNowBooking();
+      /* startStreaming();*/
       var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-      var driverOnlineStatus = await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS);
       var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-
-      log("message-----------$driverOnlineStatus");
-
       authController.loginCheck(loginKey.toString(), accessToken, context);
     }
-
+    setState(() {
+    });
     ctr.fetchDriverDetail();
   }
-
 
 
   @override
@@ -211,6 +185,49 @@ print("-----------message");
                           fontWeight: FontWeight.bold),
                     ),
 
+
+                    Row(
+                      children: [
+                        Text(contoller.onOff.value == true ?
+                        "Online".tr : "Offline".tr),
+                        contoller.hide.value == false ?
+                        Switch(
+                            value: contoller.onOff.value,
+                            activeColor: contoller.onOff.value == true
+                                ? Colors.green
+                                : Colors.grey,
+                            onChanged: (value) {
+                              if (value == true) {
+                                Get.to(() => SelfieScreen());
+                             /*   sp.setBoolValue(
+                                    sp.DRIVER_ONLINE_STATUS, true);
+                                controller.rideNowBooking();*/
+                                /* timer1 = Timer.periodic(
+                                        Duration(seconds: 5), (timer) {
+                                      controller.rideNowBooking();
+                                    });*/
+                                /*startStreaming();*/
+                              } else {
+                                contoller.onOff.value = value;
+
+                                sp.setBoolValue(
+                                    sp.DRIVER_ONLINE_STATUS, false);
+                                contoller.updateDriverLatLong("0",
+                                    "0", "0", "UnAvailable");
+                                /* timer1!.cancel();
+                                    timer2!.cancel();*/
+                              }
+                            })
+                            : Switch(
+                          value: contoller.onOff.value,
+                          activeColor: contoller.onOff.value == true
+                              ? Colors.green
+                              : Colors.grey,
+                          onChanged: null,
+                        )
+                      ],
+                    )
+/*
                     Row(
                       children: [
                         Text(
@@ -230,8 +247,10 @@ print("-----------message");
                             if (value == true) {
                               await Get.to(() => SelfieScreen());
                               // After returning from SelfieScreen, you can update the value again
-                           /*   contoller.onOff.value = true;
-                              sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);*/
+                           */
+/*   contoller.onOff.value = true;
+                              sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);*//*
+
                             } else {
                               contoller.onOff.value = false;
                               sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
@@ -242,6 +261,7 @@ print("-----------message");
 
                       ],
                     )
+*/
 
                   ],
                 ),

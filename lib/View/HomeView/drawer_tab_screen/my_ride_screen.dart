@@ -1,4 +1,6 @@
 
+import 'package:flutter/cupertino.dart';
+
 import '../../../controller/auth_controller.dart';
 import '../../../controller/my_ride_controller.dart';
 import '../../../route_helper/route_helper.dart';
@@ -50,103 +52,173 @@ class _MyRideScreenState extends State<MyRideScreen> {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
-              children: [
-                Row(
-                  children: [
-                    Row(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            controller.status.value = "0";
-                            datePicker();
-                          },
-                          child: Container(
-                            height: 40,
-                            width: Get.width / 3.5,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(5),
 
-                                border:
-                                Border.all(color: MyColors.buttonColor)),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.calendar_month,
-                                  color: MyColors.primary,
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    controller.startDate.value == ""?"Select".tr:controller.startDate.value,
-                                    style: TextStyle(fontSize: 10.0),
+              children: [
+               
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          children: [
+                            // Start Date Picker
+                            Expanded(
+                              flex: 4,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () {
+                                    controller.status.value = "0";
+                                    datePicker();
+                                  },
+                                  child: Container(
+                                    height: 45,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: MyColors.buttonColor.withOpacity(0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today_rounded,
+                                          size: 18,
+                                          color: MyColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            controller.startDate.value,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontFamily: "Poppins",
+                                              color: controller.startDate.value == "Select"
+                                                  ? Colors.grey[400]
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        Text("To".tr,style: TextStyle(fontFamily: "Poppins",fontSize: 14,color: Colors.grey),),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        InkWell(
-                          onTap: () {
-                            controller.status.value = "1";
-                            datePicker();
-                          },
-                          child: Container(
-                            height: 40,
-                            width: Get.width / 3.5,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(5),
-                                border:
-                                Border.all(color: MyColors.buttonColor)),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.calendar_month,
-                                  color: MyColors.primary,
+
+                            // Separator
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                Expanded(
-                                  child: Text(
-                                    controller.endDate.value == ""?"Select".tr:controller.endDate.value,
-                                    style: TextStyle(fontSize: 10.0),
+                                child: Text(
+                                  "To".tr,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontFamily: "Poppins",
+                                    color: Colors.grey[600],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 1,
-                        ),
-                      ],
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: Size(30, 40),
-                            maximumSize: Size(90, 40),
-                            backgroundColor: MyColors.primary),
-                        onPressed: () {
-                          controller.rideLaterScreenBooking(
-                              controller.startDate.value,
-                              controller.endDate.value);
-                        },
-                        child: Center(
-                          child: Text("Submit".tr,style: TextStyle(fontSize: 11,color: MyColors.white),),
+
+                            // End Date Picker
+                            Expanded(
+                              flex: 4,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () {
+                                    controller.status.value = "1";
+                                    datePicker();
+                                  },
+                                  child: Container(
+                                    height: 45,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: MyColors.buttonColor.withOpacity(0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today_rounded,
+                                          size: 18,
+                                          color: MyColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            controller.endDate.value,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontFamily: "Poppins",
+                                              color: controller.endDate.value == "Select"
+                                                  ? Colors.grey[400]
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MyColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            if (controller.startDate.value != "Select" &&
+                                controller.endDate.value != "Select") {
+                              controller.rideLaterScreenBooking(
+                                  controller.startDate.value,
+                                  controller.endDate.value);
+                            } else {
+                              customSnackBar("Please select both dates".tr);
+                            }
+                          },
+                          child: Text(
+                            "Print".tr,
+                            style: const TextStyle(
+                              fontFamily: "Poppins",
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+
+                    ),
                   ],
                 ),
+
                 Expanded(
                   child: controller.rideLaterScreenLoader.value == true
                       ? Center(

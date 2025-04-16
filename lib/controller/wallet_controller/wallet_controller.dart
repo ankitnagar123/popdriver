@@ -212,12 +212,12 @@ class WalletController extends GetxController{
       "name": name,
       "payment_reason": payReason,
     };
-    log("Payment Request Params: $map");
+    log("Payment Request Params Initialize: $map");
 
     try {
       final response = await apiService.postDatatoken(URLS.add_driver_amount, map);
       var jsonString = jsonDecode(response.data);
-      log("Payment Request Response: ${jsonString['result'].toString()}");
+      log("Payment Request Response Initialize: ${jsonString['result'].toString()}");
 
       if (jsonString['result'] == "Payment request sent successfully. Enter M-PESA PIN to complete.") {
         callback();
@@ -239,8 +239,6 @@ class WalletController extends GetxController{
     }
   }
 
-
-
   Future<void> checkPaymentStatus(String amount ,contactNumber,payReason,name) async {
     checkPaymentLoader.value = true;
 
@@ -248,12 +246,12 @@ class WalletController extends GetxController{
       "driver_id": await secure.readData(secure.user_id),
       "payment_type":"Wallet"
     };
-    log("Check Payment Params: $map");
+    log("Check Payment Params Check: $map");
 
     try {
       final response = await apiService.postDatatoken(URLS.check_payment_status, map);
       var jsonString = jsonDecode(response.data);
-      log("Payment Status Response: ${jsonString['result']}");
+      log("Payment Status Response Check: ${jsonString['result']}");
 
       if (jsonString['result'] == "paid") {
         customSnackBar("✅ Payment successful!");
@@ -281,12 +279,12 @@ class WalletController extends GetxController{
       "name": name,
       "payment_reason": payReason,
     };
-    log("Payment Request Params: $map");
+    log("Payment Request Response Main: $map");
 
     try {
       final response = await apiService.postDatatoken(URLS.wallet_payment_driver_main, map);
       var jsonString = jsonDecode(response.data);
-      log("Payment Request Response: ${jsonString['result']}");
+      log("Payment Request Response Main: ${jsonString['result']}");
 
       if (jsonString['result'].toString() == "success") {
         callback();
@@ -305,9 +303,6 @@ class WalletController extends GetxController{
       balanceAddLoader.value = false;
     }
   }
-
-
-
 
   void showPaymentProcessingDialog(BuildContext context, VoidCallback onComplete) {
     int secondsLeft = 30;
@@ -384,7 +379,6 @@ class WalletController extends GetxController{
       withdrawLoader.value = false;
     log("Exception ---",error: e.toString());
     }
-    
   }
 
 }

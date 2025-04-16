@@ -642,7 +642,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            '${widget.amount} TSh',
+            '${widget.amount} KSh',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: theme.colorScheme.primary,
@@ -674,7 +674,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
             controller: _mobileController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              hintText: '+254 712 345 678', // Changed to Kenyan format
+              hintText: 'Enter mobile number', // Changed to Kenyan format
               prefixIcon: const Icon(Icons.smartphone_rounded),
               suffixIcon: IconButton(
                 icon: const Icon(Icons.close_rounded),
@@ -694,9 +694,9 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
               if (value == null || value.isEmpty) {
                 return 'Please enter mobile number';
               }
-              if (!RegExp(r'^\+254\d{9}$').hasMatch(value)) { // Updated regex
+            /*  if (!RegExp(r'^\+254\d{9}$').hasMatch(value)) { // Updated regex
                 return 'Invalid Kenyan number'; // Updated error message
-              }
+              }*/
               return null;
             },
           ),
@@ -719,10 +719,10 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
       return;
     }
 
-    if (!RegExp(r'^\+254\d{9}$').hasMatch(_mobileController.text)) { // Updated regex
+   /* if (!RegExp(r'^\+254\d{9}$').hasMatch(_mobileController.text)) { // Updated regex
       setState(() => _errorText = 'Invalid Kenyan number'); // Updated error message
       return;
-    }
+    }*/
 
     controller.buyMemberShip(widget.membershipId.toString(),widget.amount.toString(),_mobileController.text, widget.screenType,"Membership");
 

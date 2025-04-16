@@ -65,12 +65,13 @@ class MyRidesController extends GetxController {
     }
   }
 
-  void rideHistory(String startDate, String endDate) async {
+  void rideHistory(String startDate, String endDate,type ) async {
     historyLoader.value = true;
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
       "start_date": startDate,
-      "end_date": endDate
+      "end_date": endDate,
+      "type ": type
     };
 
     historyList.clear();

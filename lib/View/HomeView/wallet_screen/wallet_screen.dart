@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:email_validator/email_validator.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -442,7 +443,7 @@ class _WalletScreenState extends State<WalletScreen> {
                             )
                           : Column(
                               children: [
-                                Row(
+                               /* Row(
                                   children: [
                                     Padding(
                                       padding: const EdgeInsets.only(left: 10),
@@ -454,9 +455,10 @@ class _WalletScreenState extends State<WalletScreen> {
                                               datePicker();
                                             },
                                             child: Container(
-                                              height: 35,
+                                              height: 40,
                                               width: Get.width / 3.5,
                                               decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(10),
                                                 border: Border.all(
                                                     color:
                                                         MyColors.buttonColor),
@@ -496,9 +498,12 @@ class _WalletScreenState extends State<WalletScreen> {
                                               datePicker();
                                             },
                                             child: Container(
-                                              height: 35,
+
+                                              height: 40,
                                               width: Get.width / 3.5,
                                               decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(10),
+
                                                 border: Border.all(
                                                     color:
                                                         MyColors.buttonColor),
@@ -572,136 +577,304 @@ class _WalletScreenState extends State<WalletScreen> {
                                       }),
                                     ),
                                   ],
-                                ),
-                                ListView.builder(
-                                    shrinkWrap: true,
-                                    physics: ScrollPhysics(),
-                                    itemCount:
-                                        controller.transactionList.length,
-                                    itemBuilder: (context, index) {
-                                      var list =
-                                          controller.transactionList[index];
-                                      return Card(
-                                        elevation: 10.0,
-                                        shape: RoundedRectangleBorder(
-                                          side: BorderSide(
-                                              color: MyColors.primary,
-                                              width: 1.0),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                list.status,
-                                                style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontFamily: "Poppins",
-                                                    color: Colors.grey,
-                                                    fontWeight:
-                                                        FontWeight.w700),
-                                              ),
-                                              Align(
-                                                alignment: Alignment.topRight,
-                                                child: Text(
-                                                  "Amount".tr,
-                                                  style: TextStyle(
-                                                      fontFamily: "Poppins",
-                                                      color: Colors.grey,
-                                                      fontWeight:
-                                                          FontWeight.w400),
+                                ),*/
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Row(
+                                          children: [
+                                            // Start Date Picker
+                                            Expanded(
+                                              flex: 4,
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  onTap: () {
+                                                    controller.status.value = "0";
+                                                    datePicker();
+                                                  },
+                                                  child: Container(
+                                                    height: 45,
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(
+                                                        color: MyColors.buttonColor.withOpacity(0.3),
+                                                        width: 1.5,
+                                                      ),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.calendar_today_rounded,
+                                                          size: 18,
+                                                          color: MyColors.primary,
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            controller.startDate.value,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontFamily: "Poppins",
+                                                              color: controller.startDate.value == "Select"
+                                                                  ? Colors.grey[400]
+                                                                  : Colors.black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                              Text(
-                                                "Ride ID: ${list.bookingId}".tr,
-                                                style: TextStyle(
+                                            ),
+
+                                            // Separator
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey[100],
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  "To".tr,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
                                                     fontFamily: "Poppins",
-                                                    color: Colors.black,
-                                                    fontWeight:
-                                                        FontWeight.w500),
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
                                               ),
+                                            ),
+
+                                            // End Date Picker
+                                            Expanded(
+                                              flex: 4,
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                child: InkWell(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  onTap: () {
+                                                    controller.status.value = "1";
+                                                    datePicker();
+                                                  },
+                                                  child: Container(
+                                                    height: 45,
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      border: Border.all(
+                                                        color: MyColors.buttonColor.withOpacity(0.3),
+                                                        width: 1.5,
+                                                      ),
+                                                    ),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.calendar_today_rounded,
+                                                          size: 18,
+                                                          color: MyColors.primary,
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Expanded(
+                                                          child: Text(
+                                                            controller.endDate.value,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontFamily: "Poppins",
+                                                              color: controller.endDate.value == "Select"
+                                                                  ? Colors.grey[400]
+                                                                  : Colors.black,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Print Button
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: Obx(() {
+                                        if (controller.receiptLoader.value) {
+                                          return const SizedBox(
+                                            width: 45,
+                                            height: 45,
+                                            child: Center(child: CupertinoActivityIndicator()),
+                                          );
+                                        }
+                                        return ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: MyColors.primary,
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            if (controller.startDate.value != "Select" &&
+                                                controller.endDate.value != "Select") {
+                                              controller.printReceipt(
+                                                  controller.startDate.value,
+                                                  controller.endDate.value,
+                                                  context
+                                              );
+                                            } else {
+                                              customSnackBar("Please select both dates".tr);
+                                            }
+                                          },
+                                          child: Text(
+                                            "Print".tr,
+                                            style: const TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: controller.transactionList.length,
+                                  itemBuilder: (context, index) {
+                                    final transaction = controller.transactionList[index];
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                      child: Card(
+                                        color: Colors.white,
+                                        elevation: 4,
+                                        shape: RoundedRectangleBorder(
+                                          side: BorderSide(color: MyColors.primary.withOpacity(0.2), width: 1),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              // Header Row (Status & Amount)
                                               Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  Wrap(
+                                                  Chip(
+                                                    label: Text(
+                                                      transaction.status.toUpperCase(),
+                                                      style: const TextStyle(
+                                                        fontSize: 9,
+                                                        fontFamily: "Poppins",
+                                                        fontWeight: FontWeight.w600,
+                                                        letterSpacing: 0.5,
+                                                      ),
+                                                    ),
+                                                    backgroundColor: MyColors.primary.withOpacity(0.1),
+                                                    visualDensity: VisualDensity.compact,
+                                                  ),
+                                                  Text(
+                                                    "KSh ${transaction.driverEarning}",
+                                                    style: const TextStyle(
+                                                      fontFamily: "Poppins",
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 12),
+
+                                              // Ride ID
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.receipt, size: 18, color: Colors.grey[600]),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    "Ride ID: ${transaction.bookingId}".tr,
+                                                    style: TextStyle(
+                                                      fontFamily: "Poppins",
+                                                      color: Colors.grey[800],
+                                                      fontWeight: FontWeight.w500,
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 12),
+
+                                              // Balance Information
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Row(
                                                     children: [
+                                                      Icon(Icons.account_balance_wallet, size: 18, color: Colors.grey[600]),
+                                                      const SizedBox(width: 8),
                                                       Text(
                                                         "Balance:".tr,
                                                         style: TextStyle(
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            fontSize: 13,
-                                                            color: Colors.black,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w400),
+                                                          fontFamily: "Poppins",
+                                                          color: Colors.grey[700],
+                                                          fontSize: 14,
+                                                        ),
                                                       ),
-                                                      SizedBox(
-                                                        width: 5.0,
-                                                      ),
+                                                      const SizedBox(width: 4),
                                                       Text(
-                                                        "KSh ${list.driverEarning}",
+                                                        "KSh ${transaction.driverEarning}",
                                                         style: TextStyle(
-                                                            fontSize: 13,
-                                                            fontFamily:
-                                                                "Poppins",
-                                                            color: MyColors
-                                                                .primary,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w800),
+                                                          fontFamily: "Poppins",
+                                                          color: MyColors.primary,
+                                                          fontWeight: FontWeight.w700,
+                                                          fontSize: 14,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 12),
+
+                                              // Date & Time
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                                                  const SizedBox(width: 8),
                                                   Text(
-                                                    "KSh ${list.driverEarning}",
+                                                    "${transaction.date} • ${transaction.time}",
                                                     style: TextStyle(
-                                                        fontSize: 13,
-                                                        fontFamily: "Poppins",
-                                                        color: MyColors.primary,
-                                                        fontWeight:
-                                                            FontWeight.w600),
+                                                      fontFamily: "Poppins",
+                                                      color: Colors.grey[600],
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
-                                              Wrap(
-                                                children: [
-                                                  Text(
-                                                    list.date,
-                                                    style: TextStyle(
-                                                        fontFamily: "Poppins",
-                                                        fontSize: 12,
-                                                        color: Colors.black,
-                                                        fontWeight:
-                                                            FontWeight.w400),
-                                                  ),
-                                                  SizedBox(
-                                                    width: 5.0,
-                                                  ),
-                                                  Text(
-                                                    list.time,
-                                                    style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontFamily: "Poppins",
-                                                        color: Colors.black,
-                                                        fontWeight:
-                                                            FontWeight.w400),
-                                                  ),
-                                                ],
-                                              )
                                             ],
                                           ),
                                         ),
-                                      );
-                                    }),
+                                      ),
+                                    );
+                                  },
+                                )
                               ],
                             )
                 ],

@@ -1,15 +1,10 @@
-
-import '../../../controller/auth_controller.dart';
-import '../../../controller/rating_controller.dart';
-import '../../../route_helper/route_helper.dart';
-import '../../../utils/colors.dart';
-import '../../../utils/custom_button.dart';
-import '../../../utils/snackBar.dart';
-import '../../../utils/text_field.dart';import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
+
+import '../../../Model/rating_model.dart';
+import '../../../controller/rating_controller.dart';
 import '../../../utils/colors.dart';
-import '../../../utils/custom_button.dart';
 
 class RatingScreen extends StatefulWidget {
   const RatingScreen({Key? key}) : super(key: key);
@@ -19,7 +14,6 @@ class RatingScreen extends StatefulWidget {
 }
 
 class _RatingScreenState extends State<RatingScreen> {
-
   RatingController controller = Get.put(RatingController());
 
   @override
@@ -31,146 +25,43 @@ class _RatingScreenState extends State<RatingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:AppBar(
-        iconTheme: IconThemeData(
-            color: MyColors.white
-        ),
+      appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: MyColors.primary,
+        elevation: 4,
+        shadowColor: Colors.black.withOpacity(0.3),
         title: Text("Rate & Reviews".tr,
-          style: TextStyle(fontSize: 20, color: MyColors.white),),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,)),
         centerTitle: true,
-
       ),
-
       body: Obx(() {
-        if(controller.isLoading.value){
-          return Center(child: myIndicator(),);
-        }else{
-          var list =  controller.ratingList.value!;
+        if (controller.isLoading.value) {
+          return Center(
+            child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(MyColors.primary)),
+          );
+        } else {
+          var list = controller.ratingList.value!;
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(list.totalRating,
-                      style: TextStyle(fontSize: 18),),
-                    RatingBarIndicator(
-                      rating: double.parse(list.totalRating),
-                      itemBuilder: (context, index) =>
-                          Icon(
-                            Icons.star,
-                            color: Colors.amber,
-                          ),
-                      itemCount: 5,
-                      itemSize: 25.0,
-                      direction: Axis.horizontal,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10,),
-                chartRow(context, '5', double.parse(list.rating5),Colors.green),
-                chartRow(context, '4', double.parse(list.rating4),Colors.green),
-                chartRow(context, '3', double.parse(list.rating3),Colors.green),
-                chartRow(context, '2', double.parse(list.rating2),Colors.green),
-                chartRow(context, '1', double.parse(list.rating1),Colors.green),
-
-                SizedBox(
-                  height: 20,
-                ),
-              Expanded(
-                  child: ListView.builder(
-                    itemCount: list.list.length,
-                      shrinkWrap: true,
-                      itemBuilder: (context, index) {
-                      var reverseList = list.list.reversed.toList();
-                      var lists = reverseList[index];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(50),
-                                  child: FadeInImage.assetNetwork(
-                                    placeholder: 'assets/images/loader.gif',
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                    image: lists.image,
-                                    imageErrorBuilder: (c, o, s) => Image.asset(
-                                      "assets/images/logo.png",
-                                      fit: BoxFit.cover,
-                                      height: 40,
-                                      width: 40,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                    child: Padding(
-                                      padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(lists.userName),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                lists.date+", "+lists.time,
-                                                style: TextStyle(
-                                                    color: Colors.black45,
-                                                    fontSize: 12),
-                                              ),
-                                              Column(
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      RatingBarIndicator(
-                                                        rating: double.parse(lists.rating),
-                                                        itemBuilder: (context, index) =>
-                                                            Icon(
-                                                              Icons.star,
-                                                              color: Colors.amber,
-                                                            ),
-                                                        itemCount: 5,
-                                                        itemSize: 15.0,
-                                                        direction: Axis.horizontal,
-                                                      ),
-                                                      Text(lists.rating)
-                                                    ],
-                                                  ),
-                                                  SizedBox(height: 2.0,),
-                                                  Text("Ride ID: ${lists.rateId}".tr,
-                                                    style: TextStyle(
-                                                        color: Colors.black45,
-                                                        fontSize: 12),)
-                                                ],
-                                              )
-                                            ],
-                                          ),
-
-                                        ],
-                                      ),
-                                    ))
-                              ],
-                            ),
-                            SizedBox(height: 10,),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 60),
-                              child: Container(
-                                width: Get.width/1.5,
-                                decoration: BoxDecoration(
-                                ),
-                                  child: Text(lists.feedback == ""?"":"' ${lists.feedback} '",style: TextStyle(fontWeight: FontWeight.w600,fontSize: 15),)),
-                            ),
-                            SizedBox(height: 10,)
-                          ],
-                        );
-                      },))
-              ],
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Overall Rating Card
+                  _buildOverallRating(list),
+                  const SizedBox(height: 24),
+                  // Rating Distribution
+                  _buildRatingDistribution(list),
+                  const SizedBox(height: 24),
+                  // Reviews List
+                  _buildReviewsHeader(),
+                  const SizedBox(height: 16),
+                  _buildReviewsList(list),
+                ],
+              ),
             ),
           );
         }
@@ -178,29 +69,288 @@ class _RatingScreenState extends State<RatingScreen> {
     );
   }
 
-  Widget chartRow(BuildContext context, String label, double pct, Color color) {
-    return Row(
-      children: [
-        Text(label,),
-        SizedBox(width: 8),
-        Icon(Icons.star, color: Colors.green),
-        Padding(
-          padding: EdgeInsetsDirectional.fromSTEB(8, 10, 8, 0),
-          child:Container(
-            width: Get.width * 0.65,
-            height: 20,
-            child: ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(20)),
-              child: LinearProgressIndicator(
-                backgroundColor: Colors.grey,
-                value:pct/100,
-                valueColor: AlwaysStoppedAnimation<Color>(color)),
-              ),
+  Widget _buildOverallRating(list) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Overall Rating",
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Text(list.totalRating,
+                    style: const TextStyle(
+                        fontSize: 27,
+                        fontWeight: FontWeight.bold,
+                        color: MyColors.primary)),
+
+              ],
             ),
-          ),
-        Text('${pct.toStringAsFixed(0)}',),
+            const Spacer(),
+            Column(
+              children: [
+                RatingBarIndicator(
+                  rating: double.parse(list.totalRating),
+                  itemBuilder: (context, index) => const Icon(
+                    Icons.star_rounded,
+                    color: Colors.amber,
+                  ),
+                  itemCount: 5,
+                  itemSize: 32.0,
+                ),
+                const SizedBox(height: 8),
+
+                Text("Based on ${controller.ratingList.value!.list.length} Rating",
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingDistribution(list) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Rating Distribution",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 16),
+        Column(
+          children: [
+            _buildDistributionRow('Excellent', double.parse(list.rating5), Colors.green),
+            _buildDistributionRow('Very Good', double.parse(list.rating4), Colors.lightGreen),
+            _buildDistributionRow('Good', double.parse(list.rating3), Colors.orange),
+            _buildDistributionRow('Average', double.parse(list.rating2), Colors.orangeAccent),
+            _buildDistributionRow('Poor', double.parse(list.rating1), Colors.red),
+          ],
+        ),
       ],
     );
   }
 
-}
+  Widget _buildDistributionRow(String label, double pct, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          const Icon(Icons.star, size: 18, color: Colors.amber),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Stack(
+              children: [
+                Container(
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                LayoutBuilder(
+                  builder: (context, constraints) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOut,
+                    width: constraints.maxWidth * (pct / 100),
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        colors: [color, color.withOpacity(0.7)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text('${pct.toStringAsFixed(0)}',
+              style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsHeader() {
+    return const Text("User Reviews",
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
+  }
+
+  Widget _buildReviewsList(list) {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),  // Disable inner scroll
+    shrinkWrap: true,
+      itemCount: list.list.length,
+      separatorBuilder: (context, index) => const Divider(height: 32),
+      itemBuilder: (context, index) {
+        var reverseList = list.list.reversed.toList();
+        var review = reverseList[index];
+        return _buildReviewCard(review);
+      },
+    );
+  }
+
+  Widget _buildReviewCard(ListElement review) {
+    return Card(
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User Info Row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: Image.network(
+                    review.image,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, o, s) => Container(
+                      width: 48,
+                      height: 48,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.person, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // User Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(review.userName,
+                          style: const TextStyle(
+                              color: Colors.black87,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${review.date} • ${review.time}",
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                // Rating and Ride ID
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    RatingBarIndicator(
+                      rating: double.parse(review.rating),
+                      itemBuilder: (context, index) => const Icon(
+                        Icons.star_rounded,
+                        color: Colors.amber,
+                      ),
+                      itemCount: 5,
+                      itemSize: 20,
+                    ),
+                    const SizedBox(height: 4),
+                    Text("Ride ID: ${review.rateId}",
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500])),
+                  ],
+                ),
+              ],
+            ),
+            // Feedback and Points
+            if (review.feedback.isNotEmpty ||
+                review.positivePointList.isNotEmpty ||
+                review.negativePointList.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 60, top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Feedback Text
+                    if (review.feedback.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: MyColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          review.feedback,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.black87),
+                        ),
+                      ),
+                    // Positive Points
+                    if (review.positivePointList.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: review.positivePointList.map((point) => Chip(
+                            backgroundColor: Colors.green.withOpacity(0.1),
+                            label: Text(point.positivePoint,
+                                style: const TextStyle(color: Colors.green)),
+                            avatar: const Icon(Icons.check_circle,
+                                size: 16,
+                                color: Colors.green),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          )).toList(),
+                        ),
+                      ),
+                    // Negative Points
+                    if (review.negativePointList.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: review.negativePointList.map((point) => Chip(
+                            backgroundColor: Colors.red.withOpacity(0.1),
+                            label: Text(point.negativePoint,
+                                style: const TextStyle(color: Colors.red)),
+                            avatar: const Icon(Icons.cancel,
+                                size: 16,
+                                color: Colors.red),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          )).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }}

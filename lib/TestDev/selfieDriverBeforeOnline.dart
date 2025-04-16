@@ -22,11 +22,17 @@ class SelfieScreen extends StatelessWidget {
           onPressed: () async{
            await controller.captureSelfie();
             controller.selfieUpload(() {
-
-Get.back();
+              Navigator.pop(context, true);   // <-- Yeh zaroori hai!
             },);
           }),),
       appBar: AppBar(
+        leading: GestureDetector(
+            onTap:  () {
+              Navigator.pop(context, false);
+
+
+            },
+            child: Icon(Icons.arrow_back)),
           title: const Text(
         "Take a Selfie",
         style: TextStyle(fontSize: 14),

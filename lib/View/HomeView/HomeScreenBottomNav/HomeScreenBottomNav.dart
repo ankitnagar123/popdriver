@@ -6,7 +6,7 @@ import 'package:mtaanidriver/utils/colors.dart';
 
 import '../../../controller/route_controller.dart';
 import '../drawer_tab_screen/my_ride_screen.dart';
-import '../drawer_tab_screen/ride_history.dart';
+import '../drawer_tab_screen/ride_history/ride_history.dart';
 import '../home_screen.dart';
 import '../profile_screens/profile.dart';
 import '../wallet_screen/wallet_screen.dart';

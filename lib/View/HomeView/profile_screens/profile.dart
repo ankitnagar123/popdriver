@@ -133,64 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(
                             height: 20,
                           ),
-                          Row(
-                            children: [
-                              Container(
-                                height: 35,
-                                width: 35,
-                                decoration: BoxDecoration(
-                                  color: MyColors.primary,
-                                  borderRadius: BorderRadius.circular(60),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.person,
-                                    color: MyColors.white,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                controller.Name.value,
-                                style: TextStyle(fontSize: 15),
-                              )
-                            ],
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                height: 35,
-                                width: 35,
-                                decoration: BoxDecoration(
-                                  color: MyColors.primary,
-                                  borderRadius: BorderRadius.circular(60),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.phone,
-                                    color: MyColors.white,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                controller.CountryCode.value +
-                                    " " +
-                                    controller.Contact.value,
-                                style: TextStyle(fontSize: 15),
-                              )
-                            ],
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
+                          _buildProfileInfoCard()
                           /*Row(
                             children: [
                               Container(
@@ -263,7 +206,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('No image selected.');
     }
   }
+  Widget _buildProfileInfoCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildInfoRow(Icons.person, "Full Name",
+                "${controller.Name.value} ${controller.lastName.value}"),
+            Divider(height: 32),
+            _buildInfoRow(Icons.phone, "Contact Number",
+                "${controller.CountryCode.value} ${controller.Contact.value}"),
+            // Uncomment if needed
+            // Divider(height: 32),
+            // _buildInfoRow(Icons.email, "Email Address", controller.Email.value),
+          ],
+        ),
+      ),
+    );
+  }
 
+  Widget _buildInfoRow(IconData icon, String title, String value) {
+    return ListTile(
+      leading: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: MyColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: MyColors.primary, size: 24),
+      ),
+      title: Text(title, style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500)),
+      subtitle: Text(value, style: TextStyle(
+          fontSize: 16,
+          color: Colors.black87,
+          fontWeight: FontWeight.w600)),
+      contentPadding: EdgeInsets.symmetric(vertical: 4),
+    );
+  }
 }
 
 class DetailScreen extends StatelessWidget {

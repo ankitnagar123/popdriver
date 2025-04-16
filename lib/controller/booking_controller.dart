@@ -275,7 +275,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     controller.driverArriveValue.value = false;
     controller.arriveDriver.value = "";
     controller.painButton.value = false;
-    controller.onOff.value = true;
+    // controller.onOff.value = true;
     controller.hide.value = false;
     completeText.value = "";
   }
