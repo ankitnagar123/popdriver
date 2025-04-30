@@ -10,9 +10,19 @@ class MyColors {
   // static const Color primary = Color(0xffd2c51f);
   static const Color primary = Color(0xff019ba5);
   static const Color buttonColor = Color(0xff019ba5);
-  static const Color TextField = Color(0xffE7D2CC);
+  static const Color TextField = Color(0xfff4ecea);
   static const Color orange = Color(0xffF15E2E);
 
   static  String InviteCode = "";
+  static  String walletAmount = "";
+  static  String name = "";
+  static  String image = "";
+  static  String email  = "";
+  static  String phone  = "";
+  static  String InviteUrl = "";
   static  String MemberShipId = "";
+  static  String MemberShipType = "";
+  static  String MemberShipExpiry = "";
+  static  String MemberShipStatus = "";
+  static  String MemberShipCommision = "";
 }

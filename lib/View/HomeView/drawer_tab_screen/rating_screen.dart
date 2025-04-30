@@ -30,10 +30,19 @@ class _RatingScreenState extends State<RatingScreen> {
         backgroundColor: MyColors.primary,
         elevation: 4,
         shadowColor: Colors.black.withOpacity(0.3),
-        title: Text("Rate & Reviews".tr,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,)),
+        title:  Row(
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 37,
+            ),
+
+          ],
+        ),
         centerTitle: true,
       ),
       body: Obx(() {
@@ -50,6 +59,13 @@ class _RatingScreenState extends State<RatingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
+                  Center(
+                    child: Text("Rate & Reviews".tr,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,)),
+                  ),
                   // Overall Rating Card
                   _buildOverallRating(list),
                   const SizedBox(height: 24),

@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:dio/dio.dart' as DIO;
+import 'package:mtaanidriver/controller/profile_controller.dart';
 
 import '../../Model/fetch_cart_model.dart';
 import '../../Network/api_service.dart';
@@ -28,7 +29,7 @@ import 'home_screen_controller.dart';
 
 class AuthController extends GetxController {
   DIO.Dio dioClient = DIO.Dio();
-  RxString language = "spanish".obs;
+  RxString language = "English".obs;
   var destLocation = LatLng(22.719568, 75.857727).obs;
   RxString location = "".obs;
   var otp = "".obs;
@@ -64,6 +65,7 @@ class AuthController extends GetxController {
 
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   SecureStorageService secure = SecureStorageService();
+  ProfileController profileController = ProfileController();
 
   var companyList = <TaxiCompanyFetchModel>[].obs;
 
@@ -476,7 +478,7 @@ class AuthController extends GetxController {
         customSnackBar("Logout Successfully".tr);
       } else {
         logoutLoader.value = false;
-        customSnackBar(result.toString());
+        // customSnackBar(result.toString());
       }
     } catch (e) {
       logoutLoader.value = false;
@@ -734,7 +736,9 @@ class AuthController extends GetxController {
           _showSuccessDialog();
         } else {
           Get.back();
+          Get.find().fetchDriverDetail();
           customSnackBar("🚀 Plan upgraded successfully.");
+          profileController.fetchDriverDetail();
         }
       } else {
         customSnackBar("⚠️ ${jsonString['result']}");

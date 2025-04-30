@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:dio/dio.dart'as DIO;
 import 'package:mtaanidriver/controller/auth_controller.dart';
+import '../../Model/DriverListModel.dart';
 import '../../Model/print_model.dart';
 import '../../Model/wallet_history_model.dart';
 import '../../Network/api_service.dart';
@@ -24,8 +25,8 @@ class WalletController extends GetxController{
 
   var walletFetchLoader = false.obs;
   var walletFetchHistoryLoader = false.obs;
+  var fetchDriverLoader = false.obs;
   var receiptLoader = false.obs;
-  var buttonColor = true.obs;
   RxString walletBalance = "".obs;
   RxString adminAccount = "".obs;
 
@@ -37,6 +38,82 @@ class WalletController extends GetxController{
   var printList = <PrintModel>[].obs;
 
   var transactionList = <WalletHistoryModel>[].obs;
+  var driverList = <DriverListModel>[].obs;        // For filtered list (UI)
+  var allDrivers = <DriverListModel>[].obs;        // Store full original list
+
+  void fetchDriverListApi() async {
+    fetchDriverLoader.value = true;
+
+    Map<String, dynamic> walletHistory = {
+      "id": await secure.readData(secure.user_id),
+      "type": "Driver"
+    };
+
+    try {
+      final response = await apiService.postData(URLS.DRIVER_LIST_FETCH, walletHistory);
+      print("fetchDriverListApi response-------->:${response.body}");
+
+      var fetchedDrivers = driverListModelFromJson(response.body);
+
+      allDrivers.value = fetchedDrivers;      // Save full list
+      driverList.value = fetchedDrivers;      // Initial filtered list is full
+
+      fetchDriverLoader.value = false;
+    } catch (e) {
+      fetchDriverLoader.value = false;
+      print("Exception-----${e.toString()}");
+    }
+  }
+  void filterDrivers(String query) {
+    if (query.isEmpty) {
+      driverList.value = allDrivers;
+    } else {
+      final search = query.toLowerCase();
+      driverList.value = allDrivers.where((driver) {
+        final name = "${driver.firstName} ${driver.lastName}".toLowerCase();
+        final phone = driver.contact.toLowerCase();
+        final email = driver.email.toLowerCase();
+        return name.contains(search) || phone.contains(search) || email.contains(search);
+      }).toList();
+    }
+  }
+
+  Future<void> sendWalletAmountToDriver(String receiverId ,amount,VoidCallback call) async {
+    checkPaymentLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "driver_id": await secure.readData(secure.user_id),
+      "reciever_id":receiverId,
+      "amount":amount
+    };
+    log("sendWalletAmountToDriver  Check: $map");
+
+    try {
+      final response = await apiService.postDatatoken(URLS.SEND_WALLET_AMOUNT_TO_DRIVER, map);
+      var jsonString = jsonDecode(response.data);
+      log("Payment Status Response Check: ${jsonString['result']}");
+
+      if (jsonString['result'] == "success") {
+        call();
+        walletFetch();
+        customSnackBar("✅Send Wallet Payment successful!");
+
+      } else {
+        var jsonString = jsonDecode(response.data);
+
+        customSnackBar(jsonString['result'].toString());
+      }
+    } catch (e) {
+      log("Exception during payment status check", error: e.toString());
+      customSnackBar("❌ Error checking payment status.");
+    } finally {
+      checkPaymentLoader.value = false;
+    }
+  }
+
+
+
+
 
   void walletFetch()async{
 
@@ -68,6 +145,7 @@ class WalletController extends GetxController{
 
   }
 
+
   void fetchTransaction()async{
 
     walletFetchHistoryLoader.value = true;
@@ -90,6 +168,8 @@ class WalletController extends GetxController{
     }
 
   }
+
+
 
   void printReceipt(String start_date, String end_date,BuildContext context)async{
     receiptLoader.value = true;
@@ -202,15 +282,13 @@ class WalletController extends GetxController{
   var checkPaymentLoader = false.obs;
   var withdrawLoader = false.obs;
 
-  void addWalletAmountPaymentInitialize(String amount ,contactNumber,payReason,name,VoidCallback callback) async {
+  void addWalletAmountPaymentInitialize(String amount ,contactNumber,VoidCallback callback) async {
     balanceAddLoader.value = true;
 
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
       "amount": amount,
       "phone": contactNumber,
-      "name": name,
-      "payment_reason": payReason,
     };
     log("Payment Request Params Initialize: $map");
 
@@ -223,7 +301,7 @@ class WalletController extends GetxController{
         callback();
         customSnackBar(jsonString['result'].toString());
         showPaymentProcessingDialog(Get.context!, () {
-          checkPaymentStatus(amount,contactNumber,payReason,name);
+          checkPaymentStatus(amount,contactNumber);
         });
         // 🔁 Wait 30 seconds before checking payment
         /* await Future.delayed(Duration(seconds: 30));
@@ -239,7 +317,7 @@ class WalletController extends GetxController{
     }
   }
 
-  Future<void> checkPaymentStatus(String amount ,contactNumber,payReason,name) async {
+  Future<void> checkPaymentStatus(String amount ,contactNumber) async {
     checkPaymentLoader.value = true;
 
     Map<String, dynamic> map = {
@@ -255,7 +333,7 @@ class WalletController extends GetxController{
 
       if (jsonString['result'] == "paid") {
         customSnackBar("✅ Payment successful!");
-         addWalletAmountPaymentMain(amount,contactNumber,payReason,name,() {
+         addWalletAmountPaymentMain(amount,contactNumber,() {
 
         },);
       } else {
@@ -269,15 +347,13 @@ class WalletController extends GetxController{
     }
   }
 
-  void addWalletAmountPaymentMain(String amount ,contactNumber,payReason,name,VoidCallback callback) async {
+  void addWalletAmountPaymentMain(String amount ,contactNumber,VoidCallback callback) async {
     balanceAddLoader.value = true;
 
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
       "amount": amount,
       "phone": contactNumber,
-      "name": name,
-      "payment_reason": payReason,
     };
     log("Payment Request Response Main: $map");
 

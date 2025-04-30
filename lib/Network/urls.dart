@@ -27,7 +27,7 @@ class URLS {
   static const String fetch_membership_list = "https://ride.mtaani.com/API/fetch_membership_list.php";
   static const String driver_add_membership = "driver_add_membership.php";
   static const String check_payment_status = "check_payment_status.php";
-  static const String driver_add_membership_complete = "payment_success.php";
+  static const String driver_add_membership_complete = "membership_payment.php";
 
   /*--------------------------------------------DEVICE_ID_UPDATE------------------------------------*/
 
@@ -51,10 +51,13 @@ class URLS {
   /*--------------------------------------------WALLET PROCESS------------------------------------*/
 
   static const String DRIVER_WALLET_FETCH = "fetch_driver_wallet.php";
+  static const String DRIVER_LIST_FETCH = "fetch_user_driver_list.php";
+  static const String SEND_WALLET_AMOUNT_TO_DRIVER = "send_driver_wallet_amount.php";
   static const String DRIVER_WALLET_TRANSACTION_HISTORY = "fetch_driver_wallet_transaction_history.php";
   static const String DRIVER_WALLET_HISTORY_DOWNLOAD = "https://ride.mtaani.com/API/salary_exel_file.php";
   static const String add_driver_amount = "add_driver_amount.php";
   static const String wallet_payment_driver_main = "wallet_payment_driver.php";
+
   static const String add_driver_withdraw_request = "add_driver_withdraw_request.php";
 
 

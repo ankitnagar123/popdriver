@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:mtaanidriver/utils/colors.dart';
 
 import '../../../controller/route_controller.dart';
+import '../Menu_bar/menu_bar_screen.dart';
 import '../drawer_tab_screen/my_ride_screen.dart';
 import '../drawer_tab_screen/ride_history/ride_history.dart';
 import '../home_screen.dart';
@@ -27,7 +28,8 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
     const HomeScreen(),
     const MyRideScreen(),
     const WalletScreen(),
-    const ProfileScreen(),
+    // const ProfileScreen(),
+    MtaaniSidebar(),
   ];
 
   Future<bool> _onWillPop() async {
@@ -226,12 +228,11 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                         style: ButtonStyle(
                             shape: WidgetStatePropertyAll(CircleBorder(side: BorderSide(color:routeController.pageIndex.value == 3? Colors.white70:Colors.transparent)))
                         ),
-                        icon: Icon(Icons.person,
+                        icon: Icon(Icons.list_alt,
                           size: 25,
                           color: routeController.pageIndex.value == 3
                               ? Colors.white
-                              : Colors.white70,
-                        ),
+                              : Colors.white70,),
                         onPressed: () {
                           HapticFeedback.lightImpact(); // <-- VIBRATE HERE
 

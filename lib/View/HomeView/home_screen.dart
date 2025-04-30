@@ -1,6 +1,8 @@
 
 import 'dart:developer';
 
+import 'package:mtaanidriver/View/HomeView/Menu_bar/menu_bar_screen.dart';
+
 import '../../TestDev/selfieDriverBeforeOnline.dart';
 import '../../controller/auth_controller.dart';
 import '../../controller/booking_controller.dart';
@@ -8,6 +10,7 @@ import '../../controller/home_screen_controller.dart';
 import '../../controller/my_ride_controller.dart';
 import '../../controller/permision_controller.dart';
 import '../../controller/profile_controller.dart';
+import '../../controller/route_controller.dart';
 import '../../route_helper/route_helper.dart';
 import '../../utils/CustomRideStart.dart';
 import '../../utils/colors.dart';
@@ -76,6 +79,7 @@ print("-----------message");
  /* Timer? timer1;
   Timer? timer2;*/
 
+  RouteController routeController = Get.put(RouteController());
 
   void getData() async {
 
@@ -107,7 +111,7 @@ print("-----------message");
     return Obx(() {
       return  Scaffold(
         key: _scaffoldKey,
-        drawer: MainDrawer(),
+        
         body: Stack(
           children: [
             GoogleMap(
@@ -148,7 +152,7 @@ print("-----------message");
                   children: [
                     InkWell(
                       onTap: () {
-                        _scaffoldKey.currentState!.openDrawer();
+                        Get.to(()=>MtaaniSidebar(),arguments: "Home");
                       },
                       child: Icon(
                         Icons.menu,
@@ -219,11 +223,14 @@ print("-----------message");
                               }
                             })
                             : Switch(
+
                           value: contoller.onOff.value,
-                          activeColor: contoller.onOff.value == true
-                              ? Colors.green
-                              : Colors.grey,
-                          onChanged: null,
+
+                          activeTrackColor: Colors.green,
+
+                          onChanged: (value) {
+                            customSnackBar("You can't offline until booking completed");
+                          },
                         )
                       ],
                     )

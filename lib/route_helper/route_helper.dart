@@ -130,7 +130,7 @@ class RouteHelper {
   static  List<GetPage> routes = [
 
   GetPage(name: splash, page: ()=>  SplashScreen()),
-  GetPage(name: onBoarding, page: ()=> const OnBoardingScreen()),
+  GetPage(name: onBoarding, page: ()=> const OnboardingScreen()),
   GetPage(name: login, page: ()=> const LoginScreen()),
   GetPage(name: signUp, page: ()=> const SignUpScreen()),
   GetPage(name: forgetPassword, page: ()=> const ForgotPassword()),

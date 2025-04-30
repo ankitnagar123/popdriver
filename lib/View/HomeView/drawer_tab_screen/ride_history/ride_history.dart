@@ -40,8 +40,20 @@ class _RideHistoryState extends State<RideHistory> {
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text("Ride History".tr,
-          style: TextStyle(fontSize: 20, color: MyColors.white,fontFamily: "Poppins"),),
+        title:   Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 33,
+            ),
+
+          ],
+        ),
         centerTitle: true,
 
       ),
@@ -57,11 +69,15 @@ class _RideHistoryState extends State<RideHistory> {
             child: Text('No History Found'),
           );*/
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
+              Center(
+                child: Text("Ride History".tr,
+                  style: TextStyle(fontSize: 18, color: MyColors.black,fontFamily: "Poppins"),),
+              ),
+              SizedBox(height: 5,),
               _buildStatsRow(),
               SizedBox(
                 height: 20,
@@ -839,7 +855,7 @@ class _RideHistoryState extends State<RideHistory> {
 
 
   void _handleRideTap(dynamic ride) {
-    if (ride.status == "Complete") {
+    // if (ride.status == "Complete") {
       controller.fetchDriverBookingDetails(
         ride.bookingId,
             () {
@@ -850,7 +866,7 @@ class _RideHistoryState extends State<RideHistory> {
           );
         },
       );
-    }
+    // }
   }
 
   Widget _buildRideDetailsDialog() {

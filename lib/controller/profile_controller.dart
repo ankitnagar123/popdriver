@@ -93,7 +93,13 @@ class ProfileController extends GetxController{
         String vehicle_colour = jsonString["vehicle_colour"].toString();
         String car_id = jsonString["car_id"].toString();
         String invite = jsonString["invite_code"].toString();
+        String walletAmount = jsonString["wallet_amount"].toString();
+        String inviteUrl = jsonString["invite_url"].toString();
         String membership_id = jsonString["membership_id"].toString();
+        String membership_status = jsonString["membership_description"].toString();
+        String member_expiry_date = jsonString["member_expiry_date"].toString();
+        String membership_type = jsonString["membership_type"].toString();
+        String membership_commission = jsonString["membership_commission"].toString();
 
 
         Image.value = image;
@@ -119,10 +125,21 @@ class ProfileController extends GetxController{
         color.value = vehicle_colour;
         carId.value = car_id;
         MyColors.InviteCode = invite;
+        MyColors.walletAmount = walletAmount;
+        MyColors.name = "$name $lastname";
+        MyColors.email = email;
+        MyColors.phone = country+contact;
+        MyColors.image = image;
+        MyColors.InviteUrl = inviteUrl;
         MyColors.MemberShipId = membership_id;
+        MyColors.MemberShipStatus = membership_status;
+        MyColors.MemberShipType = membership_type;
+        MyColors.MemberShipExpiry = member_expiry_date;
+        MyColors.MemberShipCommision = membership_commission;
 
-        log("memberShip_id--------->${membership_id}");
-        log("licenceExpiry--------->${licencedate}");
+        log("memberShip_id--------->$membership_id");
+        log("licenceExpiry--------->$licencedate");
+        log("MyColors.InviteCode--------->${MyColors.InviteCode}");
 
         secure.writeData(secure.user_name, Name.value+" "+lastName.value);
         fetchDetailLoader.value = false;

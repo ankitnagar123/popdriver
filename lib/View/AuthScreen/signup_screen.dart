@@ -1,4 +1,7 @@
 import 'dart:developer';
+import 'package:mtaanidriver/View/HomeView/support_screen/privacy_policy.dart';
+import 'package:mtaanidriver/View/HomeView/support_screen/term_condition.dart';
+
 import '../../route_helper/route_helper.dart';
 import '../../utils/colors.dart';
 import '../../utils/shared_preferences.dart';
@@ -298,8 +301,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 SizedBox(
-                  height: 50,
-                  width: 30,
+                  height: 40,
+                  width: 25,
                   child: Checkbox(
                     //visualDensity: VisualDensity(horizontal:-4),
                       checkColor: MyColors.white,
@@ -318,11 +321,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: TextStyle(color: MyColors.DarkBlue, fontSize: 10),
                 ),
                 SizedBox(
+                  width: 3,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Get.to(()=>TermCondition());
+                  },
+                  child: Text(
+                    "terms of service and ".tr,
+                    style: TextStyle(color: MyColors.primary, fontSize: 10),
+                  ),
+                ),
+                SizedBox(
                   width: 5,
                 ),
-                Text(
-                  "terms of service and privacy policy".tr,
-                  style: TextStyle(color: MyColors.primary, fontSize: 10),
+                GestureDetector(
+                  onTap: () {
+                    Get.to(()=>PrivacyPolicy());
+                  },
+                  child: Text(
+                    "privacy policy".tr,
+                    style: TextStyle(color: MyColors.primary, fontSize: 10),
+                  ),
                 ),
               ],
             ),

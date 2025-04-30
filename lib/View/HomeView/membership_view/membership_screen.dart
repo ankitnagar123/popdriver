@@ -15,7 +15,7 @@ import '../../../utils/snackBar.dart';
 import 'membership_flow.dart';
 
 class MemberShipScreen extends StatefulWidget {
-  String type = "";
+  String type ;
 
   MemberShipScreen({super.key, required this.type});
 
@@ -41,399 +41,306 @@ class _MemberShipScreenState extends State<MemberShipScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: InkWell(
-            onTap: () {
-              if (widget.type == "signup") {
-                Get.offAllNamed(RouteHelper.getLoginScreenRoute());
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
-            child: Icon(Icons.arrow_back, color: Colors.white)),
-        backgroundColor: MyColors.primary,
-        title: Text(
-          "MemberShip".tr,
-          style: TextStyle(
-              fontSize: 20, color: MyColors.white, fontFamily: "Poppins"),
-        ),
-        centerTitle: true,
-      ),
-      body: Obx(() {
-        if (controller.memberShipLoader.value) {
-          return Center(
-            child: CupertinoActivityIndicator(),
-          );
-        } else if (controller.memberShipList.isEmpty) {
-          return Center(
-            child: Text("Plane not found".tr),
-          );
-        } else {
-          return Column(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // This is your manual back logic
+          if (widget.type == "signup") {
+            Get.offAllNamed(RouteHelper.getLoginScreenRoute());
+          } else {
+            Get.back();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          leading: InkWell(
+              onTap: () {
+                Get.back();
+                  if (widget.type == "signup") {
+                    Get.offAllNamed(RouteHelper.getLoginScreenRoute());
+                  } else {
+                    Get.back();
+                  }
+
+              },
+              child: Icon(Icons.arrow_back, color: Colors.white)),
+          backgroundColor: MyColors.primary,
+          title:   Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child:/* ListView.separated(
-                    itemCount: controller.memberShipList.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) {
+              Image.asset(
+                'assets/images/headLogo.png',
+                height: 28,
+              ),  Image.asset(
+                color: Colors.white,
+                'assets/images/stearing.png',
+                height: 33,
+              ),
 
-                      final plan = controller.memberShipList[index];
-                      final isSelected = membership == plan.membershipId;
+            ],
+          ),
+          centerTitle: true,
+        ),
+        body: Obx(() {
+          if (controller.memberShipLoader.value) {
+            return Center(
+              child: CupertinoActivityIndicator(),
+            );
+          } else if (controller.memberShipList.isEmpty) {
+            return Center(
+              child: Text("Plane not found".tr),
+            );
+          } else {
+            return Column(
+              children: [
+                SizedBox(height: 5,),
+                Text(
+                  "Membership".tr,
+                  style: TextStyle(
+                      fontSize: 18, color: MyColors.black, fontFamily: "Poppins"),
+                ),
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xff019ba5), Color(0xff017f91)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                Container(
+                  padding: EdgeInsets.all(7),
+                  margin: EdgeInsets.all(5),
+width: MediaQuery.of(context).size.width/1.2,
+                  decoration: BoxDecoration(color: Colors.black,borderRadius:  BorderRadius.circular(10),border: Border.all(color: MyColors.primary,width: 2)),
+                  child: Column(children: [
+                    Text(
+                      "YOUR CURRENT PLAN",
+                      style: const TextStyle(
+                        wordSpacing: 2,
+                        letterSpacing: 2,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      MyColors.MemberShipType.toUpperCase(),
+                      style: const TextStyle(
+                        wordSpacing: 1,
+                        letterSpacing: 1,
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+
+                      children: [
+                        Text(
+                          "Commission ${MyColors.MemberShipCommision}%  Expire ${MyColors.MemberShipExpiry}",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.white70,
+
+                            fontWeight: FontWeight.w500,
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 10,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
                         ),
-                        padding: const EdgeInsets.all(15),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ClipOval(
+                      ],
+                    ),
+                  ],),
+                ),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child:
+                    ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                      itemCount: controller.memberShipList.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) {
+                        final plan = controller.memberShipList[index];
+                        final isSelected = membership == plan.membershipId;
+
+                        return Container(
+                             decoration: _getPlanDecoration(plan.membershipType,isSelected),
+      /*BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xff019ba5), Color(0xff017f91)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 10,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),*/
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  ClipOval(
                                     child: Image.asset(
-                                  'assets/images/background.png',
-                                  fit: BoxFit.contain,
-                                  height: 40,
-                                )),
-                                Align(
-                                  alignment: Alignment.topRight,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
+                                      'assets/images/background.png',
+                                      fit: BoxFit.cover,
+                                      height: 40,
+                                      width: 40,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: plan.membershipType == "Gold" ||
-                                              plan.membershipType == "gold"
+                                      color: plan.membershipType.toLowerCase() == "gold"
                                           ? Colors.orangeAccent
-                                          : plan.membershipType == "Silver"
-                                              ? Colors.grey.shade400
-                                              : plan.membershipType == "Bronze"
-                                                  ? Color(0xffCE8946)
-                                                  : Colors.white24,
+                                          : plan.membershipType.toLowerCase() == "silver"
+                                          ? Colors.grey.shade400
+                                          : plan.membershipType.toLowerCase() == "bronze"
+                                          ? const Color(0xffCE8946)
+                                          : Colors.white24,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       plan.membershipType,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 5),
-
-                            Text(
-                              plan.name,
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              plan.price == "0" ? "FREE" : " KSh ${plan.price}",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
+
+                              const SizedBox(height: 10),
+
+                              /// Plan Name
+                              Text(
+                                plan.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 5),
 
+                              const SizedBox(height: 5),
 
-                            Row(
-                              children: [
-                                Text(
-                                  "Government Tax (VAT) : ",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
-                                  ),
+                              /// Price
+                              Text(
+                                plan.price == "0" ? "FREE" : "KSh ${plan.price}",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
                                 ),
-                                Text(
-                                  plan.tax,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  "Commission : ",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.normal,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  plan.commission,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 5,),
-                            Text(
-                              plan.description,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.white70,
                               ),
-                            ),
 
-                            const SizedBox(height: 20),
-                            Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSelected ? MyColors.black : Colors.white,
-                                  foregroundColor: isSelected ? Colors.black87 : MyColors.primary,
-                                    shape: StadiumBorder(),
-                                  padding:  EdgeInsets.symmetric(
-                                      horizontal: 10, vertical:isSelected?15:10),
-                                  elevation: 5,
+                              const SizedBox(height: 10),
+
+                              /// Tax & Commission
+                              _buildInfoRow("Government Tax (VAT) :", "${plan.tax}%"),
+                              _buildInfoRow("Commission :", "${plan.commission}%"),
+
+                              const SizedBox(height: 10),
+
+                              /// Description
+                              Text(
+                                plan.description,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
                                 ),
-                                onPressed: isSelected
-                                    ? null
-                                    : () {
-                                  setState(() {
-                                    membership = plan.membershipId;
-                                    amount = plan.price;
-                                    MyColors.MemberShipId = plan.membershipId;  // assign to global here
-                                    log("membership selected -> $membership");
-                                  });
-                                },
+                              ),
 
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      isSelected ? 'Selected ${plan.name}' : 'Choose ${plan.name}',
-                                      style: TextStyle(fontWeight: FontWeight.bold,fontSize: 12,color:  isSelected ? Colors.white:Colors.black87),
+                              const SizedBox(height: 20),
+
+                              /// Select Button
+                              Center(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isSelected ? Colors.black : Colors.white,
+                                    foregroundColor: isSelected ? Colors.white : Colors.black,
+                                    shape: const StadiumBorder(),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: isSelected ? 15 : 12,
                                     ),
-                                    Icon(Icons.check_circle,
-                                      color: isSelected ?  Colors.white:MyColors.DarkBlue,size: isSelected ? 30:20, ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
-                      );
-                    },
-                  ),*/
-                  ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                    itemCount: controller.memberShipList.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) {
-                      final plan = controller.memberShipList[index];
-                      final isSelected = membership == plan.membershipId;
-
-                      return Container(
-                           decoration: _getPlanDecoration(plan.membershipType),
-/*BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xff019ba5), Color(0xff017f91)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 10,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),*/
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// Top Row — Image and Badge
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ClipOval(
-                                  child: Image.asset(
-                                    'assets/images/background.png',
-                                    fit: BoxFit.cover,
-                                    height: 40,
-                                    width: 40,
+                                    elevation: isSelected ? 2 : 5,
                                   ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: plan.membershipType.toLowerCase() == "gold"
-                                        ? Colors.orangeAccent
-                                        : plan.membershipType.toLowerCase() == "silver"
-                                        ? Colors.grey.shade400
-                                        : plan.membershipType.toLowerCase() == "bronze"
-                                        ? const Color(0xffCE8946)
-                                        : Colors.white24,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    plan.membershipType,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                  onPressed: isSelected
+                                      ? null
+                                      : () {
+                                    setState(() {
+                                      membership = plan.membershipId;
+                                      amount = plan.price;
 
-                            const SizedBox(height: 10),
-
-                            /// Plan Name
-                            Text(
-                              plan.name,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(height: 5),
-
-                            /// Price
-                            Text(
-                              plan.price == "0" ? "FREE" : "KSh ${plan.price}",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            /// Tax & Commission
-                            _buildInfoRow("Government Tax (VAT) :", "${plan.tax}%"),
-                            _buildInfoRow("Commission :", "${plan.commission}%"),
-
-                            const SizedBox(height: 10),
-
-                            /// Description
-                            Text(
-                              plan.description,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            /// Select Button
-                            Center(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSelected ? Colors.black : Colors.white,
-                                  foregroundColor: isSelected ? Colors.white : Colors.black,
-                                  shape: const StadiumBorder(),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: isSelected ? 15 : 12,
-                                  ),
-                                  elevation: isSelected ? 2 : 5,
-                                ),
-                                onPressed: isSelected
-                                    ? null
-                                    : () {
-                                  setState(() {
-                                    membership = plan.membershipId;
-                                    amount = plan.price;
-                                    MyColors.MemberShipId = plan.membershipId;
-                                  });
-                                },
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      isSelected ? 'Selected ${plan.name}' : 'Choose ${plan.name}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? Colors.white : Colors.black87,
+                                      log("-Membership ID--$membership-------------Amount-----$amount");
+                                      // MyColors.MemberShipId = plan.membershipId;
+                                    });
+                                  },
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isSelected ? 'Selected ${plan.name}' : 'Choose ${plan.name}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? Colors.white : Colors.black87,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: isSelected ? 26 : 22,
-                                      color: isSelected ? Colors.white : MyColors.DarkBlue,
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: isSelected ? 26 : 22,
+                                        color: isSelected ? Colors.green : MyColors.DarkBlue,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        }
-      }),
-      bottomNavigationBar: Container(
-        margin: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        child: Obx(() {
-          return custom_buttons(
-              loading: controller.memberShipLoader1.value,
-              voidCallback: () {
+              ],
+            );
+          }
+        }),
+        bottomNavigationBar: Container(
+          margin: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+          child: Obx(() {
+            return custom_buttons(
+                loading: controller.memberShipLoader1.value,
+                voidCallback: () {
+                  log("-Membership ID--$membership-------------Amount-----$amount");
+
                   if(membership == ""){
 
-                  customSnackBar("please select any plan".tr);
-                }else{
+                    customSnackBar("please select any plan".tr);
+                  }else if(amount  ==""){
+                    customSnackBar("select plan".tr);
+
+                    /*  Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MPesaPaymentFlow()),
+                      );*/
+                    /*  MyColors.MemberShipId = membership;  // ensure global value is also synced
+                    controller.buyMemberShip(membership.toString(),"numberadd kro",amount, widget.type,"Membership");*/
+                  }else{
+                    amount =="0"?controller.buyMemberShipComplete(membership,widget.type):
                     showMpesaPaymentSheet(context,amount,membership,widget.type);
-                  /*  Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MPesaPaymentFlow()),
-                    );*/
-                  /*  MyColors.MemberShipId = membership;  // ensure global value is also synced
-                  controller.buyMemberShip(membership.toString(),"numberadd kro",amount, widget.type,"Membership");*/
-                }
-              },
-              text: "Get ".tr);
-        }),
+
+                  }
+                },
+                text: widget.type =="signup"?"Select Plan": "Update Plan ".tr);
+          }),
+        ),
       ),
     );
   }
@@ -464,78 +371,101 @@ class _MemberShipScreenState extends State<MemberShipScreen> {
       ),
     );
   }
-  BoxDecoration _getPlanDecoration(String type) {
+  BoxDecoration _getPlanDecoration(String type, bool isSelected) {
+    // Common shadow for all plans
+    final List<BoxShadow> baseShadow = [
+      BoxShadow(
+        color: Colors.black26,
+        blurRadius: 8,
+        offset: Offset(0, 4),
+      ),
+    ];
+
+    // Glow effect for selected plans
+    Color glowColor;
+    switch (type.toLowerCase()) {
+      case "gold":
+        glowColor = Colors.amber.withOpacity(0.6);
+        break;
+      case "silver":
+        glowColor = Colors.blueGrey.withOpacity(0.6);
+        break;
+      case "bronze":
+        glowColor = Color(0xffCD7F32).withOpacity(0.6);
+        break;
+      default:
+        glowColor = Color(0xff019ba5).withOpacity(0.6);
+    }
+
+    // Selection effects
+    final List<BoxShadow> selectedEffects = [
+      ...baseShadow,
+      BoxShadow(
+        color: glowColor,
+        spreadRadius: 2,
+        blurRadius: 20,
+        offset: Offset(0, 4),
+      ),
+    ];
+
     switch (type.toLowerCase()) {
       case "gold":
         return BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFD700), Color(0xFFF9A602)], // gold shades
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFD700), Color(0xFFF9A602)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isSelected ? selectedEffects : baseShadow,
+          border: isSelected
+              ? Border.all(color: Colors.amber, width: 2)
+              : null,
         );
 
       case "silver":
         return BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFB0BEC5), Color(0xFF90A4AE)], // silver shades
+          gradient: LinearGradient(
+            colors: [Color(0xFFB0BEC5), Color(0xFF90A4AE)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isSelected ? selectedEffects : baseShadow,
+          border: isSelected
+              ? Border.all(color: Colors.blueGrey, width: 2)
+              : null,
         );
 
       case "bronze":
         return BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFCD7F32), Color(0xFFAD6F25)], // bronze shades
+          gradient: LinearGradient(
+            colors: [Color(0xFFCD7F32), Color(0xFFAD6F25)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isSelected ? selectedEffects : baseShadow,
+          border: isSelected
+              ? Border.all(color: Color(0xffCD7F32), width: 2)
+              : null,
         );
 
       default:
         return BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xff019ba5), Color(0xff017f91)], // default blue
+          gradient: LinearGradient(
+            colors: [Color(0xff019ba5), Color(0xff017f91)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+          boxShadow: isSelected ? selectedEffects : baseShadow,
+          border: isSelected
+              ? Border.all(color: Color(0xff019ba5), width: 2)
+              : null,
         );
     }
   }
-
 
 
 
@@ -595,6 +525,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
                 _buildMobileInput(theme),
 
                 // Payment Button
+
                 _buildPaymentButton(theme, size),
 
                 const SizedBox(height: 24),
@@ -651,6 +582,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
 
           const SizedBox(height: 24),
         ],
+
       ),
     );
   }

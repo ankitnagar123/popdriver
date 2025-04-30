@@ -19,18 +19,32 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+        backgroundColor: Colors.white,
+
+        appBar: AppBar(
         iconTheme: IconThemeData(
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text("Privacy Policy".tr,
-          style: TextStyle(fontSize: 25, color: MyColors.white),),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 35,
+            ),
+
+          ],
+        ),
         centerTitle: true,
 
       ),
       body: Stack(
         children: [
+
           Padding(
             padding: const EdgeInsets.only(top: 10.0),
             child: WebView(

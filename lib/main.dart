@@ -59,7 +59,7 @@ class _GoyaDriverState extends State<GoyaDriver> {
       ),
      /* navigatorKey: widget.navigatorKey,*/
       translations: Locales(),
-      locale: Locale('es', 'ES'),
+      locale: Locale('en', 'US'),
       fallbackLocale: Locale('en','US'),
       title: 'Mtaani Driver',
       debugShowCheckedModeBanner: false,

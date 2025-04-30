@@ -11,21 +11,17 @@ class onboardingData
 }
 List<onboardingData> items=[
   onboardingData(
-
-    middleImage:"assets/images/onboarding1.png",
-    title:"Safe, convenient, and Reliable transportation with Mtaani Driver".tr,
+    middleImage: "assets/images/onboarding1.png",
+    title: "🚗 Safe, Easy & Reliable rides — Mtaani Driver’s got you covered!".tr,
   ),
   onboardingData(
-
-    middleImage:"assets/images/onboarding2.png",
-    title:"Get to your destination on time, every time with Mtaani Driver".tr,
-
+    middleImage: "assets/images/onboarding2.png",
+    title: "🕒 Always on time, every time — Ride smart with Mtaani Driver!".tr,
   ),
   onboardingData(
-
-    middleImage:"assets/images/onboarding3.png",
-    title:"See all ride request in your area".tr,
-
+    middleImage: "assets/images/onboarding3.png",
+    title: "📍 Discover ride requests around you — Earn more with ease!".tr,
   ),
+
 ];
 

@@ -117,8 +117,19 @@ class _EditProfileState extends State<EditProfile> {
               color: MyColors.white
           ),
           backgroundColor: MyColors.primary,
-          title: Text("Edit Profile".tr,
-            style: TextStyle(fontSize: 20, color: MyColors.white,fontFamily: "Poppins"),),
+          title:   Row(
+            children: [
+              Image.asset(
+                'assets/images/headLogo.png',
+                height: 28,
+              ),  Image.asset(
+                color: Colors.white,
+                'assets/images/stearing.png',
+                height: 37,
+              ),
+
+            ],
+          ),
           centerTitle: true,
 
         ),
@@ -132,6 +143,11 @@ class _EditProfileState extends State<EditProfile> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Text("Edit Profile".tr,
+                        style: TextStyle(fontSize: 18, color: MyColors.black,fontFamily: "Poppins"),),
+                    ),
+
                     custom_textfield(
                       manditory: "*",
                       labletext: "First Name".tr,

@@ -37,8 +37,16 @@ class _MyRideScreenState extends State<MyRideScreen> {
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text("Upcoming Rides".tr,
-          style: TextStyle(fontSize: 18, color: MyColors.white,fontFamily: "Poppins"),),
+        title:
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/headLogo.png',height: 28,),
+            Image.asset('assets/images/stearing.png',height: 38,color: Colors.white,),
+          ],
+        ),
+
+
         centerTitle: true,
 
       ),
@@ -50,11 +58,14 @@ class _MyRideScreenState extends State<MyRideScreen> {
         }
         else {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             child: Column(
 
               children: [
-               
+                Text("Upcoming Rides".tr,
+                  style: TextStyle(fontSize: 18, color: MyColors.black,fontFamily: "Poppins"),),
+
+               SizedBox(height: 8,),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [

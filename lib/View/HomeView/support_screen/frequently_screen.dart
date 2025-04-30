@@ -18,13 +18,26 @@ class _FrequentlyScreenState extends State<FrequentlyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+        backgroundColor: Colors.white,
+
+        appBar: AppBar(
         iconTheme: IconThemeData(
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text("FAQ".tr,
-          style: TextStyle(fontSize: 25, color: MyColors.white),),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 35,
+            ),
+
+          ],
+        ),
         centerTitle: true,
 
       ),
@@ -32,8 +45,9 @@ class _FrequentlyScreenState extends State<FrequentlyScreen> {
         children: [
           Column(
             children: [
+
               SizedBox(height: 20,),
-              Text("Frequently Asked Questions".tr,style: TextStyle(fontSize: 20),),
+              Text("Frequently Asked Questions".tr,style: TextStyle(fontSize: 18),),
               SizedBox(height: 20,),
               Expanded(
                 child: WebView(

@@ -40,8 +40,19 @@ class _WriteSupportState extends State<WriteSupport> {
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text(" Write Support".tr,
-          style: TextStyle(fontSize: 25, color: MyColors.white),),
+        title:  Row(
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 35,
+            ),
+
+          ],
+        ),
         centerTitle: true,
 
       ),
@@ -50,12 +61,15 @@ class _WriteSupportState extends State<WriteSupport> {
           return Center(child: CircularProgressIndicator(),);
         }
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Write Support".tr,
-                style: TextStyle(fontSize: 18, color: MyColors.black),),
+              Center(
+                child: Text(" Write Support".tr,
+                  style: TextStyle(fontSize: 18, color: MyColors.black),),
+              ),
+
               /* custom_textfield(
               labletext: "Full Name".tr,
               textEditingController: nameCtr,
@@ -85,7 +99,7 @@ class _WriteSupportState extends State<WriteSupport> {
                 ),
                 controller: messageCtr,
                 keyboardType: TextInputType.multiline,
-                maxLines: 7,
+                maxLines: 4,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]'))
                 ],
@@ -93,7 +107,7 @@ class _WriteSupportState extends State<WriteSupport> {
                   filled: true,
                   fillColor: MyColors.TextField,
                   hintText: "Write your Messages/Feedback/Enquiry".tr,
-                  hintStyle: TextStyle(fontSize: 15),
+                  hintStyle: TextStyle(fontSize: 12,color: Colors.grey),
                   border: InputBorder.none,
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(

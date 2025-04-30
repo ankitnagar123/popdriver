@@ -64,6 +64,7 @@ class custom_textfield extends StatelessWidget {
                 color: MyColors.TextField,
                 border: Border.all(color: MyColors.TextField, width: 1)),
             child: TextFormField(
+
               toolbarOptions: ToolbarOptions(
                 copy: true,
                 cut: true,
@@ -80,6 +81,7 @@ class custom_textfield extends StatelessWidget {
                   ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@.]'))] // Allow all characters if allowSpecialCharacters is true
                   : allowSpecialCharacters ?[ FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z ]'))]: null,
               decoration: InputDecoration(
+
                 counterText: "",
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,

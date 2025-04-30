@@ -17,18 +17,32 @@ class _TermConditionState extends State<TermCondition> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         iconTheme: IconThemeData(
             color: MyColors.white
         ),
         backgroundColor: MyColors.primary,
-        title: Text("Terms & Condition".tr,
-          style: TextStyle(fontSize: 25, color: MyColors.white),),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/headLogo.png',
+              height: 28,
+            ),  Image.asset(
+              color: Colors.white,
+              'assets/images/stearing.png',
+              height: 35,
+            ),
+
+          ],
+        ),
         centerTitle: true,
 
       ),
       body: Stack(
         children: [
+          Text("Terms & Condition".tr,
+            style: TextStyle(fontSize: 25, color: MyColors.white),),
           Padding(
             padding: const EdgeInsets.only(top: 10.0),
             child: WebView(
