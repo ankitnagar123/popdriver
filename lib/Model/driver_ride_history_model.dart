@@ -12,10 +12,11 @@ class DriverRideHistoryModel {
   String bookingId;
   String sourceAdd;
   String destinationAdd;
-  String tolloptionPrice;
   String rideDate;
   String rideTime;
   String duration;
+  String paymentMode;
+  String distance;
   String rideEndDate;
   String rideEndTime;
   String carTypeName;
@@ -26,10 +27,11 @@ class DriverRideHistoryModel {
     required this.bookingId,
     required this.sourceAdd,
     required this.destinationAdd,
-    required this.tolloptionPrice,
     required this.rideDate,
     required this.rideTime,
     required this.duration,
+    required this.paymentMode,
+    required this.distance,
     required this.rideEndDate,
     required this.rideEndTime,
     required this.carTypeName,
@@ -38,28 +40,30 @@ class DriverRideHistoryModel {
   });
 
   factory DriverRideHistoryModel.fromJson(Map<String, dynamic> json) => DriverRideHistoryModel(
-    bookingId: json["booking_id"],
-    sourceAdd: json["source_add"],
-    destinationAdd: json["destination_add"],
-    tolloptionPrice: json["tolloption_price"],
-    rideDate: json["ride_date"],
-    rideTime: json["ride_time"],
-    duration: json["duration"],
-    rideEndDate: json["ride_end_date"],
-    rideEndTime: json["ride_end_time"],
-    carTypeName: json["car_type_name"],
-    status: json["status"],
-    totalPrice: json["total_price"],
+    bookingId: json["booking_id"].toString(),
+    sourceAdd: json["source_add"].toString(),
+    destinationAdd: json["destination_add"].toString(),
+    rideDate: json["ride_date"].toString(),
+    rideTime: json["ride_time"].toString(),
+    duration: json["duration"].toString(),
+    paymentMode: json["payment_mode"].toString(),
+    distance: json["distance"].toString(),
+    rideEndDate: json["ride_end_date"].toString(),
+    rideEndTime: json["ride_end_time"].toString(),
+    carTypeName: json["car_type_name"].toString(),
+    status:json["status"].toString(),
+    totalPrice: json["total_price"].toString(),
   );
 
   Map<String, dynamic> toJson() => {
     "booking_id": bookingId,
-    "source_add": sourceAdd,
+    "source_add":sourceAdd,
     "destination_add": destinationAdd,
-    "tolloption_price": tolloptionPrice,
     "ride_date": rideDate,
     "ride_time": rideTime,
     "duration": duration,
+    "payment_mode":paymentMode,
+    "distance": distance,
     "ride_end_date": rideEndDate,
     "ride_end_time": rideEndTime,
     "car_type_name": carTypeName,
@@ -67,3 +71,5 @@ class DriverRideHistoryModel {
     "total_price": totalPrice,
   };
 }
+
+

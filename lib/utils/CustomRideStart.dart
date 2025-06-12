@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:slidable_button/slidable_button.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import '../View/HomeView/RatingToDriver/RatingToDriver.dart';
 import '../controller/booking_controller.dart';
 import '../controller/home_screen_controller.dart';
 import '../controller/my_ride_controller.dart';
@@ -26,6 +27,10 @@ class CustomRideStart extends StatefulWidget {
   String price;
   String pickupLocation;
   String dropLocation;
+  String time;
+  String distance;
+  String bookingId;
+  String userID;
 
   CustomRideStart({
     super.key,
@@ -39,6 +44,10 @@ class CustomRideStart extends StatefulWidget {
     required this.price,
     required this.pickupLocation,
     required this.dropLocation,
+    required this.time,
+    required this.distance,
+    required this.bookingId,
+    required this.userID,
   }) : super();
 
   @override
@@ -57,7 +66,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
     return Stack(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           child: Column(
             children: [
               SizedBox(
@@ -150,7 +159,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                         padding: const EdgeInsets.only(left: 23),
                         child: Text(
                           "pickup point".tr,
-                          style: TextStyle(fontSize: 12,fontFamily: "Poppins"),
+                          style: TextStyle(fontSize: 13,fontFamily: "Poppins"),
                         ),
                       ),
                       Row(
@@ -166,7 +175,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                               maxLines: 2,
                               softWrap: false,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: 12,fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -192,7 +201,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                 children: [
                                   Text(
                                     "Destination Point".tr,
-                                    style: TextStyle(fontSize: 10),
+                                    style: TextStyle(fontSize: 12),
                                   ),
                                   SizedBox(
                                     width: Get.width / 1.5,
@@ -201,16 +210,80 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                       maxLines: 2,
                                       softWrap: false,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 12),
+                                      style: TextStyle(fontSize: 12,fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ],
                               ))
                         ],
                       ),
-                      SizedBox(
-                        height: 20,
+                      SizedBox(height: 5,),
+                      Padding(
+                        padding: const EdgeInsets.all(5.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                        Container(
+                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon( Icons.attach_money, size: 16, color: Colors.green),
+                            SizedBox(width: 4),
+                            Text(
+                              widget.price,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                           /* _buildInfoBadge(
+                              icon: Icons.attach_money,
+                              value: widget.price,
+                              color: Colors.green,
+                            ),*/
+                            _buildInfoBadge(
+                              icon: Icons.directions_car,
+                              value: widget.distance,
+                              color: MyColors.primary,
+                            ),
+                            _buildInfoBadge(
+                              icon: Icons.access_time,
+                              value: widget.time,
+                              color: Colors.blue,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      GestureDetector(
+                        onTap: () {
+                          showMoreInfo();
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon( Icons.info, size: 25, color: Colors.red),
+
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 5,),
                       Obx(
                             () =>
                         controller.statusChangeLoader.value ||
@@ -287,6 +360,9 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                     cdate,
                                     tdata,
                                         () {
+                                    Get.to(()=>RatingScreen(userId: widget.userID,bookigid: widget.bookingId,));
+
+
                                       setState(() {
                                         customSnackBar("Booking completed");
                                         contoller.onOff.value = true;
@@ -330,7 +406,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
           ),
         ),
         Positioned(
-          top: 40,
+          top: 15,
           left: controller.useracceptmodel.status == "Start Ride"?Get.width / 2.5:Get.width / 3.5,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -423,32 +499,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
               SizedBox(
                 width: 8,
               ),
-              /* InkWell(
-                  onTap: mapCallback,
-                  child: Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: MyColors.buttonColor,
-                      borderRadius: BorderRadius.circular(80),
-                      boxShadow: [
-                        BoxShadow(
-                          color: MyColors.DarkBlue,
-                          offset: const Offset(
-                            0.0,
-                            0.0,
-                          ),
-                          blurRadius: 2.0,
-                          spreadRadius: 0.0,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Icon(Icons.directions,color: MyColors.white,),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8,),*/
+
               controller.cancelStartBookLoader.value
                   ? Center(
                 child: myIndicator(),
@@ -653,7 +704,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              "KSh",
+                                              "AUD",
                                               style: TextStyle(
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.bold,
@@ -673,7 +724,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                       ],
                                     ),
                                     Text(
-                                      "KSh ${list.totalPrice}",
+                                      "\$ ${list.totalPrice}",
                                       style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold),
@@ -717,6 +768,31 @@ class _CustomRideStartState extends State<CustomRideStart> {
     );
   }
 
+  Widget _buildInfoBadge({required IconData icon, required String value, required Color color}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void makePhoneCall(String phoneNumber) async {
     PermissionStatus permissionStatus = await Permission.phone.request();
     launchUrlString("tel://$phoneNumber");
@@ -725,5 +801,233 @@ class _CustomRideStartState extends State<CustomRideStart> {
     } else {
       openAppSettings();
     }*/
+  }
+
+
+  Future showMoreInfo() {
+    return showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 10,
+        insetPadding: EdgeInsets.symmetric(horizontal: 20),
+        child: SingleChildScrollView(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9, // Wider dialog
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title with close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Pricing Information",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                          fontFamily: "Poppins"),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                // Pricing info in rows
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoCard("💳", "Card Payment", "4% surcharge", context),
+                    _buildInfoCard(
+                        "⏳", "Waiting Time", "\$1 per minute", context),
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoCard("🛣️", "Extra Travel", "\$3 per km", context),
+                    Container(
+                        width: MediaQuery.of(context).size.width *
+                            0.35), // Empty space
+                  ],
+                ),
+                SizedBox(height: 8),
+
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "— \$\$ extra for toll roads",
+                        style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontFamily: "Poppins"),
+                      ),
+                      SizedBox(
+                        height: 7,
+                      ),
+                      Text(
+                        "— price compare as approx guide only may NOT 100% accurate.",
+                        style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontFamily: "Poppins"),
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: 24),
+
+                // Vehicle capacities section
+                Text(
+                  "Vehicle Capacities",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                      fontFamily: "Poppins"),
+                ),
+
+                SizedBox(height: 12),
+
+                Column(
+                  children: [
+                    _buildVehicleCapacity(
+                        "🚗", "Sedan", "4 passengers + small luggage"),
+                    SizedBox(height: 12),
+                    Divider(),
+                    _buildVehicleCapacity(
+                        "🚙", "SUV", "4 passengers + extra space"),
+                    SizedBox(height: 12),
+                    Divider(),
+                    _buildVehicleCapacity(
+                        "🚐", "VAN", "Up to 10 passengers + extra space"),
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                // Action button
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xff019ba5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      "Got it!",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontFamily: "Poppins"),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+      String emoji, String title, String subtitle, BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.35,
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: TextStyle(fontSize: 20)),
+          SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              fontFamily: "Poppins",
+              color: Colors.grey[800],
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+                fontSize: 13, color: Colors.grey[600], fontFamily: "Poppins"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleCapacity(String emoji, String type, String capacity) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(emoji, style: TextStyle(fontSize: 20)),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                type,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                    fontFamily: "Poppins"),
+              ),
+              SizedBox(height: 4),
+              Text(
+                capacity,
+                style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontFamily: "Poppins"),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

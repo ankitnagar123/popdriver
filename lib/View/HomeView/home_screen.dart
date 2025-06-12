@@ -1,4 +1,3 @@
-
 import 'dart:developer';
 
 import 'package:mtaanidriver/View/HomeView/Menu_bar/menu_bar_screen.dart';
@@ -25,9 +24,6 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../controller/painic_controller.dart';
 import '../../controller/vehicle_controller.dart';
-import '../../utils/drawer.dart';
-
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -37,7 +33,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   HomeController contoller = Get.find<HomeController>();
   BookingController controller = Get.find<BookingController>();
 
@@ -49,23 +44,38 @@ class _HomeScreenState extends State<HomeScreen> {
   TextEditingController tollCtr = TextEditingController();
   List<String> buttonText = [
     "Ride Now".tr,
-    "Ride Later".tr,
+    // "Ride Later".tr,
   ];
 
+  String getTimeOfDayGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      return 'Morning Captain 🌅';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Afternoon Captain 🌞';
+    } else if (hour >= 17 && hour < 20) {
+      return 'Evening Captain 🌇';
+    } else {
+      return 'Night Captain 🌙';
+    }
+  }
 
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   TextEditingController reasonCtr = TextEditingController();
   VehicleController controllerss = Get.put(VehicleController());
+
   @override
   void initState() {
     super.initState(); // <--- this should be called first
-print("-----------message");
+
+    print("-----------message");
     log("onOff------------Direct ${contoller.onOff.value}");
 
     getData();
     contoller.getLocation();
     controller.adminApprove();
-    controller.userAcceptBooking(() { });
+    controller.userAcceptBooking(() {});
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       contoller.arriveDriver.value = Get.arguments["ArriveDriver"];
@@ -75,14 +85,12 @@ print("-----------message");
     authController.updateDeviceId();
   }
 
-
- /* Timer? timer1;
+  /* Timer? timer1;
   Timer? timer2;*/
 
   RouteController routeController = Get.put(RouteController());
 
   void getData() async {
-
     if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
       contoller.onOff.value = true;
       controller.rideNowBooking();
@@ -91,11 +99,9 @@ print("-----------message");
       var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
       authController.loginCheck(loginKey.toString(), accessToken, context);
     }
-    setState(() {
-    });
+    setState(() {});
     ctr.fetchDriverDetail();
   }
-
 
   @override
   void dispose() {
@@ -109,878 +115,1133 @@ print("-----------message");
     print("-----------message");
 
     return Obx(() {
-      return  Scaffold(
+      return Scaffold(
         key: _scaffoldKey,
-        
-        body: Stack(
-          children: [
-            GoogleMap(
-              myLocationButtonEnabled: false,
-              myLocationEnabled: true,
-              zoomControlsEnabled: false,
-              zoomGesturesEnabled: true,
-              padding: const EdgeInsets.all(0),
-              buildingsEnabled: true,
-              cameraTargetBounds: CameraTargetBounds.unbounded,
-              compassEnabled: true,
-              indoorViewEnabled: false,
-              mapToolbarEnabled: true,
-              rotateGesturesEnabled: true,
-              scrollGesturesEnabled: true,
-              tiltGesturesEnabled: true,
-              markers: Set<Marker>.of(contoller.markers),
-              polylines: Set<Polyline>.of(polyline.values),
-              mapType: MapType.normal,
-              onMapCreated: (GoogleMapController controller) {
-                contoller.setGoogleMapController(controller);
-                contoller.updateCameraPosition(contrl.mapInitialLocation.value);
-              },
-              initialCameraPosition: CameraPosition(
-                  target: LatLng(contrl.mapInitialLocation.value.latitude,
-                      contrl.mapInitialLocation.value.longitude),
-                  zoom: 16),
-            ),
-            Positioned(
-              top: 30,
-
-              left: 20,
-              right: 20,
-              child: SizedBox(
-                width: Get.width,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        body: contoller.onOff.value == false
+            ? Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
                   children: [
-                    InkWell(
-                      onTap: () {
-                        Get.to(()=>MtaaniSidebar(),arguments: "Home");
-                      },
-                      child: Icon(
-                        Icons.menu,
-                        color: MyColors.black,
+                    SafeArea(
+                      child: SizedBox(
+                        width: Get.width,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                Get.to(() => MtaaniSidebar(),
+                                    arguments: "Home");
+                              },
+                              child: Icon(
+                                Icons.menu,
+                                color: MyColors.black,
+                              ),
+                            ),
+                            SizedBox(),
+                            contoller.arriveDriver.value == "Arrived"
+                                ? Text(
+                                    "Start Ride".tr,
+                                    style: TextStyle(
+                                        fontFamily: "Poppins",
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
+                                  )
+                                : contoller.arriveDriver.value == "Start"
+                                    ? Text(
+                                        "Start Ride".tr,
+                                        style: TextStyle(
+                                            fontFamily: "Poppins",
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold),
+                                      )
+                                    : controller.completeText.value ==
+                                            "Complete Ride"
+                                        ? Text("Complete Ride".tr,
+                                            style: TextStyle(
+                                                fontFamily: "Poppins",
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold))
+                                        : Text(
+                                            "Home".tr,
+                                            style: TextStyle(
+                                                fontFamily: "Poppins",
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                            Row(
+                              children: [
+                                Text(contoller.onOff.value == true
+                                    ? "Online".tr
+                                    : "Offline".tr),
+                                contoller.hide.value == false
+                                    ?
+                                    /*  Switch(
+                              value: contoller.onOff.value,
+                              activeColor: contoller.onOff.value == true
+                                  ? Colors.green
+                                  : Colors.grey,
+                              onChanged: (value) {
+                                if (value == true) {
+                                  contoller.onOff.value = value;
+
+                                  // Get.to(() => SelfieScreen());
+                                     sp.setBoolValue(
+                                  sp.DRIVER_ONLINE_STATUS, true);
+                              controller.rideNowBooking();
+                                  */ /* timer1 = Timer.periodic(
+                                      Duration(seconds: 5), (timer) {
+                                    controller.rideNowBooking();
+                                  });*/ /*
+                                  */ /*startStreaming();*/ /*
+                                } else {
+                                  contoller.onOff.value = value;
+
+                                  sp.setBoolValue(
+                                      sp.DRIVER_ONLINE_STATUS, false);
+                                  contoller.updateDriverLatLong("0",
+                                      "0", "0", "UnAvailable");
+                                  */ /* timer1!.cancel();
+                                  timer2!.cancel();*/ /*
+                                }
+                              })*/
+                                    Switch(
+                                        value: contoller.onOff.value,
+                                        activeColor:
+                                            contoller.onOff.value == true
+                                                ? Colors.green
+                                                : Colors.grey,
+                                        onChanged: (value) {
+                                          contoller.onOff.value = value;
+                                          if (contoller.onOff.value == true) {
+                                            sp.setBoolValue(
+                                                sp.DRIVER_ONLINE_STATUS, true);
+                                            controller.rideNowBooking();
+                                            /* timer1 = Timer.periodic(
+                                            Duration(seconds: 5), (timer) {
+                                          controller.rideNowBooking();
+                                        });*/
+                                            /*startStreaming();*/
+                                          } else {
+                                            sp.setBoolValue(
+                                                sp.DRIVER_ONLINE_STATUS, false);
+                                            contoller.updateDriverLatLong(
+                                                "0", "0", "0", "UnAvailable");
+                                            /* timer1!.cancel();
+                                        timer2!.cancel();*/
+                                          }
+                                        })
+                                    : Switch(
+                                        value: contoller.onOff.value,
+                                        activeTrackColor: Colors.green,
+                                        onChanged: (value) {
+                                          customSnackBar(
+                                              "You can't offline until booking completed");
+                                        },
+                                      )
+                              ],
+                            )
+                          ],
+                        ),
                       ),
                     ),
-                    SizedBox(),
-                    contoller.arriveDriver.value == "Arrived"
-                        ? Text(
-                      "Start Ride".tr,
-                      style: TextStyle(
-                        fontFamily: "Poppins",
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    )
-                        : contoller.arriveDriver.value == "Start"
-                        ? Text(
-                      "Start Ride".tr,
-                      style: TextStyle(
-                          fontFamily: "Poppins",
-
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    )
-                        : controller.completeText.value == "Complete Ride"
-                        ? Text("Complete Ride".tr,
-                        style: TextStyle(
-                          fontFamily: "Poppins",
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold))
-                        : Text(
-                      "Home".tr,
-                      style: TextStyle(
-                          fontFamily: "Poppins",
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                    SizedBox(
+                      height: 30,
                     ),
-
-
-                    Row(
-                      children: [
-                        Text(contoller.onOff.value == true ?
-                        "Online".tr : "Offline".tr),
-                        contoller.hide.value == false ?
-                        Switch(
-                            value: contoller.onOff.value,
-                            activeColor: contoller.onOff.value == true
-                                ? Colors.green
-                                : Colors.grey,
-                            onChanged: (value) {
-                              if (value == true) {
-                                Get.to(() => SelfieScreen());
-                             /*   sp.setBoolValue(
+                    Center(
+                        child: Image(
+                      image: AssetImage("assets/images/offline.png"),
+                      width: 230,
+                    )),
+                    SizedBox(
+                      height: 15,
+                    ),
+                    Text(
+                      "Good ${getTimeOfDayGreeting()} ",
+                      style: TextStyle(
+                        letterSpacing: 1.0,
+                        fontSize: 16,
+                        color: Colors.grey,
+                        // fontWeight: FontWeight.,
+                      ),
+                    ),
+                    Text(
+                      "Go ON DUTY to start earning ",
+                      style: TextStyle(
+                        letterSpacing: 1.0,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        // fontWeight: FontWeight.,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Stack(
+                children: [
+                  GoogleMap(
+                    myLocationButtonEnabled: false,
+                    myLocationEnabled: true,
+                    zoomControlsEnabled: false,
+                    zoomGesturesEnabled: true,
+                    padding: const EdgeInsets.all(0),
+                    buildingsEnabled: true,
+                    cameraTargetBounds: CameraTargetBounds.unbounded,
+                    compassEnabled: true,
+                    indoorViewEnabled: false,
+                    mapToolbarEnabled: true,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
+                    markers: Set<Marker>.of(contoller.markers),
+                    polylines: Set<Polyline>.of(polyline.values),
+                    mapType: MapType.normal,
+                    onMapCreated: (GoogleMapController controller) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        contoller.setGoogleMapController(controller);
+                        contoller.updateCameraPosition(
+                            contrl.mapInitialLocation.value);
+                      });
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: contrl.mapInitialLocation.value.latitude == 0
+                          ? const LatLng(0.0, 0.0)
+                          : LatLng(contrl.mapInitialLocation.value.latitude,
+                              contrl.mapInitialLocation.value.longitude),
+                      zoom: 16,
+                    ),
+                  ),
+                  Positioned(
+                    top: 30,
+                    left: 20,
+                    right: 20,
+                    child: SizedBox(
+                      width: Get.width,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              Get.to(() => MtaaniSidebar(), arguments: "Home");
+                            },
+                            child: Icon(
+                              Icons.menu,
+                              color: MyColors.black,
+                            ),
+                          ),
+                          SizedBox(),
+                          contoller.arriveDriver.value == "Arrived"
+                              ? Text(
+                                  "Start Ride".tr,
+                                  style: TextStyle(
+                                      fontFamily: "Poppins",
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                )
+                              : contoller.arriveDriver.value == "Start"
+                                  ? Text(
+                                      "Start Ride".tr,
+                                      style: TextStyle(
+                                          fontFamily: "Poppins",
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold),
+                                    )
+                                  : controller.completeText.value ==
+                                          "Complete Ride"
+                                      ? Text("Complete Ride".tr,
+                                          style: TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold))
+                                      : Text(
+                                          "Home".tr,
+                                          style: TextStyle(
+                                              fontFamily: "Poppins",
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                          Row(
+                            children: [
+                              Text(contoller.onOff.value == true
+                                  ? "Online".tr
+                                  : "Offline".tr),
+                              contoller.hide.value == false
+                                  ? Switch(
+                                      value: contoller.onOff.value,
+                                      activeColor: contoller.onOff.value == true
+                                          ? Colors.green
+                                          : Colors.grey,
+                                      onChanged: (value) {
+                                        if (value == true) {
+                                          Get.to(() => SelfieScreen());
+                                          /*   sp.setBoolValue(
                                     sp.DRIVER_ONLINE_STATUS, true);
                                 controller.rideNowBooking();*/
-                                /* timer1 = Timer.periodic(
+                                          /* timer1 = Timer.periodic(
                                         Duration(seconds: 5), (timer) {
                                       controller.rideNowBooking();
                                     });*/
-                                /*startStreaming();*/
-                              } else {
-                                contoller.onOff.value = value;
+                                          /*startStreaming();*/
+                                        } else {
+                                          contoller.onOff.value = value;
 
-                                sp.setBoolValue(
-                                    sp.DRIVER_ONLINE_STATUS, false);
-                                contoller.updateDriverLatLong("0",
-                                    "0", "0", "UnAvailable");
-                                /* timer1!.cancel();
+                                          sp.setBoolValue(
+                                              sp.DRIVER_ONLINE_STATUS, false);
+                                          contoller.updateDriverLatLong(
+                                              "0", "0", "0", "UnAvailable");
+                                          /* timer1!.cancel();
                                     timer2!.cancel();*/
-                              }
-                            })
-                            : Switch(
-
-                          value: contoller.onOff.value,
-
-                          activeTrackColor: Colors.green,
-
-                          onChanged: (value) {
-                            customSnackBar("You can't offline until booking completed");
-                          },
-                        )
-                      ],
-                    )
-/*
-                    Row(
-                      children: [
-                        Text(
-
-                          contoller.onOff.value ? "Online".tr : "Offline".tr,
-                          style: TextStyle(
-                            color: contoller.onOff.value ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Obx(() => Switch(
-                          value: contoller.onOff.value,
-                          activeColor: Colors.green,
-                          onChanged: contoller.hide.value
-                              ? null
-                              : (value) async {
-                            if (value == true) {
-                              await Get.to(() => SelfieScreen());
-                              // After returning from SelfieScreen, you can update the value again
-                           */
-/*   contoller.onOff.value = true;
-                              sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);*//*
-
-                            } else {
-                              contoller.onOff.value = false;
-                              sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
-                              contoller.updateDriverLatLong("0", "0", "0", "UnAvailable");
-                            }
-                          },
-                        ))
-
-                      ],
-                    )
-*/
-
-                  ],
-                ),
-              ),
-            ),
+                                        }
+                                      })
+                                  : Switch(
+                                      value: contoller.onOff.value,
+                                      activeTrackColor: Colors.green,
+                                      onChanged: (value) {
+                                        customSnackBar(
+                                            "You can't offline until booking completed");
+                                      },
+                                    )
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
 /*-----------------painButton-------------------*/
-            Visibility(
-              visible: contoller.painButton.value,
-              child: Positioned(
-                left: Get.width / 1.4,
-                top: Get.height / 7,
-                child: InkWell(
-                  onTap: () {
-                    painButtonController
-                        .getAddressFromLatLng(controller.bookingId.value);
-                  },
-                  child: painButtonController.painLoader.value ?
-                  Center(
-                    child: myIndicator(),
-                  ) :
-                  Container(
-                    height: 75,
-                    width: 75,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(60),
-                      color: Color(0xffFF1A14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/images/penic.png',
-                          height: 30,
-                        ),
-                        Text(
-                          "Panic\nButton".tr,
-                          style: TextStyle(
-                            color: MyColors.white,
-                            fontSize: 10,
-                          ),
-                          textAlign: TextAlign.center,
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            contoller.hide.value == false
-                ? SizedBox.shrink()
-                : Visibility(
-              visible: contoller.driverArriveValue.value,
-              child: Positioned(
-                top: Get.height / 2.25,
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        Container(
-                          height: Get.height / 1.7,
-                          width: Get.width,
-                          child: CustomRideStart(
-                            callCallback: () {
-                            },
-                            msgCallBack: () {
-                              Get.toNamed(
-                                  RouteHelper.getMessageScreenRout(),
-                                  arguments: {
-                                    "userId":
-                                    controller.useracceptmodel.userId
-                                  });
-                            },
-                            cancelCallBack: () {
-                              Get.toNamed(
-                                  RouteHelper.getCancelBookingScreenRoute(),
-                                  arguments: {
-                                    "ID": controller.useracceptmodel
-                                        .bookingId,
-                                    "type": "Ride Now".tr
-                                  });
-                            },
-                            image: controller.useracceptmodel.image,
-                            userName: controller.useracceptmodel.userName,
-                            paymentType:
-                            controller.useracceptmodel.paymentMode,
-                            price:
-                            "KSh ${controller.useracceptmodel.totalPrice}",
-                            pickupLocation:
-                            controller.useracceptmodel.sourceAdd,
-                            dropLocation:
-                            controller.useracceptmodel.destinationAdd,
-                            mapCallback: () {
-                              if (controller.useracceptmodel.status == "Confirmed".tr) {
-                                MapUtils.openMap(double.parse(controller.useracceptmodel.sourceLat),
-                                  double.parse(controller.useracceptmodel.sourceLong),);
-                              } else {
-                                MapUtils.openMap(double.parse(
-                                    controller.useracceptmodel
-                                        .destinationLat),
-                                  double.parse(controller.useracceptmodel
-                                      .destinationLong),);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            contoller.driverArriveValue.value == true
-                ? SizedBox.shrink()
-                : contoller.onOff.value == true
-                ? Positioned(
-              top: 100,
-              left: 5,
-              right: 15,
-              child: Column(
-                children: [
-                  Container(
-
-                    width: Get.width,
-                    child: Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
-                      children: [
-                        ...List.generate(
-                          buttonText.length,
-                              (index) =>
-                              button(
-                                index: index,
-                                text: buttonText[index],
+                  Visibility(
+                    visible: contoller.painButton.value,
+                    child: Positioned(
+                      left: Get.width / 1.4,
+                      top: Get.height / 7,
+                      child: InkWell(
+                        onTap: () {
+                          painButtonController
+                              .getAddressFromLatLng(controller.bookingId.value);
+                        },
+                        child: painButtonController.painLoader.value
+                            ? Center(
+                                child: myIndicator(),
+                              )
+                            : Container(
+                                height: 75,
+                                width: 75,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(60),
+                                  color: Color(0xffFF1A14),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/penic.png',
+                                      height: 30,
+                                    ),
+                                    Text(
+                                      "Emergency\nButton".tr,
+                                      style: TextStyle(
+                                        color: MyColors.white,
+                                        fontSize: 9,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    )
+                                  ],
+                                ),
                               ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  contoller.selectedValueIndex.value == 0
-                      ? controller.datas.value == ""
-                      ? SizedBox()
-                      : rideNow()
-                      : controller.datass.value == ""
-                      ? SizedBox()
-                      : rideLater()
+                  contoller.hide.value == false
+                      ? SizedBox.shrink()
+                      : Visibility(
+                          visible: contoller.driverArriveValue.value,
+                          child: Positioned(
+                            top: Get.height /3.2,
+                            child: Column(
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      height: Get.height / 1.3,
+                                      width: Get.width,
+                                      child: CustomRideStart(
+                                        bookingId: controller
+                                            .useracceptmodel.bookingId,
+                                        userID:
+                                            controller.useracceptmodel.userId,
+                                        distance:
+                                            controller.useracceptmodel.distance,
+                                        time:
+                                            controller.useracceptmodel.duration,
+                                        callCallback: () {},
+                                        msgCallBack: () {
+                                          Get.toNamed(
+                                              RouteHelper
+                                                  .getMessageScreenRout(),
+                                              arguments: {
+                                                "userId": controller
+                                                    .useracceptmodel.userId
+                                              });
+                                        },
+                                        cancelCallBack: () {
+                                          showCustomDialog(
+                                              context,
+                                              controller
+                                                  .useracceptmodel.bookingId);
+
+                                          // Get.toNamed(
+                                          //     RouteHelper.getCancelBookingScreenRoute(),
+                                          //     arguments: {
+                                          //       "bookingId": controller.useracceptmodel.bookingId.toString(),
+                                          //       "type": "Ride Now".tr
+                                          //     });
+                                        },
+                                        image: controller.useracceptmodel.image,
+                                        userName:
+                                            controller.useracceptmodel.userName,
+                                        paymentType: controller
+                                            .useracceptmodel.paymentMode,
+                                        price:
+                                            "\$ ${controller.useracceptmodel.totalPrice}",
+                                        pickupLocation: controller
+                                            .useracceptmodel.sourceAdd,
+                                        dropLocation: controller
+                                            .useracceptmodel.destinationAdd,
+                                        mapCallback: () {
+                                          if (controller
+                                                  .useracceptmodel.status ==
+                                              "Confirmed".tr) {
+                                            MapUtils.openMap(
+                                              double.parse(controller
+                                                  .useracceptmodel.sourceLat),
+                                              double.parse(controller
+                                                  .useracceptmodel.sourceLong),
+                                            );
+                                          } else {
+                                            MapUtils.openMap(
+                                              double.parse(controller
+                                                  .useracceptmodel
+                                                  .destinationLat),
+                                              double.parse(controller
+                                                  .useracceptmodel
+                                                  .destinationLong),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                  contoller.driverArriveValue.value == true
+                      ? SizedBox.shrink()
+                      : contoller.onOff.value == true
+                          ? Positioned(
+                              top: 80,
+                              left: 5,
+                              right: 15,
+                              child: SizedBox(
+                                  height: Get.height *
+                                      0.85, // Occupying 70% of screen height
+
+                                  child: rideNow()),
+                            )
+                          : SizedBox(),
                 ],
               ),
-            )
-                : SizedBox()
-          ],
-        ),
       );
-    }
-
-    );
-  }
-
-
-
-
-  Widget button({required String text, required int index}) {
-    return InkWell(
-      splashColor: Colors.cyanAccent,
-      onTap: () {
-        setState(() {
-          contoller.selectedValueIndex.value = index;
-          if (contoller.selectedValueIndex.value == 1) {
-            controller.rideLaterBooking();
-          /*  timer1!.cancel();
-            timer2 = Timer.periodic(Duration(seconds: 5), (timer) {
-              controller.rideLaterBooking();
-            });*/
-          } else {
-           /* timer2!.cancel();*/
-            controller.rideNowBooking();
-          }
-        });
-      },
-      child: Row(
-        children: [
-          SizedBox(
-            width: 5,
-          ),
-          Container(
-            height: 50,
-            width: Get.width / 2.3,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient:  index == contoller.selectedValueIndex.value? LinearGradient(colors: [
-                MyColors.primary,
-                Colors.cyan,
-              ]):null,
-                color: index == contoller.selectedValueIndex.value
-                    ? MyColors.primary
-                    : Colors.grey.shade500,
-                borderRadius: BorderRadius.circular(5)),
-            child: Center(
-              child: Text(
-                text,
-                style: TextStyle(
-                  fontFamily: "Poppins",
-                  color: index == contoller.selectedValueIndex.value
-                      ? MyColors.white
-                      : MyColors.white,
-                  fontSize: index == contoller.selectedValueIndex.value
-                      ? 15
-                      : 13,
-                  fontWeight: index == contoller.selectedValueIndex.value
-                      ?FontWeight.w600:FontWeight.normal
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    });
   }
 
   Widget rideNow() {
-    return Container(
-      height: Get.height,
-      width: Get.width,
-      child: Column(
-        children: [
-          Expanded(
-            child: Obx(() {
-              return ListView.builder(
-                shrinkWrap: true,
-                itemCount: controller.rideNowList.length,
-                itemBuilder: (context, index) {
-                  var reverseList = controller.rideNowList.reversed.toList();
-                  var list = reverseList[index];
+    return Obx(() {
+      return ListView.builder(
+        physics: AlwaysScrollableScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: controller.rideNowList.length,
+        itemBuilder: (context, index) {
+          var reverseList = controller.rideNowList.reversed.toList();
+          var list = reverseList[index];
 
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Card(
-                      color: MyColors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(list.userName),
-                                Text("#${list.bookingId}"),
-                              ],
-                            ),
-                            SizedBox(
-                              height: 8,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("KSh ${list.totalPrice}"),
-                                Text("${list.distance} KM"),
-                              ],
-                            ),
-                            SizedBox(
-                              height: 8,
-                            ),
-                            /* Row(
-                                mainAxisAlignment: MainAxisAlignment
-                                    .spaceBetween,
-                                children: [
-                                  Text(list.rideTime),
-
-                                ],
-                              ),*/
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  color: Colors.green,
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Pickup Point".tr,
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                    SizedBox(
-                                      width: Get.width / 1.5,
-                                      child: Text(
-                                        list.sourceAdd,
-                                        maxLines: 2,
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4, top: 5),
-                              child: SizedBox(
-                                height: 30,
-                                child: VerticalDivider(
-                                  color: MyColors.black,
-                                ),
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  color: MyColors.primary,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Destination Point".tr,
-                                        style: TextStyle(fontSize: 10),
-                                      ),
-                                      SizedBox(
-                                        width: Get.width / 1.5,
-                                        child: Text(
-                                          list.destinationAdd,
-                                          maxLines: 2,
-                                          softWrap: false,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              ],
-                            ),
-                            SizedBox(
-                              height: 5.0,
-                            ),
-                            Obx(() {
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    child: controller.acceptBookLoader.value &&
-                                        contoller.bookingIndex == index
-                                        ? Center(
-                                      child: myIndicator(),
-                                    )
-                                        : custom_buttons(
-                                        voidCallback: () {
-                                          if (list.totalPrice == "0") {
-                                            customSnackBar(
-                                                'your company is not offering this City ride contact your company '.tr);
-                                          } else if (list.totalPrice == 0) {
-                                            customSnackBar(
-                                                'your company is not offering this City ride contact your company '.tr);
-                                          } else
-                                            contoller.bookingIndex = index;
-                                            controller.acceptBooking(
-                                                list.bookingId,
-                                                () {
-                                              Get.toNamed(RouteHelper.getReadyForRideScreenRoute());
-                                            });
-                                        },
-                                        text: "Accept".tr),
-                                  ),
-                                  SizedBox(
-                                    width: 5,
-                                  ),
-                                  Obx((){
-
-                                    return Expanded(
-                                      child: controller.cancelBookLoader.value && contoller.cancelIndex == index?
-
-                                          Center(child: myIndicator(),):
-
-                                      InkWell(
-                                        onTap: () {
-                                          contoller.cancelIndex = index;
-                                          controller.cancelBooking(
-                                              list.bookingId, "", () {
-
-                                            controller.rideNowBooking();
-                                          });
-                                        },
-                                        child: Container(
-                                          height: 50,
-                                          width: 150,
-                                          decoration: BoxDecoration(
-                                              borderRadius:
-                                              BorderRadius.circular(10),
-                                              color: MyColors.TextField),
-                                          child:
-                                          Center(child: Text("Pass".tr)),
-                                        ),
-                                      ),
-                                    );
-                                  })
-                                ],
-                              );
-                            })
-                          ],
+          return Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          list.userName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: MyColors.black,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }),
-          ),
-          SizedBox(
-            height: Get.height / 5,
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget rideLater() {
-    return Container(
-      height: Get.height,
-      child: Column(
-        children: [
-          Expanded(
-            child: Obx(() {
-              return ListView.builder(
-                shrinkWrap: true,
-                itemCount: controller.rideLaterList.length,
-                itemBuilder: (context, index) {
-                  var reverseList = controller.rideLaterList.reversed.toList();
-                  var list = reverseList[index];
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Card(
-                      color: MyColors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(list.userName),
-                                Text("#${list.bookingId}"),
-                              ],
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            "#${list.bookingId}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
                             ),
-                            SizedBox(
-                              height: 8,
+                          ),
+                          Text(
+                            "${list.rideDate} • ${list.rideTime}",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text("KSh ${list.totalPrice}"),
-                                Text("${list.distance} KM"),
-                              ],
-                            ),
-                            SizedBox(
-                              height: 8,
-                            ),
-                            /* Row(
-                                mainAxisAlignment: MainAxisAlignment
-                                    .spaceBetween,
-                                children: [
-                                  Text(list.rideTime),
-
-                                ],
-                              ),*/
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Container(
-                              height: 20,
-                              width: Get.width,
-                              color: MyColors.primary,
-                              child: Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "Ride Later".tr,
-                                    style: TextStyle(color: MyColors.white),
-                                  ),
-                                  Text(
-                                    "${list.rideDate}" +
-                                        " " +
-                                        "${list.rideTime}",
-                                    style: TextStyle(color: MyColors.white),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  color: Colors.green,
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Pickup Point".tr,
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                    SizedBox(
-                                      width: Get.width / 1.4,
-                                      child: Text(
-                                        list.sourceAdd,
-                                        maxLines: 2,
-                                        softWrap: false,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: SizedBox(
-                                height: 30,
-                                child: VerticalDivider(
-                                  color: MyColors.black,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_offer_outlined,
+                              size: 16, color: Colors.green),
+                          SizedBox(width: 4),
+                          Row(
+                            children: [
+                              Text(
+                                "Offer \$ ${list.userOfferPrice}",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on,
-                                  color: MyColors.primary,
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Destination Point".tr,
-                                        style: TextStyle(fontSize: 10),
-                                      ),
-                                      SizedBox(
-                                        width: Get.width / 1.2,
-                                        child: Text(
-                                          list.destinationAdd,
-                                          maxLines: 2,
-                                          softWrap: false,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              ],
-                            ),
-                            SizedBox(
-                              height: 5.0,
-                            ),
-                            Obx(() {
-                              return Row(
-                                children: [
-                                  Expanded(
-                                    child: controller.acceptBookLoader.value &&
-                                        contoller.bookingIndex == index
-                                        ? Center(
-                                      child: myIndicator(),
-                                    )
-                                        : custom_buttons(
-                                        voidCallback: () {
-                                          if (list.totalPrice == "0") {
-                                          } else if (list.totalPrice == 0) {
-                                          } else
-                                            contoller.bookingIndex = index;
-                                            controller.acceptBooking(
-                                                list.bookingId,
-                                                () {
-                                              Get.toNamed(RouteHelper
-                                                  .getReadyForRideScreenRoute());
-                                            });
-                                        },
-                                        text: "Accept".tr),
-                                  ),
-                                  SizedBox(
-                                    width: 5,
-                                  ),
-                                  Obx(() {
-                                    return Expanded(
-                                      child: controller.cancelBookLoader
-                                          .value &&
-                                          contoller.cancelIndex == index
-                                          ? Center(
-                                        child: myIndicator(),
-                                      )
-                                          : Container(
-                                        height: 50,
-                                        width: 150,
-                                        decoration: BoxDecoration(
-                                            borderRadius:
-                                            BorderRadius.circular(10),
-                                            color: MyColors.TextField),
-                                        child: Center(
-                                            child: InkWell(
-                                                onTap: () {
-                                                  contoller.cancelIndex = index;
-                                                  controller.cancelBooking(
-                                                      list.bookingId, "", () {
-                                                    controller.rideLaterBooking();
-                                                  });
-                                                },
-                                                child: Text("Pass".tr))),
-                                      ),
-                                    );
-                                  }),
-                                ],
-                              );
-                            }),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
-              );
-            }),
-          ),
-          SizedBox(
-            height: Get.height / 5,
-          )
-        ],
-      ),
-    );
-  }
+                  ),
 
- /* Future<void> getLocation() async {
-    contoller.getLocation().then((value) async {
-      BookingController controllers = Get.find<BookingController>();
-      contoller.startLocation.value = LatLng(value.latitude, value.longitude);
-      if (contoller.hide.value == false) {
+                  SizedBox(height: 7),
 
-      } else {
-        if (controllers.useracceptmodel.bookingId != "") {
-          controllers.updateLatLongStartRide(controllers.useracceptmodel.bookingId,
-              value.latitude.toString(), value.longitude.toString());
-        }
-      }
+                  // Price & Distance Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                    Wrap(children: [
+                      _buildInfoBadge(
+                        icon: Icons.directions_car,
+                        value: "${list.distance}",
+                        color: MyColors.primary,
+                      ),
+                      SizedBox(
+                        width: 10,
+                      ),
+                      _buildInfoBadge(
+                        icon: Icons.access_time,
+                        value: list.duration,
+                        color: Colors.blue,
+                      ),
+                    ],),
+                      GestureDetector(
+                        onTap: () {
+                          showMoreInfo();
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon( Icons.info, size: 25, color: Colors.red.shade400),
 
-      Uint8List imageData = await getMarkers(context);
-      contoller.markers.add(Marker(
-          markerId: MarkerId("1"),
-          position: LatLng(value.latitude, value.longitude),
-          rotation: value.heading,
-          draggable: true,
-          zIndex: 2,
-          flat: true,
-          anchor: Offset(0.5, 0.5),
-          //anchor: Offset(0.5, 0.5),
-          icon: BitmapDescriptor.fromBytes(imageData)));
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 9,
+                  ),
+                  // In the Price & Distance Row section, replace with:
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildInfoBadge(
+                        icon: Icons.local_taxi,
+                        value: "Taxi \$ ${list.taxiPrice}",
+                        color: Colors.orange,
+                      ),
+                      _buildInfoBadge(
+                        icon: Icons.people,
+                        value: "R/S \$ ${list.sharePrice}",
+                        color: Colors.purple,
+                      ),
+                    ],
+                  ),
 
+                  SizedBox(height: 16),
 
-      if (polyline.isNotEmpty) {
-        contoller.userPickupMarker(context);
-      }
+                  // Location Section
+                  _buildLocationRow(
+                    icon: Icons.location_pin,
+                    iconColor: Colors.green,
+                    title: "Pickup Point".tr,
+                    address: list.sourceAdd,
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: 12),
+                    child: Divider(
+                      color: Colors.grey[300],
+                      height: 20,
+                      thickness: 1,
+                    ),
+                  ),
+                  _buildLocationRow(
+                    icon: Icons.flag,
+                    iconColor: MyColors.primary,
+                    title: "Destination Point".tr,
+                    address: list.destinationAdd,
+                  ),
+                  SizedBox(height: 16),
 
-      if (contoller.onOff.value == true) {
-        contoller.updateDriverLatLong(value.latitude.toString(),
-            value.longitude.toString(), value.heading.toString(), "Available");
-      }
-      else {
-        contoller.updateDriverLatLong("0",
-            "0", "0", "UnAvailable");
-      }
+                  // Action Buttons
+                  Obx(() {
+                    bool isLoadingAccept = controller.acceptBookLoader.value &&
+                        contoller.bookingIndex == index;
+                    bool isLoadingPass = controller.cancelBookLoader.value &&
+                        contoller.cancelIndex == index;
 
-      CameraPosition cameraPosition = new CameraPosition(
-        target: LatLng(value.latitude, value.longitude),
-        zoom: 16,
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            text: "Accept".tr,
+                            color: MyColors.black,
+                            isLoading: isLoadingAccept,
+                            onPressed: () {
+                              if (list.userOfferPrice == "0" ||
+                                  list.userOfferPrice == 0) {
+                                customSnackBar(
+                                    'your company is not offering this City ride contact your company '
+                                        .tr);
+                              } else {
+                                contoller.bookingIndex = index;
+                                controller.acceptBooking(
+                                  list.bookingId,
+                                  () => Get.toNamed(
+                                      RouteHelper.getReadyForRideScreenRoute()),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: _buildActionButton(
+                            text: "Pass".tr,
+                            color: Colors.grey,
+                            isLoading: isLoadingPass,
+                            isSecondary: true,
+                            onPressed: () {
+                              contoller.cancelIndex = index;
+                              controller.cancelBooking(
+                                list.bookingId,
+                                "",
+                                () => controller.rideNowBooking(),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  })
+                ],
+              ),
+            ),
+          );
+        },
       );
-
-
-      contoller.googleMapController.value!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
-     *//* setState(() {
-      });*//*
     });
-    var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-    var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-    authController.loginCheck(loginKey.toString(), accessToken, context);
   }
 
-  startStreaming() {
-    contoller.streamSubscription =
-        Geolocator.getPositionStream().listen((event) {
-          getLocation();
-        });
-  }
+// Helper Widgets
 
-  Future<Uint8List> getMarkers(context) async {
-    ByteData byteData = await DefaultAssetBundle.of(context).load(
-      "assets/images/imagemarker.png",
+  Widget _buildInfoBadge(
+      {required IconData icon, required String value, required Color color}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
-    return byteData.buffer.asUint8List();
-  }*/
+  }
 
+  Widget _buildLocationRow(
+      {required IconData icon,
+      required Color iconColor,
+      required String title,
+      required String address}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                address,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String text,
+    required Color color,
+    required bool isLoading,
+    bool isSecondary = false,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        foregroundColor: isSecondary ? color : Colors.white,
+        backgroundColor: isSecondary ? Colors.transparent : color,
+        elevation: 0,
+        padding: EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: isSecondary ? BorderSide(color: color) : BorderSide.none,
+        ),
+      ),
+      onPressed: isLoading ? null : onPressed,
+      child: isLoading
+          ? SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: isSecondary ? color : Colors.white,
+              ),
+            )
+          : Text(
+              text,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+    );
+  }
+
+  void showCustomDialog(BuildContext context, String bookingId) {
+    final String dialogTitle =
+        "Are you sure you want to cancel this booking".tr;
+
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header Icon
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Message Text
+                    Text(
+                      dialogTitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: "Poppins",
+                      ),
+                    ),
+                    Text(
+                      "If you cancel this booking, you will not receive any new bookings for the next 10 minutes",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w400,
+                        fontFamily: "Poppins",
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Buttons Row
+                    Obx(() {
+                      if (controller.cancelBookLoader.value ||
+                          controller.cancelStartBookLoader.value) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          // Cancel Button
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                side: const BorderSide(color: Colors.grey),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                "Back".tr,
+                                style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Confirm Button
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              onPressed: () {
+                                controller.driverBookingCancel(bookingId, '',
+                                    () {
+                                  polyline.clear();
+                                  contoller.markers.clear();
+                                  contoller.hide.value = false;
+                                  contoller.onOff.value = true;
+                                  controller.userAcceptBooking(() {});
+                                  controller.completeText.value = "";
+                                  contoller.polylineVariable.value = "";
+                                  contoller.polylineVariable2.value = "";
+                                  contoller.driverArriveValue.value = false;
+                                  controller.reason.value = "";
+                                  controller.selectedIndex.value = -1;
+                                  contoller.arriveDriver.value = "";
+                                  contoller.painButton.value = false;
+                                  Get.back();
+                                });
+                              },
+                              child: Text(
+                                "Cancel".tr,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ));
+  }
+
+  Future showMoreInfo() {
+    return showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 10,
+        insetPadding: EdgeInsets.symmetric(horizontal: 20),
+        child: SingleChildScrollView(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9, // Wider dialog
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title with close button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Pricing Information",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                          fontFamily: "Poppins"),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+          
+                SizedBox(height: 16),
+          
+                // Pricing info in rows
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoCard("💳", "Card Payment", "4% surcharge", context),
+                    _buildInfoCard(
+                        "⏳", "Waiting Time", "\$1 per minute", context),
+                  ],
+                ),
+          
+                SizedBox(height: 16),
+          
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoCard("🛣️", "Extra Travel", "\$3 per km", context),
+                    Container(
+                        width: MediaQuery.of(context).size.width *
+                            0.35), // Empty space
+                  ],
+                ),
+                SizedBox(height: 8),
+          
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "— \$\$ extra for toll roads",
+                        style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontFamily: "Poppins"),
+                      ),
+                      SizedBox(
+                        height: 7,
+                      ),
+                      Text(
+                        "— price compare as approx guide only may NOT 100% accurate.",
+                        style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                            fontFamily: "Poppins"),
+                        textAlign: TextAlign.start,
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
+                ),
+          
+                SizedBox(height: 24),
+          
+                // Vehicle capacities section
+                Text(
+                  "Vehicle Capacities",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                      fontFamily: "Poppins"),
+                ),
+          
+                SizedBox(height: 12),
+          
+                Column(
+                  children: [
+                    _buildVehicleCapacity(
+                        "🚗", "Sedan", "4 passengers + small luggage"),
+                    SizedBox(height: 12),
+                    Divider(),
+                    _buildVehicleCapacity(
+                        "🚙", "SUV", "4 passengers + extra space"),
+                    SizedBox(height: 12),
+                    Divider(),
+                    _buildVehicleCapacity(
+                        "🚐", "VAN", "Up to 10 passengers + extra space"),
+                  ],
+                ),
+          
+                SizedBox(height: 16),
+          
+                // Action button
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xff019ba5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      "Got it!",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontFamily: "Poppins"),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+      String emoji, String title, String subtitle, BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.35,
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: TextStyle(fontSize: 20)),
+          SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              fontFamily: "Poppins",
+              color: Colors.grey[800],
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+                fontSize: 13, color: Colors.grey[600], fontFamily: "Poppins"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVehicleCapacity(String emoji, String type, String capacity) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(emoji, style: TextStyle(fontSize: 20)),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                type,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                    fontFamily: "Poppins"),
+              ),
+              SizedBox(height: 4),
+              Text(
+                capacity,
+                style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontFamily: "Poppins"),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

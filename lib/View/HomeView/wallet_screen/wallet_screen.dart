@@ -15,6 +15,7 @@ import '../../../utils/custom_button.dart';
 import '../../../utils/snackBar.dart';
 
 import '../drawer_tab_screen/my_ride_screen.dart';
+import 'EarningList.dart';
 import 'addTopUp.dart';
 import 'ammount_withdrawal_screen.dart';
 
@@ -63,7 +64,7 @@ class _WalletScreenState extends State<WalletScreen> {
               children: [
                 Image.asset(
                   'assets/images/headLogo.png',
-                  height: 28,
+                  height: 40,
                 ),  Image.asset(
                   color: Colors.white,
                   'assets/images/stearing.png',
@@ -158,8 +159,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ),
                                     Text(
                                       controller.walletBalance.value == ""
-                                          ? "KSh 0"
-                                          : "KSh ${controller.walletBalance.value}",
+                                          ? "\$ 0"
+                                          : "\$ ${controller.walletBalance.value}",
                                       style: TextStyle(
                                           fontFamily: "Poppins",
                                           decoration: controller
@@ -200,7 +201,8 @@ class _WalletScreenState extends State<WalletScreen> {
                                      MyColors.primary
                                        )),
                             onPressed: () {
-                              Get.to(()=>AddTopUpScreen());
+
+                            //  Get.to(()=>Earninglist());
                             },
                             child: Text(
                               "Top Up".tr,
@@ -688,7 +690,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                                         VisualDensity.compact,
                                                   ),
                                                   Text(
-                                                    "KSh ${transaction.driverEarning}",
+                                                    "\$ ${transaction.driverEarning}",
                                                     style: const TextStyle(
                                                       fontFamily: "Poppins",
                                                       fontSize: 14,
@@ -751,7 +753,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        "KSh ${transaction.driverEarning}",
+                                                        "\$ ${transaction.driverEarning}",
                                                         style: TextStyle(
                                                           fontFamily: "Poppins",
                                                           color:

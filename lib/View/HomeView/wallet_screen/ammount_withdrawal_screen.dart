@@ -64,7 +64,7 @@ class _AmountWithdrawalScreenState extends State<AmountWithdrawalScreen> {
               children: [
                 Image.asset(
                   'assets/images/headLogo.png',
-                  height: 28,
+                  height: 40,
                 ),  Image.asset(
                   color: Colors.white,
                   'assets/images/stearing.png',
@@ -159,8 +159,8 @@ class _AmountWithdrawalScreenState extends State<AmountWithdrawalScreen> {
                                     ),
                                     Text(
                                       controller.walletBalance.value == ""
-                                          ? "KSh 0"
-                                          : "KSh ${controller.walletBalance.value}",
+                                          ? "\$ 0"
+                                          : "\$ ${controller.walletBalance.value}",
                                       style: TextStyle(
                                           fontFamily: "Poppins",
                                           decoration: controller
@@ -203,7 +203,7 @@ class _AmountWithdrawalScreenState extends State<AmountWithdrawalScreen> {
                         children: [
                           _buildTextField(
                             controller: amtController,
-                            label: 'Amount (kSh)',
+                            label: 'Amount (\$)',
                             keyboardType: TextInputType.number,
                             validator: (value) {
                               if (value == null || value.isEmpty) {

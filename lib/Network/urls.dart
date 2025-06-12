@@ -1,30 +1,30 @@
 
 
 class URLS {
-
   // static const String BASE_URL = "https://dev-gpsec-portal.pocweburl.com/API/";
-  static const String BASE_URL = "https://ride.mtaani.com/API/";
+  static const String BASE_URL = "https://cisswork.com/Android/PopRide/API/";
   //static const String BASE_URL = "https://faizah.in/cisswork/Mtaani DriverTaxi/API/";
 
 /*--------------------------------------------SIGNUP PROCESS------------------------------------*/
 
 
   static const String DRIVER_REGISTER = "driver_signup.php";
-  static const String VEHICLE_FETCH = "https://ride.mtaani.com/API/fetch_vehicle_list.php";
+  static const String VEHICLE_FETCH = "https://cisswork.com/Android/PopRide/API/fetch_vehicle_list.php";
   static const String DRIVER_ADD_BANK_DETAIL = "driver_add_bank_details.php";
   static const String fetch_driver_bank_details = "fetch_driver_bank_details.php";
-  static const String DRIVER_LOGIN = "https://ride.mtaani.com/API/driver_login.php";
+  static const String DRIVER_LOGIN = "https://cisswork.com/Android/PopRide/API/driver_login.php";
   static const String DRIVER_SIGNUP_CHECK = "driver_signup_recheck.php";
+  static const String DRIVER_SIGNUP = "driver_signup.php";
   static const String DRIVER_FORGET_PASSWORD = "send_driver_otp.php";
   static const String send_otp = "send_otp.php";
   static const String verify_driver_otp = "verify_driver_otp.php";
-  static const String varify_booking_start_otp = "https://ride.mtaani.com/API/varify_booking_start_otp.php";
+  static const String varify_booking_start_otp = "varify_booking_start_otp.php";
   static const String DRIVER_SET_PASSWORD = "change_driver_password.php";
   static const String DRIVER_LOGOUT = "driver_logout.php";
   static const String DRIVER_LOGIN_CHECK = "driver_login_recheck.php";
   static const String check_driver_admin_status = "check_driver_admin_status.php";
   static const String DRIVER_DELETE_ACCOUNT = "delete_driver.php";
-  static const String fetch_membership_list = "https://ride.mtaani.com/API/fetch_membership_list.php";
+  static const String fetch_membership_list = "https://cisswork.com/Android/PopRide/API/fetch_membership_list.php";
   static const String driver_add_membership = "driver_add_membership.php";
   static const String check_payment_status = "check_payment_status.php";
   static const String driver_add_membership_complete = "membership_payment.php";
@@ -39,6 +39,7 @@ class URLS {
 
   static const String DRIVER_FETCH_DETAIL = "fetch_driver_detail.php";
   static const String DRIVER_UPDATE_DETAIL = "update_driver_profile.php";
+  static const String DRIVER_UPDATE_PASSWORD = "update_driver_password.php";
   static const String DRIVER_UPDATE_PROFILE_IMAGE = "update_driver_profile_image.php";
 
 
@@ -54,7 +55,7 @@ class URLS {
   static const String DRIVER_LIST_FETCH = "fetch_user_driver_list.php";
   static const String SEND_WALLET_AMOUNT_TO_DRIVER = "send_driver_wallet_amount.php";
   static const String DRIVER_WALLET_TRANSACTION_HISTORY = "fetch_driver_wallet_transaction_history.php";
-  static const String DRIVER_WALLET_HISTORY_DOWNLOAD = "https://ride.mtaani.com/API/salary_exel_file.php";
+  static const String DRIVER_WALLET_HISTORY_DOWNLOAD = "https://cisswork.com/Android/PopRide/API/salary_exel_file.php";
   static const String add_driver_amount = "add_driver_amount.php";
   static const String wallet_payment_driver_main = "wallet_payment_driver.php";
 
@@ -81,6 +82,7 @@ class URLS {
   static const String USER_ACCEPT_BOOKING = "driver_fetch_confirm_booking_user_details.php";
   static const String DRIVER_UPDATE_LAT_LONG = "update_driverlatlong.php";
   static const String STATUS_CHANGE = "driver_update_booking_status.php";
+  static const String RATINGTOUSER = "insert_user_rating.php";
   static const String DRIVER_BOOKING_DETAILS = "driver_fetch_booking_details.php";
   static const String RIDE_LATER_SCREEN_DRIVER_BOOKING = "fetch_driver_Ride_later_booking_list.php";
   static const String RIDE_LATER_SCREEN_DRIVER_BOOKING_START = "driver_start_booking.php";

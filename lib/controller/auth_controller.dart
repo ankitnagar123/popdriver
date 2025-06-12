@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:dio/dio.dart' as DIO;
 import 'package:mtaanidriver/controller/profile_controller.dart';
 
-import '../../Model/fetch_cart_model.dart';
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
@@ -24,6 +23,7 @@ import '../route_helper/route_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:encrypt/encrypt.dart' as encrypt;
 
+import '../utils/colors.dart';
 import 'booking_controller.dart';
 import 'home_screen_controller.dart';
 
@@ -35,7 +35,6 @@ class AuthController extends GetxController {
   var otp = "".obs;
   var companyLoader = false.obs;
   var signUpLoader = false.obs;
-  var signUpCheckLoader = false.obs;
   var bankLoader = false.obs;
   var loginLoader = false.obs;
   var forgetPasswordLoader = false.obs;
@@ -93,7 +92,7 @@ class AuthController extends GetxController {
     });
   }
 
-  void driverSignUp(
+/*  void driverSignUp(
       String vehicleId,
       String names,
       String vehicleNumber,
@@ -152,7 +151,7 @@ class AuthController extends GetxController {
 
     try {
       final response = await dioClient.post(
-          "https://ride.mtaani.com/API/driver_signup.php",
+          "https://cisswork.com/Android/PopRide/API/driver_signup.php",
           data: formdata);
 
       var jsonString = jsonDecode(response.data);
@@ -173,18 +172,67 @@ class AuthController extends GetxController {
       signUpLoader.value = false;
       log("Exception------", error: e.toString());
     }
+  }*/
+
+  void saveLoginDetails(
+      String contact, String code, String flag, String password) {
+    sp.setStringValue(sp.MOBILE_NO, contact);
+    sp.setStringValue(sp.COUNTRY_CODE, code);
+    sp.setStringValue(sp.FLAG, flag);
+    sp.setStringValue(sp.PASSWORD, password);
+  }
+
+  void driverSignUp(String vehicleId, String vehicleNo, String identityNo,
+      VoidCallback callback) async {
+    signUpLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "vehicle_id": vehicleId,
+      "vehicle_number": vehicleNo,
+      "identity_no": identityNo,
+      "first_name": name.value,
+      "sur_name": lastname.value,
+      "country_code": countryCode.value,
+      "contact": contacts.value,
+      "email": emailID.value,
+      "password": passwords.value,
+      "flag": flags.value,
+    };
+    log("signup parameter ------>:$map");
+
+    try {
+      final response = await apiService.postData(URLS.DRIVER_SIGNUP, map);
+
+      var jsonString = jsonDecode(response.body);
+      log("signUp response----->:$jsonString");
+      if (jsonString['result'] == "successfully") {
+        var id = jsonString["id"];
+
+        secure.writeData(secure.user_id, id.toString());
+        signUpLoader.value = false;
+        updateDeviceId();
+        // addBankDetail();
+        callback();
+      } else {
+        signUpLoader.value = false;
+        customSnackBar(jsonString['result'].toString());
+      }
+    } catch (e) {
+      signUpLoader.value = false;
+      log("Exception--------", error: e.toString());
+    }
   }
 
   void driverSignUpCheck(
-    String contact,
-    String first_name,
-    String sur_name,
-    String country_code,
-    String password,
-    String gender,
-    String flag,
-  ) async {
-    signUpCheckLoader.value = true;
+      String emails,
+      String contact,
+      String first_name,
+      String sur_name,
+      String country_code,
+      String password,
+      String flag,
+      VoidCallback call) async {
+    signUpLoader.value = true;
 
     Map<String, dynamic> map = {
       'contact_no': contact,
@@ -202,20 +250,21 @@ class AuthController extends GetxController {
       if (jsonString['result'] == "Success") {
         name.value = first_name.toString();
         lastname.value = sur_name.toString();
-        emailID.value = email.toString();
+        emailID.value = emails.toString();
         contacts.value = contact.toString();
-        genders.value = gender.toString();
+        // genders.value = gender.toString();
         flags.value = flag.toString();
         passwords.value = password.toString();
         countryCode.value = country_code.toString();
-        signUpCheckLoader.value = false;
-        Get.toNamed(RouteHelper.getAddBankDetailsScreenRoute());
+        signUpLoader.value = false;
+        call();
+        // Get.toNamed(RouteHelper.getSelectVehicleScreenRoute());
       } else {
-        signUpCheckLoader.value = false;
+        signUpLoader.value = false;
         customSnackBar(jsonString['result'].toString());
       }
     } catch (e) {
-      signUpCheckLoader.value = false;
+      signUpLoader.value = false;
       log("Exception--------", error: e.toString());
     }
   }
@@ -270,8 +319,15 @@ class AuthController extends GetxController {
     }
   }
 
-  void driverLogin(String country_code, contact, String password,
-      String login_device_key, String access_token, context) async {
+  void driverLogin(
+      String country_code,
+      flag,
+      contact,
+      String password,
+      String login_device_key,
+      String access_token,
+      bool isChecked,
+      context) async {
     loginLoader.value = true;
     Map<String, dynamic> loginParameter = {
       "country_code": country_code,
@@ -296,6 +352,17 @@ class AuthController extends GetxController {
       var inviteCode = jsonString["invite_code"];
       var driverName = jsonString["name"];
       if (result == 'Success') {
+        if (isChecked) {
+          log("-----isChecked");
+          log("contact-----$contact");
+          log("country_code-----$country_code");
+          log("flag-----$flag");
+          saveLoginDetails(contact, country_code, flag, password);
+        } else {
+          log("is not -----isChecked");
+
+          saveLoginDetails("", "", "", "");
+        }
         print("user id -------${jsonString["driver_id"]}");
         updateDeviceId();
         sp.setBoolValue(sp.LOGIN_KEY, true);
@@ -314,62 +381,111 @@ class AuthController extends GetxController {
         loginLoader.value = false;
         customSnackBar(result.toString());
         showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Center(
-                  child: SizedBox(
-                      height: Get.height / 5,
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "You Are Already Logged-in In Other Device do you want to Logout"
-                                    .tr,
-                                textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title
+                    Text(
+                      "Session Alert".tr,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Divider
+                    Divider(
+                      height: 1,
+                      color: Colors.grey[300],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Message
+                    Text(
+                      "You are already logged in on another device. Do you want to logout from that device?"
+                          .tr,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              backgroundColor: Colors.red.shade600,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              SizedBox(
-                                height: 20,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              "Cancel".tr,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: [
-                                  TextButton(
-                                      onPressed: () {
-                                        Get.back();
-                                      },
-                                      child: Text(
-                                        "Cancel".tr,
-                                        style: TextStyle(color: Colors.red),
-                                      )),
-                                  TextButton(
-                                      onPressed: () {
-                                        driverLogout("1", () {
-                                          Navigator.pop(context);
-                                        });
-                                      },
-                                      child: Text(
-                                        "Ok".tr,
-                                        style: TextStyle(color: Colors.green),
-                                      )),
-                                ],
-                              )
-                            ],
+                            ),
                           ),
                         ),
-                      )),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              backgroundColor: Colors.green.shade600,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              driverLogout("1", () {
+                                Navigator.pop(context);
+                              });
+                            },
+                            child: Text(
+                              "Logout".tr,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              );
-            });
+              ),
+            );
+          },
+        );
       } else if (result == "You Don't have any active membership") {
         loginLoader.value = false;
         Navigator.push(
@@ -466,7 +582,8 @@ class AuthController extends GetxController {
         }
 
         var language = await sp.getStringValue(sp.LANGUAGE);
-        sp.clearData();
+        sp.clearDataExceptLoginFields();
+        // sp.clearData();
         secure.deleteAllData();
         sp.setBoolValue(sp.ON_BOARDING_KEY, true);
 
@@ -543,11 +660,12 @@ class AuthController extends GetxController {
       "access_token": accessToken
     };
 
-    log("reCheck parameter----->:$check");
+    log("login Check parameter----->:$check");
 
     try {
       final response = await http.post(
-          Uri.parse("https://ride.mtaani.com/API/driver_login_recheck.php"),
+          Uri.parse(
+              "https://cisswork.com/Android/PopRide/API/driver_login_recheck.php"),
           headers: {
             'Authorization': 'Bearer $Tokan',
             // Pass the JWT token in the headers
@@ -556,7 +674,7 @@ class AuthController extends GetxController {
 
       var jsonString = jsonDecode(response.body);
 
-      log('response--------->:${response.body}');
+      log('login Check response--------->:${response.body}');
       var result = jsonString['result'];
       log('response login--------->:$result');
       if (jsonString['result'] == "You Are Already Logged-in In Other Device") {
@@ -649,8 +767,8 @@ class AuthController extends GetxController {
     }
   }
 
-
-  void buyMemberShip(String membershipId,amount ,contactNumber,String type,paymentType) async {
+  void buyMemberShip(String membershipId, amount, contactNumber, String type,
+      paymentType) async {
     memberShipLoader1.value = true;
 
     Map<String, dynamic> map = {
@@ -662,7 +780,8 @@ class AuthController extends GetxController {
     log("Payment Request Params: $map");
 
     try {
-      final response = await apiService.postDatatoken(URLS.driver_add_membership, map);
+      final response =
+          await apiService.postDatatoken(URLS.driver_add_membership, map);
       var jsonString = jsonDecode(response.data);
       log("Payment Request Response: ${jsonString['result']}");
 
@@ -670,10 +789,10 @@ class AuthController extends GetxController {
           "Payment request sent successfully. Enter M-PESA PIN to complete.") {
         customSnackBar(jsonString['result'].toString());
         showPaymentProcessingDialog(Get.context!, () {
-          checkPaymentStatus(membershipId, type,paymentType);
+          checkPaymentStatus(membershipId, type, paymentType);
         });
         // 🔁 Wait 30 seconds before checking payment
-       /* await Future.delayed(Duration(seconds: 30));
+        /* await Future.delayed(Duration(seconds: 30));
         await checkPaymentStatus(membership_id, type);*/
       } else {
         customSnackBar(jsonString['result'].toString());
@@ -686,18 +805,22 @@ class AuthController extends GetxController {
     }
   }
 
-
-  Future<void> checkPaymentStatus(String membership_id, String type,String paymentType, ) async {
+  Future<void> checkPaymentStatus(
+    String membership_id,
+    String type,
+    String paymentType,
+  ) async {
     memberShipLoader1.value = true;
 
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
-      "payment_type":paymentType
+      "payment_type": paymentType
     };
     log("Check Payment Params: $map");
 
     try {
-      final response = await apiService.postDatatoken(URLS.check_payment_status, map);
+      final response =
+          await apiService.postDatatoken(URLS.check_payment_status, map);
       var jsonString = jsonDecode(response.data);
       log("Payment Status Response: ${jsonString['result']}");
 
@@ -715,7 +838,6 @@ class AuthController extends GetxController {
     }
   }
 
-
   Future<void> buyMemberShipComplete(String membership_id, String type) async {
     memberShipLoader1.value = true;
 
@@ -726,8 +848,8 @@ class AuthController extends GetxController {
     log("Membership Complete Params: $map");
 
     try {
-      final response =
-      await apiService.postDatatoken(URLS.driver_add_membership_complete, map);
+      final response = await apiService.postDatatoken(
+          URLS.driver_add_membership_complete, map);
       var jsonString = jsonDecode(response.data);
       log("Membership Complete Response: ${jsonString['result']}");
 
@@ -751,8 +873,8 @@ class AuthController extends GetxController {
     }
   }
 
-
-  void showPaymentProcessingDialog(BuildContext context, VoidCallback onComplete) {
+  void showPaymentProcessingDialog(
+      BuildContext context, VoidCallback onComplete) {
     int secondsLeft = 30;
     Timer? timer;
 
@@ -772,7 +894,8 @@ class AuthController extends GetxController {
 
         return StatefulBuilder(builder: (context, setState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text("Processing Payment"),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -810,12 +933,12 @@ class AuthController extends GetxController {
           "Payment request sent successfully. Enter M-PESA PIN to complete.") {
         checkPaymentStatus(membership_id,type);
         customSnackBar(jsonString['result'].toString());
-      *//*  if (type == "signup") {
+      */ /*  if (type == "signup") {
           _showSuccessDialog();
         } else {
           Get.back();
           customSnackBar("Plane upgraded");
-        }*//*
+        }*/ /*
       } else {
         customSnackBar(jsonString['result'].toString());
       }
@@ -884,12 +1007,10 @@ class AuthController extends GetxController {
     }
   }*/
 
-
   void signupOtp(String type, VoidCallback callback) async {
     otpLoader.value = true;
     Map<String, dynamic> otpParameter = {
-      "country_code": countryCode.value,
-      "contact": contacts.value,
+      "email": emailID.value,
       "appType": "Driver"
     };
 
@@ -903,7 +1024,15 @@ class AuthController extends GetxController {
       if (result == "successfully") {
         startOtpTimer();
         otps.value = jsonString["otp"].toString();
-        customSnackBar("OTP ${jsonString["OTP"].toString()}");
+        Get.showSnackbar(GetSnackBar(
+          backgroundColor: MyColors.black,
+          borderRadius: 10,
+          duration: Duration(seconds: 6),
+          maxWidth: Get.width / 1.1,
+          message: "OTP ${jsonString["OTP"].toString()}",
+          snackPosition: SnackPosition.BOTTOM,
+          margin: EdgeInsets.only(bottom: 20),
+        ));
         otpLoader.value = false;
         if (type == "") {
           callback();
@@ -921,14 +1050,9 @@ class AuthController extends GetxController {
   var otpVerify = false.obs;
   var otpVerify2 = false.obs;
 
-  void verifyOtp(
-      String contact, String code, String otp, VoidCallback callback) async {
+  void verifyOtp(String otp, VoidCallback callback) async {
     otpVerify.value = true;
-    Map<String, dynamic> otpParameter = {
-      "contact": contact,
-      "country_code": code,
-      "otp": otp
-    };
+    Map<String, dynamic> otpParameter = {"email": emailID, "otp": otp};
     log("otp verify parameter------>:$otpParameter");
     try {
       var response =
@@ -953,11 +1077,11 @@ class AuthController extends GetxController {
     Map<String, dynamic> otpParameter = {"booking_id": id, "otp": otp};
     log("otp verify parameter------>:$otpParameter");
     try {
-      var response = await apiService.postDatas(
+      var response = await apiService.postData(
           URLS.varify_booking_start_otp, otpParameter);
-      var jsonString = jsonDecode(response.data);
+      var jsonString = jsonDecode(response.body);
       log("otp response ------>:$jsonString");
-      var result = jsonString["result"];
+      var result = jsonString["result"].toString();
       if (result == "OTP verified successfully") {
         callback();
       } else {

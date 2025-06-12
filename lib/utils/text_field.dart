@@ -43,7 +43,7 @@ class custom_textfield extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: Row(
                 children: [
-                Text(labletext.tr,style: TextStyle(color: MyColors.DarkBlue),),
+                Text(labletext.tr,style: TextStyle(color: MyColors.DarkBlue,fontSize: 14)),
                   SizedBox(width: 5,),
                   Text(manditory == ""?"":manditory.tr,
                     style: TextStyle(
@@ -55,7 +55,7 @@ class custom_textfield extends StatelessWidget {
           Container(
             height: 50,
             width: context.width,
-            padding: const EdgeInsets.only(left: 10),
+            padding: const EdgeInsets.only(left: 10,top: 0),
             margin: const EdgeInsets.only(top: 5),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(

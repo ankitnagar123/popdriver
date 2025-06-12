@@ -1,9 +1,11 @@
-import 'dart:developer';
+
 import 'dart:io';
+
+
 import 'package:mtaanidriver/View/AuthScreen/login_screen.dart';
 
 import '../../../controller/auth_controller.dart';
-import '../../../controller/support_controller.dart';
+
 import '../../../controller/vehicle_controller.dart';
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
@@ -26,6 +28,7 @@ class VehicleDetail extends StatefulWidget {
 
 class _VehicleDetailState extends State<VehicleDetail> {
   VehicleController controller = Get.put(VehicleController());
+
   AuthController controllers = Get.find<AuthController>();
 
   TextEditingController vehicleNameCtr = TextEditingController();
@@ -567,7 +570,7 @@ class _VehicleDetailState extends State<VehicleDetail> {
                   controllers.signupOtp( "", () async {
                     var result =  await Get.toNamed(RouteHelper.getSignupOTPScreen());
                     if(result == "back"){
-                      controllers.driverSignUp(
+                  /*    controllers.driverSignUp(
                           carId,
                           vehicleNameCtr.text,
                           vehicleNumberCtr.text,
@@ -584,25 +587,97 @@ class _VehicleDetailState extends State<VehicleDetail> {
                           IdProofImageDisplayFile,
                           idProofImageExpiry.text,
                               () {
-                            Navigator.push(context, MaterialPageRoute(builder: (context)=>MemberShipScreen(type: 'signup',)));
-                            /* showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        content: Text("Vehicle Added Successfully. Once the Details are verified by our Mtaani Driver"
-                            "driver Support Team. We will contact you & get you onboarded.".tr),
-                        actions: [
-                          TextButton(
-                              onPressed: () {
-                                Get.offAllNamed(RouteHelper.getLoginScreenRoute());
-                              },
-                              child: Text(
-                                "Ok".tr,
-                                style: TextStyle(color: Colors.blue),
-                              ))
-                        ],
-                      ),
-                    );*/
-                          });
+                                showDialog(
+                                  barrierDismissible: false,
+                                  context: context,
+                                  builder: (ctx) =>
+                                      Dialog(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                              20.0),
+                                        ),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.grey.withOpacity(0.2),
+                                                spreadRadius: 2,
+                                                blurRadius: 10,
+                                                offset: Offset(-5, -5),
+                                              ),
+                                              BoxShadow(
+                                                color: Colors.grey.withOpacity(0.2),
+                                                spreadRadius: 2,
+                                                blurRadius: 10,
+                                                offset: Offset(5, 5),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(30.0),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.green,
+                                                  size: 80,
+                                                ),
+                                                SizedBox(height: 20),
+                                                Text(
+                                                  "Got your registration!",
+                                                  style: TextStyle(
+                                                    fontSize: 18
+                                                    ,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black87,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 15),
+                                                Text(
+                                                  "Our team will contact you shortly.",
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.grey[600],
+                                                    height: 1.4,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 30),
+                                                ElevatedButton(
+                                                  onPressed: (){
+                                                    Get.offAll(()=>LoginScreen());
+                                                  },
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: MyColors.black,
+                                                    padding: EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                      horizontal: 30,
+                                                    ),
+                                                    elevation: 3,
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(10),
+                                                    ),
+                                                    shadowColor: Colors.blue.withOpacity(0.3),
+                                                  ),
+                                                  child: Text(
+                                                    "Go Back",
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                );
+                              });*/
                     }
                   });
 

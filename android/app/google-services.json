@@ -1,21 +1,59 @@
 {
   "project_info": {
-    "project_number": "145048760642",
-    "project_id": "mtaani-ride",
-    "storage_bucket": "mtaani-ride.firebasestorage.app"
+    "project_number": "537584520795",
+    "project_id": "poptaxi-ae8fd",
+    "storage_bucket": "poptaxi-ae8fd.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:145048760642:android:1c90cd0100545fcb6558db",
+        "mobilesdk_app_id": "1:537584520795:android:527a6ae30f6b1a24e2797e",
         "android_client_info": {
-          "package_name": "com.mtaani.driver"
+          "package_name": "com.pop.driver"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyClqOeeTLB51E6kZXGmFjim3KwSE1no5kY"
+          "current_key": "AIzaSyCy8F-qT1CR66dhuG1hcDAO1S4l8zKGOZM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537584520795:android:6bca874b5e73b85ae2797e",
+        "android_client_info": {
+          "package_name": "com.pop.passenger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy8F-qT1CR66dhuG1hcDAO1S4l8zKGOZM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537584520795:android:3384e0ef7224681fe2797e",
+        "android_client_info": {
+          "package_name": "com.popdriver.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy8F-qT1CR66dhuG1hcDAO1S4l8zKGOZM"
         }
       ],
       "services": {

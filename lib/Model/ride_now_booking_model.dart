@@ -13,7 +13,9 @@ class RideNowBookingModel {
   String userName;
   String sourceAdd;
   String destinationAdd;
-  String totalPrice;
+  String taxiPrice;
+  String sharePrice;
+  String userOfferPrice;
   String rideType;
   String distance;
   String duration;
@@ -25,7 +27,9 @@ class RideNowBookingModel {
     required this.userName,
     required this.sourceAdd,
     required this.destinationAdd,
-    required this.totalPrice,
+    required this.taxiPrice,
+    required this.sharePrice,
+    required this.userOfferPrice,
     required this.rideType,
     required this.distance,
     required this.duration,
@@ -34,16 +38,18 @@ class RideNowBookingModel {
   });
 
   factory RideNowBookingModel.fromJson(Map<String, dynamic> json) => RideNowBookingModel(
-    bookingId: json["booking_id"],
-    userName: json["user_name"],
-    sourceAdd: json["source_add"],
-    destinationAdd: json["destination_add"],
-    totalPrice: json["total_price"],
-    rideType: json["ride_type"],
-    distance: json["distance"],
-    duration: json["duration"],
-    rideDate: json["ride_date"],
-    rideTime: json["ride_time"],
+    bookingId: json["booking_id"].toString(),
+    userName: json["user_name"].toString(),
+    sourceAdd: json["source_add"].toString(),
+    destinationAdd: json["destination_add"].toString(),
+    taxiPrice: json["taxi_price"].toString(),
+    sharePrice: json["share_price"].toString(),
+    userOfferPrice: json["user_offer_price"].toString(),
+    rideType: json["ride_type"].toString(),
+    distance: json["distance"].toString(),
+    duration: json["duration"].toString(),
+    rideDate: json["ride_date"].toString(),
+    rideTime: json["ride_time"].toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -51,7 +57,9 @@ class RideNowBookingModel {
     "user_name": userName,
     "source_add": sourceAdd,
     "destination_add": destinationAdd,
-    "total_price": totalPrice,
+    "taxi_price": taxiPrice,
+    "share_price": sharePrice,
+    "user_offer_price": userOfferPrice,
     "ride_type": rideType,
     "distance": distance,
     "duration": duration,

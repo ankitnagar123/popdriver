@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
     <queries>
         <!-- If your app opens https URLs -->
@@ -36,7 +35,7 @@
 
     <application
         android:requestLegacyExternalStorage="true"
-        android:label="Mtaani Driver"
+        android:label="Pop Driver"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
@@ -55,7 +54,7 @@
             android:value="@string/map"/>
 
 
-        <activity
+            <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"

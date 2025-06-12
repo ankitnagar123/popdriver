@@ -35,6 +35,7 @@ class VehicleController extends GetxController{
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
   var vehicleList = <VehicleFetchModel>[].obs;
+  final selectedCarId = ''.obs;
 
 
   void fetchVehicle()async{

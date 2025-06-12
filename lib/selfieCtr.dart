@@ -77,7 +77,7 @@ class SelfieController extends GetxController {
 
     try {
       final response = await dioClient.post(
-        "https://ride.mtaani.com/API/update_driver_salfie.php",
+        "https://cisswork.com/Android/PopRide/API/update_driver_salfie.php",
         data: formdata,
       );
 

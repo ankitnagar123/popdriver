@@ -253,7 +253,6 @@ class HomeController extends GetxController {
    RxString arriveDriver = "".obs;
    RxBool driverArriveValue = false.obs;
    RxBool hide = false.obs;
-   RxInt selectedValueIndex = 0.obs;
    var bookingIndex = -1.obs;
    var polylineVariable = "".obs;
    var polylineVariable1 = "".obs;
@@ -265,12 +264,16 @@ class HomeController extends GetxController {
    var endLocation = LatLng(22.636383, 75.810692).obs;
    late StreamSubscription<Position> streamSubscription;
    PolylinePoints polylinePoints = PolylinePoints();
-   String googleAPiKey = "";
+
    var markers = <Marker>[].obs;
    List<LatLng> polylineCoordinates = [];
    SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
    ApiService apiService = ApiService();
-   var googleMapController = Rx<GoogleMapController?>(null);
+
+   // var googleMapController = Rx<GoogleMapController?>(null);
+
+   Rx<GoogleMapController?> googleMapController = Rx<GoogleMapController?>(null);
+
 
    void setGoogleMapController(GoogleMapController controller) {
       googleMapController.value = controller;
@@ -324,6 +327,7 @@ class HomeController extends GetxController {
       startListening();
    }
 
+
    void startListening() {
       streamSubscription = Geolocator.getPositionStream().listen((Position position) {
          print("listening -----");
@@ -343,6 +347,7 @@ class HomeController extends GetxController {
       });
    }
 
+/*
    Future<void> updateMarker(Position position) async {
       Uint8List imageData = await getMarkers();
       markers.clear();
@@ -357,6 +362,28 @@ class HomeController extends GetxController {
          icon: BitmapDescriptor.fromBytes(imageData),
       ));
    }
+*/
+
+   Future<void> updateMarker(Position position) async {
+      Uint8List imageData = await getMarkers();
+      final marker = markers.firstWhereOrNull((m) => m.markerId == const MarkerId("1"));
+
+      if (marker != null) {
+         markers.remove(marker);
+      }
+
+      markers.add(Marker(
+         markerId: const MarkerId("1"),
+         position: LatLng(position.latitude, position.longitude),
+         rotation: position.heading,
+         draggable: true,
+         zIndex: 2,
+         flat: true,
+         anchor: const Offset(0.5, 0.5),
+         icon: BitmapDescriptor.fromBytes(imageData),
+      ));
+   }
+
 
    Future<Uint8List> getMarkers() async {
       ByteData byteData = await rootBundle.load("assets/images/imagemarker.png");
@@ -407,48 +434,57 @@ class HomeController extends GetxController {
       }
    }
 
+
+
    Future<void> Data(Position position, BuildContext context) async {
+      try {
+         // Check if Google Map controller is available
+         if (googleMapController.value != null) {
+            CameraPosition cameraPosition = CameraPosition(
+               target: LatLng(position.latitude, position.longitude),
+               zoom: 16,
+            );
+            googleMapController.value!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+         }
 
-      CameraPosition cameraPosition = CameraPosition(
-         target: LatLng(position.latitude, position.longitude),
-         zoom: 16,
-      );
+         var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+         var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+         var authController = Get.find<AuthController>();
+          authController.loginCheck(loginKey.toString(), accessToken, context);
+         Get.find<BookingController>().rideNowBooking();
+         Get.find<BookingController>().userAcceptBooking(() {},);
 
-      googleMapController.value!.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
 
-      var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-      var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-      Get.find<AuthController>().loginCheck(loginKey.toString(), accessToken, context);
+         if (onOff.value == true) {
+             updateDriverLatLong(
+               position.latitude.toString(),
+               position.longitude.toString(),
+               position.heading.toString(),
+               "Available",
+            );
+         } else {
+             updateDriverLatLong("0", "0", "0", "UnAvailable");
+         }
 
-      if (onOff.value == true) {
-         updateDriverLatLong(
-            position.latitude.toString(),
-            position.longitude.toString(),
-            position.heading.toString(),
-            "Available",
-         );
-      } else {
-         updateDriverLatLong("0", "0", "0", "UnAvailable");
-      }
+         var bookingController = Get.find<BookingController>();
+         startLocation.value = LatLng(position.latitude, position.longitude);
 
-      BookingController controllers = Get.find<BookingController>();
-      startLocation.value = LatLng(position.latitude, position.longitude);
-      if (hide.value == false) {
-         // Do nothing if hide is false
-      } else {
-         if (controllers.useracceptmodel.bookingId != "") {
-            controllers.updateLatLongStartRide(
-               controllers.useracceptmodel.bookingId,
+         if (hide.value == false) {
+            // Do nothing if hide is false
+         } else if (bookingController.useracceptmodel.bookingId != "") {
+             bookingController.updateLatLongStartRide(
+               bookingController.useracceptmodel.bookingId,
                position.latitude.toString(),
                position.longitude.toString(),
             );
          }
+
+         if (bookingController.useracceptmodel.status != "") {
+            userPickupMarker(context);
+         }
+      } catch (e) {
+         print("Error: $e");
       }
-
-      if (controllers.useracceptmodel.status != "") {
-         userPickupMarker(context);
-      }
-
-
    }
+
 }

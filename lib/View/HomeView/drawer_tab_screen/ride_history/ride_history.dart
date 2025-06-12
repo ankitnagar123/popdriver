@@ -190,7 +190,7 @@ class _RideHistoryState extends State<RideHistory> {
                                       style: TextStyle(fontSize: 12),
                                     ),
                                     Text(
-                                      "KSh ${list.totalPrice}",
+                                      "\$ ${list.totalPrice}",
                                       style: TextStyle(fontSize: 12),
                                     ),
                                   ],
@@ -438,7 +438,7 @@ class _RideHistoryState extends State<RideHistory> {
         _buildStatCard(
           icon: Icons.attach_money,
           title: "Earnings",
-          value: "KSh ${controller.totalEarning.value}",
+          value: "\$ ${controller.totalEarning.value}",
           color: Colors.green,
         ),
       ],
@@ -526,8 +526,8 @@ class _RideHistoryState extends State<RideHistory> {
               child: _buildFilterButton(
                 text: "Reset",
                 onPressed: () {
-                  controller.HistoryEndDate.value = "Select";
-                  controller.HistoryStartDate.value = "Select";
+                  controller.HistoryEndDate.value = "";
+                  controller.HistoryStartDate.value = "";
                   controller.rideHistory("", "","");
                 },
                 color: Colors.grey,
@@ -739,7 +739,7 @@ class _RideHistoryState extends State<RideHistory> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "KSh ${ride.totalPrice}",
+                "\$ ${ride.totalPrice}",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -887,7 +887,7 @@ class _RideHistoryState extends State<RideHistory> {
               _buildDetailRow("Vehicle Type", details.carTypeName),
               _buildDetailRow("Date", "${details.rideTime} ${details.rideDate}"),
               _buildDetailRow("Ride ID", details.bookingId),
-              _buildDetailRow("Total Cost", "KSh ${details.totalPrice}"),
+              _buildDetailRow("Total Cost", "\$ ${details.totalPrice}"),
               _buildDetailRow("Payment Mode", details.paymentMode),
 
               SizedBox(height: 20),

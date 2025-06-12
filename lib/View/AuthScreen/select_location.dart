@@ -230,7 +230,7 @@ class _SelectAddressState extends State<SelectAddress> {
     List<Placemark> placeMarks = await placemarkFromCoordinates(
         controllers.destLocation.value.latitude,
         controllers.destLocation.value.longitude,
-        localeIdentifier: "en");
+  );
     print(placeMarks);
 
     Placemark place = placeMarks[0];

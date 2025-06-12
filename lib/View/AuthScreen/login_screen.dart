@@ -1,10 +1,8 @@
 import 'dart:developer';
 import 'dart:io';
-import '../../TestDev/MpesaPayment.dart';
 import '../../controller/auth_controller.dart';
 import '../../route_helper/route_helper.dart';
 import '../../utils/colors.dart';
-import '../../utils/custom_button.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -27,8 +25,9 @@ class _LoginScreenState extends State<LoginScreen> {
   AuthController controller = Get.find<AuthController>();
   TextEditingController phoneCtr = TextEditingController();
   TextEditingController passwordCtr = TextEditingController();
-  String countryFlag = "KE";
-  String countryCode = "+254";
+  String countryFlag = "AU";
+  String countryCode = "+61";
+  bool? _checked = false;
 
   DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
 
@@ -44,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     info();
+    setValue();
     accessToken = uuid.v1();
     print("uuid ------- >:$accessToken");
     sp.setStringValue(sp.UU_ID, accessToken.toString());
@@ -53,50 +53,92 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
+      bottomSheet:    Container(color: MyColors.background,
+        child: TextButton(
+          onPressed: () {
+            Get.toNamed(RouteHelper.getSignUpScreenRoute());
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Don’t have an account?".tr,
+                style: TextStyle(color:Colors.grey,fontSize: 13),
+              ), Text(
+                " SignUp".tr,
+                style: TextStyle(color: MyColors.buttonColor,fontSize: 15,fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
-        child: Stack(
+        child:
+        Column(
           children: [
-            Image.asset(
-              "assets/images/loginImage.jpg",
-              height: Get.height,
-              width: Get.width,
-              fit: BoxFit.cover,
+            SizedBox(height: 30),
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: MyColors.primary.withOpacity(0.2),
+                    blurRadius: 10,
+                    spreadRadius: 5,
+                  )
+                ],
+              ),
+              child: Image.asset(
+                "assets/images/logo.png",
+                height: 200,
+                // width: 180,
+              ),
             ),
-            Positioned(
-              top: Get.height / 2.5,
-              child: Container(
-                width: Get.width,
-                height: Get.height,
-                decoration: BoxDecoration(
-                  color: MyColors.background,
-                  borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(15),
-                      topLeft: Radius.circular(15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey,
-                      blurRadius: 20.0,
-                      spreadRadius: 10.0,
-                      offset: Offset(
-                        5.0,
-                        5.0,
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                      color: MyColors.background,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          blurRadius: 15,
+                          spreadRadius: 5,
+                          offset: Offset(0, 10),
+                        )
+                      ],
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          MyColors.background.withOpacity(0.9),
+                          MyColors.background,
+                        ],
+                      )),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Center(
+                    child: Text(
+                    "Get Moving With POP Driver 👨‍✈️".tr,
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w600,
+                        color: MyColors.primary,
+                        letterSpacing: 0.5,
                       ),
-                    )
-                  ],
-                 ),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                  child: Column(
+                    ),
+                  ),
+                  SizedBox(height: 25),
+
+                  // Phone Number Field
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Get Moving With Mtaani Driver".tr,
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      SizedBox(
-                        height: 15,
-                      ),
                       Padding(
                         padding: EdgeInsets.only(top: 10),
                         child: Column(
@@ -129,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     textInputAction: TextInputAction.next,
                                     showDropdownIcon: false,
                                     autovalidateMode: AutovalidateMode.disabled,
-                                    /*disableLengthCheck: true,*/
+                                    disableLengthCheck: false,
                                     initialCountryCode: countryFlag,
 
                                     inputFormatters: [
@@ -187,78 +229,134 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                           child: isHide
                               ? Icon(
-                                  Icons.visibility_off,
-                                  color: MyColors.DarkBlue,
-                                )
+                            size: 18,
+                            Icons.visibility_off,
+                            color: MyColors.DarkBlue,
+                          )
                               : Icon(
-                                  Icons.visibility,
-                                  color: MyColors.DarkBlue,
-                                ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: TextButton(
-                          onPressed: () {
-                            Get.toNamed(
-                                RouteHelper.getForgotPasswordScreenRoute());
-                          },
-                          child: Text(
-                            "Forgot Password".tr,
-                            style: TextStyle(color: MyColors.primary),
+                            size: 18,
+                            Icons.visibility,
+                            color: MyColors.DarkBlue,
                           ),
                         ),
                       ),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      Stack(
-                        children: [
-                          Obx(
-                            () => custom_buttons(
-                                loading: controller.loginLoader.value,
-                                voidCallback: () {
-                                   // Get.to(()=>Mpesapayment());
-                                  if (valid() == true) {
-                                    controller.driverLogin(
-                                       countryCode.toString(),
-                                        phoneCtr.text,
-                                        passwordCtr.text.toString(),
-                                        deviseName.toString(),
-                                        accessToken.toString(),
-                                        context);
-                                  }
-                                },
-                                text: 'Login'.tr),
-                          ),
-                          Positioned(
-                            left: Get.width / 1.25,
-                            top: 12,
-                            child: Icon(
-                              Icons.arrow_forward,
-                              color: MyColors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Center(
-                        child: TextButton(
-                          onPressed: () {
-                            Get.toNamed(RouteHelper.getSignUpScreenRoute());
-                          },
-                          child: Text(
-                            "New Account? SignUp".tr,
-                            style: TextStyle(color: MyColors.buttonColor),
-                          ),
-                        ),
-                      ),
+
                     ],
                   ),
-                ),
-              ),
-            )
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _checked,
+                              onChanged: (value) =>
+                                  setState(() => _checked = value),
+                              activeColor: MyColors.primary,
+                            ),
+                            Text(
+                              "Remember me".tr,
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ],
+                        ),
+                  SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () => Get.toNamed(RouteHelper.getForgotPasswordScreenRoute()),
+                      child: Text(
+                        "Forgot Password?".tr,
+                        style: TextStyle(
+                          color: MyColors.primary,
+                          fontWeight: FontWeight.w500,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 25),
+                  Obx(() => AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [
+                              MyColors.primary,
+                              MyColors.DarkBlue,
+                            ],
+                          ),
+                          boxShadow: [
+                          if (!controller.loginLoader.value)
+                      BoxShadow(
+                  color: MyColors.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: Offset(0, 5),
+                      )
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+
+
+                      if (valid()) {
+                        controller.driverLogin(
+                            countryCode.toString(),
+                            countryFlag.toString(),
+                            phoneCtr.text,
+                            passwordCtr.text.toString(),
+                            deviseName.toString(),
+                            accessToken.toString(),
+                            _checked!,
+                            context
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      minimumSize: Size(double.infinity, 0),
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: controller.loginLoader.value
+                        ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                        : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Login'.tr,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white)
+                      ],
+                    ),
+                  ),
+                )),
+
           ],
         ),
+      ),
+    ),
+    ),
+            SizedBox(height: 50,),
+    ],
+    ),
       ),
     );
   }
@@ -285,4 +383,36 @@ class _LoginScreenState extends State<LoginScreen> {
       print('IOS devise info $deviseName');
     }
   }
+
+
+  Future<void> setValue() async {
+    // Get mobile number using sp.getString()
+    String mobileNumber = (await sp.getStringValue(sp.MOBILE_NO)) ?? "";
+    String password = (await sp.getStringValue(sp.PASSWORD)) ?? "";
+    String code = (await sp.getStringValue(sp.COUNTRY_CODE)) ?? "";
+    String flag = (await sp.getStringValue(sp.FLAG)) ?? "";
+
+    print("Mobile number:-- $mobileNumber");
+    print("Country Code:-- $code");
+    print("Country Flag:-- $flag");
+    print("Controllers updated: ${phoneCtr.text}, ${passwordCtr.text}");
+
+    setState(() {
+      if (mobileNumber.isNotEmpty) {
+        phoneCtr.text = mobileNumber;
+        _checked =true;
+      }
+      if (password.isNotEmpty) {
+        passwordCtr.text = password;
+      }
+      if (code.isNotEmpty) {
+        countryCode = code;
+      }
+      if (flag.isNotEmpty) {
+        countryFlag = flag;
+      }
+
+    });
+  }
+
 }

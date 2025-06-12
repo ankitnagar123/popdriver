@@ -1,18 +1,13 @@
-import '../../route_helper/route_helper.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+
 import '../../utils/colors.dart';
-import '../../utils/text_field.dart';
 import '../../controller/auth_controller.dart';
-import '../../utils/colors.dart';
 import '../../utils/custom_button.dart';
 import '../../utils/snackBar.dart';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
+import 'package:flutter/services.dart';
+
 import 'package:get/get.dart';
-
-
-import '../../utils/colors.dart';
-import '../../utils/snackBar.dart';
 
 class SignupOTP extends StatefulWidget {
   const SignupOTP({Key? key}) : super(key: key);
@@ -22,10 +17,9 @@ class SignupOTP extends StatefulWidget {
 }
 
 class _SignupOTPState extends State<SignupOTP> {
-
   AuthController controller = Get.find<AuthController>();
+  TextEditingController otpCtr = TextEditingController();
 
-  String otp = "";
   String id = "";
 
   @override
@@ -35,91 +29,163 @@ class _SignupOTPState extends State<SignupOTP> {
 
 
   @override
+  void dispose() {
+    otpCtr.dispose(); // ✅ Dispose to avoid errors
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
         leading: InkWell(
             onTap: () {
               Get.back();
             },
-            child: Icon(Icons.arrow_back, color: MyColors.black,)),
+            child: Icon(
+              Icons.arrow_back,
+              color: MyColors.black,
+            )),
         backgroundColor: MyColors.white,
-        title: Image.asset("assets/images/logo.png", height: 50,),
+        title: Image.asset(
+          "assets/images/logo.png",
+          height: 100,
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: 40, horizontal: 10),
+        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 10),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: 120,),
-            Text(
-              "Enter the 6-digit code send to you at\n ${controller.countryCode
-                  .value + " " + controller.contacts.value}".tr,
-              style: TextStyle(fontSize: 15),),
-            SizedBox(height: 15,),
-            Text("Enter OTP".tr),
-            SizedBox(height: 20,),
-            OtpTextField(
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              numberOfFields: 6,
-              borderColor: Color(0xFF512DA8),
-              showFieldAsBox: false,
-              onCodeChanged: (String code) {
+            SizedBox(height: 110,),
 
-              },
-              onSubmit: (String verificationCode) {
-                otp = verificationCode;
-                print("otp---------$otp");
-              },
+            Center(
+              child: Text(
+                "Enter verification code\n ".tr,
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
             ),
-            SizedBox(height: 50,),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text("A code has been sent to "
+                        .tr,style: TextStyle(fontSize: 13,fontWeight: FontWeight.normal),),
+                Text(" ${"${controller.countryCode.value}${controller.contacts.value}"}"
+                    .tr,style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color: Colors.black54),),
+              ],
+            ),
+            SizedBox(
+              height: 30,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 22, right: 22.0),
+              child: PinCodeTextField(
+                  enablePinAutofill: false,
+                  controller: otpCtr,
+                  enableActiveFill: true,
+                  appContext: context,
+                  length: 6,
+                  keyboardType: TextInputType.number,
+                  textStyle: TextStyle(
+                    color: MyColors.black,
+                    fontSize: 18,
+                  ),
+                  cursorColor: MyColors.primary,
+                  pinTheme: PinTheme(
+                    inactiveColor: Colors.grey,
+                    // Set border color for inactive state
+                    inactiveFillColor: Colors.white,
+                    // Ensure background color is white
+                    selectedColor: MyColors.primary,
+
+                    activeFillColor: Colors.white,
+                    selectedFillColor: Colors.white,
+                    fieldHeight: 45,
+                    fieldWidth: 45,
+                    shape: PinCodeFieldShape.box,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      otpCtr.text = value;
+                    });
+
+                  },
+                  onCompleted: (value) {
+                    otpCtr.text = value;
+                    controller.verifyOtp( otpCtr.text, () {
+                          Get.back(result: "back");
+                        });
+                  }),
+            ),
+            Obx(() {
+              return controller.remainingTime.value == 0
+                  ? InkWell(
+                  onTap: () {
+                    controller.signupOtp("resend", () {});
+                  },
+                  child: controller.otpLoader.value
+                      ? myIndicator()
+                      : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "I didn't receive code? ".tr,
+                        style:
+                        TextStyle(color: MyColors.black,fontSize: 12),
+                      ),   Text(
+                        "Resend".tr,
+                        style:
+                        TextStyle(color: MyColors.buttonColor,fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ))
+                  : Text(
+                  "${controller.remainingTime.value} remaining time");
+            }),
+            SizedBox(
+              height: 50,
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+
                   Obx(() {
-                    return controller.remainingTime.value == 0 ?
-                    InkWell(
-                        onTap: () {
-                          controller.signupOtp("resend", () {});
-                        },
-                        child: controller.otpLoader.value ?
-                        myIndicator() :
-                        Text("I didn't receive code".tr, style: TextStyle(
-                            color: MyColors.buttonColor),)) :
-                    Text("${controller.remainingTime.value} remaining time");
-                  }),
-                  Obx(() {
-                    if(controller.otpVerify.value){
-                      return Center(child: myIndicator(),);
-                    }else {
+                    if (controller.otpVerify.value) {
+                      return Center(
+                        child: myIndicator(),
+                      );
+                    } else {
                       return InkWell(
-                      onTap: () {
-                        print("otp =====" + otp);
-                        if (otp.length != 6) {
-                          customSnackBar("Enter OTP".tr);
-                        } else {
-                          controller.verifyOtp(controller.contacts.value,controller.countryCode.value,otp,(){
-                            Get.back(result: "back");
-                          });
-                        }
-                      },
-                      child: Container(
-                        height: 50,
-                        width: 50,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(100),
-                            color: MyColors.orange
+                        onTap: () {
+                          print("otp =====" + otpCtr.text);
+                          if (otpCtr.text.length != 6) {
+                            customSnackBar("Enter OTP".tr);
+                          } else {
+                            controller.verifyOtp(otpCtr.text, () {
+                              Get.back(result: "back");
+                            });
+                          }
+                        },
+                        child: Container(
+                          height: 50,
+                          width: 50,
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(100),
+                              color: MyColors.black),
+                          child: Icon(
+                            Icons.arrow_forward,
+                            color: MyColors.white,
+                          ),
                         ),
-                        child: Icon(Icons.arrow_forward,
-                          color: MyColors.white,),
-                      ),
-                    );
+                      );
                     }
                   }),
                 ],

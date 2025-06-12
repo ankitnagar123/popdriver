@@ -33,10 +33,10 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   final statusChangeLoader = false.obs;
   final bookingId = "".obs;
   final rideNowList = <RideNowBookingModel>[].obs;
-  final rideLaterList = <RideLaterBookingModel>[].obs;
+  // final rideLaterList = <RideLaterBookingModel>[].obs;
   final startRideOtp = "".obs;
   final datas = "".obs;
-  final datass = "".obs;
+  // final datass = "".obs;
   final completeText = "".obs;
   final deleteId = "".obs;
   Timer? timer;
@@ -67,7 +67,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   void refreshData() {
     rideNowBooking();
-    rideLaterBooking();
+    // rideLaterBooking();
     userAcceptBooking(() {});
     Get.find<MyRidesController>().rideLaterScreenBooking("", '');
   }
@@ -83,7 +83,6 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   void rideNowBooking() async {
     final rideNowBooking = {'driver_id': await secure.readData(secure.user_id)};
     try {
-      rideLaterList.clear();
       final response = await apiService.postData(URLS.FETCH_RIDE_NOW_BOOKING, rideNowBooking);
       log("ride now booking response----->:${response.body}");
       rideNowList.value = rideNowBookingModelFromJson(response.body);
@@ -93,6 +92,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     }
   }
 
+
+/*
   void rideLaterBooking() async {
     final rideLaterBooking = {'driver_id': await secure.readData(secure.user_id)};
     try {
@@ -104,6 +105,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       log("ride later booking Exception-----", error: e.toString());
     }
   }
+*/
 
   void acceptBooking(String bookingId, VoidCallback callback) async {
     acceptBookLoader.value = true;
@@ -119,7 +121,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         acceptBookLoader.value = false;
         callback();
         Get.find<MyRidesController>().rideLaterScreenBooking("", '');
-        customSnackBar("Accepted successfully");
+        customSnackBar("Booking Accepted successfully");
       } else {
         acceptBookLoader.value = false;
         customSnackBar("Something Went Wrong".tr);
@@ -181,6 +183,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         customSnackBar("Something Went Wrong".tr);
       }
     } catch (e) {
+      cancelStartBookLoader.value = false;
+
       cancelBookLoader.value = false;
       log("Exception-----", error: e.toString());
     }
@@ -291,14 +295,16 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     try {
       final response = await apiService.postData(URLS.STATUS_CHANGE, statusData);
       final data = jsonDecode(response.body);
+      callback();
       final result = data['result'];
       log("status change response: $data");
       if (result == "arrived successfully") {
-        final otp = data['confirmation_code'].toString();
        /* sp.setStringValue(sp.DRIVER_START_RIDE_OTP, otp);*/
+      }else if(result == "arrived successfully"){
+
       }
+
       userAcceptBooking(() {});
-      callback();
       statusChangeLoader.value = false;
     } catch (e) {
       statusChangeLoader.value = false;

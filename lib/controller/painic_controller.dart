@@ -46,7 +46,7 @@ class PainButtonController extends GetxController{
     List<Placemark> placeMarks = await placemarkFromCoordinates(
         controller.startLocation.value.latitude,
         controller.startLocation.value.longitude,
-        localeIdentifier: "en");
+    );
     print(placeMarks);
 
     Placemark place = placeMarks[0];

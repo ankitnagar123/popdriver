@@ -26,7 +26,6 @@ class _ReadyForRideState extends State<ReadyForRide> {
   void initState() {
     controller.rideNowBooking();
     Timer(Duration(seconds: 3), () {
-      Get.find<HomeController>().selectedValueIndex.value = 0;
       Navigator.of(context).pop();
     });
 

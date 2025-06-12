@@ -6,22 +6,27 @@ class onboardingData
 
   String? middleImage;
   String? title;
+  String? subTitle;
 
-  onboardingData({this.middleImage,this.title,});
+  onboardingData({this.middleImage,this.title,this.subTitle});
 }
 List<onboardingData> items=[
   onboardingData(
     middleImage: "assets/images/onboarding1.png",
-    title: "🚗 Safe, Easy & Reliable rides — Mtaani Driver’s got you covered!".tr,
+    title: "Register Vehicle".tr,
+    subTitle: "🚗 Quick and simple vehicle registration to get you started on the road.".tr,
   ),
   onboardingData(
     middleImage: "assets/images/onboarding2.png",
-    title: "🕒 Always on time, every time — Ride smart with Mtaani Driver!".tr,
+    title: "Upload Documents".tr,
+    subTitle: "📄 Securely upload your documents — drive with confidence and compliance.".tr,
   ),
   onboardingData(
     middleImage: "assets/images/onboarding3.png",
-    title: "📍 Discover ride requests around you — Earn more with ease!".tr,
+    title: "Earn Money".tr,
+    subTitle: "💸 Start accepting ride requests nearby — boost your income effortlessly.".tr,
   ),
+
 
 ];
 

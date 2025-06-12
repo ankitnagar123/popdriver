@@ -20,6 +20,7 @@ import '../../../controller/my_ride_controller.dart';
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/custom_button.dart';
 import '../../../utils/shared_preferences.dart';
+import '../../AuthScreen/ChangePassword.dart';
 import '../drawer_tab_screen/my_ride_screen.dart';
 
 class MtaaniSidebar extends StatefulWidget {
@@ -33,14 +34,15 @@ class _MtaaniSidebarState extends State<MtaaniSidebar> {
   AuthController controller = Get.find<AuthController>();
 
   final List<_MenuItem> menuItems = [
-    _MenuItem("WALLET", Icons.wallet, WalletScreen()),
-    _MenuItem("MEMBERSHIP", Icons.card_membership, MemberShipScreen(type: "2",)),
-    _MenuItem("UPCOMING RIDES", Icons.upcoming, MyRideScreen()),
+    // _MenuItem("WALLET", Icons.wallet, WalletScreen()),
+    // _MenuItem("MEMBERSHIP", Icons.card_membership, MemberShipScreen(type: "2",)),
+    // _MenuItem("UPCOMING RIDES", Icons.upcoming, MyRideScreen()),
     _MenuItem("RIDE HISTORY", Icons.history, RideHistory()),
     _MenuItem("NOTIFICATION", Icons.notifications, NotificationScreen()),
     _MenuItem("RATE & REVIEW", Icons.rate_review, RatingScreen()),
     _MenuItem("INVITE FRIENDS", Icons.share, InviteFriendScreen()),
     _MenuItem("SUPPORT", Icons.support_agent, Support()),
+    _MenuItem("CHANGE PASSWORD", Icons.lock, ChangePassword()),
     _MenuItem("DELETE ACCOUNT", Icons.delete_forever_outlined, SizedBox()),
     _MenuItem("SIGN OUT", Icons.logout, SizedBox()),
   ];
@@ -66,81 +68,104 @@ class _MtaaniSidebarState extends State<MtaaniSidebar> {
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 10),
-                              child: Center(
-                                child: SizedBox(
-                                  height: 120,
-                                  child: Card(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 10),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                              "Are you sure want to Logout".tr),
-                                          SizedBox(
-                                            height: 20,
-                                          ),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceAround,
-                                            children: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                                child: Text(
-                                                  "Cancel".tr,
-                                                  style: TextStyle(
-                                                      color: Colors.red),
-                                                ),
-                                              ),
-                                              Obx(() {
-                                                if (controller
-                                                    .logoutLoader.value) {
-                                                  return Center(
-                                                    child: myIndicator(),
-                                                  );
-                                                } else {
-                                                  return TextButton(
-                                                    onPressed: () {
-                                                      controller
-                                                          .driverLogout("", () {
-                                                        Future.delayed(
-                                                            Duration.zero, () {
-                                                          Get.find<
-                                                                  HomeController>()
-                                                              .streamSubscription
-                                                              .cancel();
-                                                        });
-                                                        /* onUserLogout();*/
-                                                        Get.find<
-                                                                HomeController>()
-                                                            .updateDriverLatLong(
-                                                                "0",
-                                                                "0",
-                                                                "0",
-                                                                "UnAvailable");
-                                                        Get.offAllNamed(RouteHelper
-                                                            .getLoginScreenRoute());
-                                                      });
-                                                    },
-                                                    child: Text(
-                                                      "Ok".tr,
-                                                      style: TextStyle(
-                                                          color: Colors.green),
-                                                    ),
-                                                  );
-                                                }
-                                              })
-                                            ],
-                                          )
-                                        ],
+                            return Dialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                              elevation: 4,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Title
+                                    Text(
+                                      "Confirmation".tr,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Message
+                                    Text(
+                                      "Are you sure you want to logout?".tr,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Buttons Row
+                                    Obx(() {
+                                      if (controller.logoutLoader.value) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      } else {
+                                        return Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            // Cancel Button
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  backgroundColor: Colors.grey,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text(
+                                                  "Cancel".tr,
+                                                  style: const TextStyle(color: Colors.white),
+                                                ),
+                                              ),
+                                            ),
+
+                                            const SizedBox(width: 16),
+
+                                            // Logout Button
+                                            Expanded(
+                                              child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                                  backgroundColor: Colors.red[400],
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                ),
+                                                onPressed: () {
+                                                  controller.driverLogout("", () {
+                                                    Future.delayed(Duration.zero, () {
+                                                      Get.find<HomeController>()
+                                                          .streamSubscription
+                                                          .cancel();
+                                                    });
+                                                    Get.find<HomeController>()
+                                                        .updateDriverLatLong(
+                                                        "0", "0", "0", "UnAvailable");
+                                                    Get.offAllNamed(
+                                                        RouteHelper.getLoginScreenRoute());
+                                                  });
+                                                },
+                                                child: Text(
+                                                  "Logout".tr,
+                                                  style: const TextStyle(color: Colors.white),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }
+                                    }),
+                                  ],
                                 ),
                               ),
                             );
@@ -148,8 +173,10 @@ class _MtaaniSidebarState extends State<MtaaniSidebar> {
                         );
                       } else if (item.title == "DELETE ACCOUNT") {
                         showCustomDialog(context);
-                      }  else {
-                        Get.to(() => item.screen,transition: Transition.rightToLeft,duration: Duration(milliseconds: 500));
+                      } else {
+                        Get.to(() => item.screen,
+                            transition: Transition.rightToLeft,
+                            duration: Duration(milliseconds: 500));
                         // existing logic
                       }
                     },
@@ -180,31 +207,7 @@ class _MtaaniSidebarState extends State<MtaaniSidebar> {
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87)),
                           ),
-                        ) /* ElevatedButton.icon(
-                        iconAlignment: IconAlignment.start,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => item.screen),
-                          );
-                        },
-                        icon: Icon(item.icon, color: MyColors.primary,size: 25,),
-                        label: Text(item.title,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, color: Colors.black)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.teal,
-                          side: BorderSide(color: MyColors.primary, width: 1.5),
-                          padding:
-                          const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),*/
-                        ),
+                        )),
                   );
                 },
               ),
@@ -368,25 +371,20 @@ AppBar customAppBar() {
       ),
     ),*/
     actions: [
-      InkWell(
-        onTap: () {
-          Get.to(() => NotificationScreen());
-        },
-        child: Padding(
-          padding: EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(100),
-              child: FadeInImage.assetNetwork(
-                placeholder: 'assets/images/loader.gif',
-                width: 70,
-                height: 70,
+      Padding(
+        padding: EdgeInsets.all(8.0),
+        child: CircleAvatar(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: FadeInImage.assetNetwork(
+              placeholder: 'assets/images/loader.gif',
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              image: MyColors.image,
+              imageErrorBuilder: (c, o, s) => Image.asset(
+                "assets/images/logo.png",
                 fit: BoxFit.cover,
-                image: MyColors.image,
-                imageErrorBuilder: (c, o, s) => Image.asset(
-                  "assets/images/logo.png",
-                  fit: BoxFit.cover,
-                ),
               ),
             ),
           ),
@@ -442,33 +440,36 @@ AppBar customAppBar() {
                                 color: Colors.white,
                               ),
                             ),
-                      Text(
-                        'Invite Code :${MyColors.InviteCode}',
+                      // Text(
+                      //   'Invite Code :${MyColors.InviteCode}',
+                      //   style: TextStyle(
+                      //     fontSize: 13,
+                      //     color: Colors.white,
+                      //   ),
+                      // ),
+                      /*  Text(
+                        'Wallet : AUD ${MyColors.walletAmount}',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.white,
                         ),
-                      ),
-                      Text(
-                        'Wallet : KSh ${MyColors.walletAmount}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white,
-                        ),
-                      ),
+                      ),*/
                     ],
                   ),
                 ),
               ),
-              GestureDetector(
-                  onTap: () {
-                    Get.to(() => EditProfile());
-                  },
-                  child: Icon(
-                    Icons.edit,
-                    size: 20,
-                    color: Colors.white,
-                  ))
+              Align(
+                alignment: Alignment.topRight,
+                child: GestureDetector(
+                    onTap: () {
+                      Get.to(() => EditProfile());
+                    },
+                    child: Icon(
+                      Icons.edit,
+                      size: 20,
+                      color: Colors.white,
+                    )),
+              )
             ],
           ),
         )),

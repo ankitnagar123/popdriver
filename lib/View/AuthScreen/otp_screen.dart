@@ -99,7 +99,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       if(otp.length != 6){
                         customSnackBar("Enter OTP".tr);
                       } else{
-                        controller.verifyOtp(Get.arguments['contact'],Get.arguments['code'],otp,(){
+                        controller.verifyOtp(otp,(){
                           Get.offNamed(RouteHelper.getSetPasswordScreenRoute(),
                               arguments: {
                                 "id": id

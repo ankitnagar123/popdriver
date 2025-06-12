@@ -229,7 +229,7 @@ width: MediaQuery.of(context).size.width/1.2,
 
                               /// Price
                               Text(
-                                plan.price == "0" ? "FREE" : "KSh ${plan.price}",
+                                plan.price == "0" ? "FREE" : "\$ ${plan.price}",
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -573,7 +573,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            '${widget.amount} KSh',
+            '${widget.amount} \$',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: theme.colorScheme.primary,
@@ -626,7 +626,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
               if (value == null || value.isEmpty) {
                 return 'Please enter mobile number';
               }
-            /*  if (!RegExp(r'^\+254\d{9}$').hasMatch(value)) { // Updated regex
+            /*  if (!RegExp(r'^\+61\d{9}$').hasMatch(value)) { // Updated regex
                 return 'Invalid Kenyan number'; // Updated error message
               }*/
               return null;
@@ -651,7 +651,7 @@ class _MpesaPaymentSheetState extends State<MpesaPaymentSheet> {
       return;
     }
 
-   /* if (!RegExp(r'^\+254\d{9}$').hasMatch(_mobileController.text)) { // Updated regex
+   /* if (!RegExp(r'^\+61\d{9}$').hasMatch(_mobileController.text)) { // Updated regex
       setState(() => _errorText = 'Invalid Kenyan number'); // Updated error message
       return;
     }*/

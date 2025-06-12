@@ -1,4 +1,4 @@
-
+import 'package:get/get.dart';
 import 'package:get/get_navigation/src/routes/get_route.dart';
 import '../View/AuthScreen/forgot_password_screen.dart';
 import '../View/AuthScreen/login_screen.dart';
@@ -39,7 +39,6 @@ import '../View/single_complane_screen.dart';
 import '../permission.dart';
 
 class RouteHelper {
-
   static const String initial = '/';
   static const String splash = '/splash';
   static const String onBoarding = '/onBoarding';
@@ -82,95 +81,136 @@ class RouteHelper {
   static const String locationPermissionPage = '/locationPermissionPage';
   static const String signupOTP = '/signupOTP';
 
+  static String getInitialRoute() => initial;
 
+  static getSplashScreenRoute() => splash;
 
-  static String getInitialRoute()=>initial;
-  static getSplashScreenRoute()=>splash;
-  static getOnBoardingScreenRoute()=>onBoarding;
-  static getLoginScreenRoute()=>login;
-  static getSignUpScreenRoute()=>signUp;
-  static getForgotPasswordScreenRoute()=>forgetPassword;
-  static getOtpScreenRoute()=>otp;
-  static getSetPasswordScreenRoute()=>setPassword;
-  static getPasswordChangeSuccessScreenRoute()=>changePassSuccess;
-  static getSelectAddressScreenRoute()=>selectAddress;
-  static getHomeScreenScreenRoute()=>homeScreen;
-  static getReadyForRideScreenRoute()=>readyForRide;
-  static getNotificationScreenRoute()=>notificationScreen;
-  static getWalletScreenScreenRoute()=>walletScreen;
-  static getMyRideScreenScreenRoute()=>myRide;
-  static getRatingScreenScreenRoute()=>rating;
-  static getInviteFriendScreenScreenRoute()=>inviteFriend;
-  static getProfileScreenScreenRoute()=>profileScreen;
-  static getEditProfileScreenRoute()=>editProfileScreen;
-  static getRideHistoryScreenRoute()=>rideHistory;
-  static getSupportScreenRoute()=>supportScreen;
-  static getContactUsScreenRoute()=>contactUs;
-  static getWriteSupportScreenRoute()=>writeSupport;
-  static getFrequentlyScreenScreenRoute()=>frequently;
-  static getPrivacyPolicyScreenRoute()=>privacyPolicy;
-  static getTermConditionScreenRoute()=>termCondition;
-  static getCancelBookingScreenRoute()=>cancelBooking;
-  static getStartRideOtpScreenRoute()=>startRideOtp;
-  static getAddBankDetailsScreenRoute()=>addBankDetails;
-  static getSelectVehicleScreenRoute()=>selectVehicle;
-  static getVehicleDetailScreenRoute()=>vehicleDetail;
-  static getWallletScreenRout()=>wallet;
-  static getWallletHistoryScreenRout()=>wallethistory;
-  static getAddCardScreenRout()=>addCard;
-  static getFetchCardScreenRout()=>fetchCard;
-  static getReportScreenRout()=>report;
-  static getMessageScreenRout()=>message;
-  static getSingleQueryScreen()=>fetchSingleQuery;
-  static getSingleQueryComScreen()=>fetchSingleCom;
-  static getLocationPermissionPageScreen()=>locationPermissionPage;
-  static getSignupOTPScreen()=>signupOTP;
+  static getOnBoardingScreenRoute() => onBoarding;
 
+  static getLoginScreenRoute() => login;
 
-  static  List<GetPage> routes = [
+  static getSignUpScreenRoute() => signUp;
 
-  GetPage(name: splash, page: ()=>  SplashScreen()),
-  GetPage(name: onBoarding, page: ()=> const OnboardingScreen()),
-  GetPage(name: login, page: ()=> const LoginScreen()),
-  GetPage(name: signUp, page: ()=> const SignUpScreen()),
-  GetPage(name: forgetPassword, page: ()=> const ForgotPassword()),
-  GetPage(name: otp, page: ()=> const OtpScreen()),
-  GetPage(name: setPassword, page: ()=> const SetPassword()),
-  GetPage(name: changePassSuccess, page: ()=> const PasswordChangeSuccess()),
-  GetPage(name: selectAddress, page: ()=> const SelectAddress()),
-  GetPage(name: homeScreen, page: ()=> const BottomNavScreen()),
-  GetPage(name: readyForRide, page: ()=> const ReadyForRide()),
-  GetPage(name: notificationScreen, page: ()=> const NotificationScreen()),
- /* GetPage(name: walletScreen, page: ()=> const WalletScreen()),*/
-  GetPage(name: myRide, page: ()=> const MyRideScreen()),
-  GetPage(name: rating, page: ()=> const RatingScreen()),
-  GetPage(name: inviteFriend, page: ()=> const InviteFriendScreen()),
-  GetPage(name: profileScreen, page: ()=> const ProfileScreen()),
-  GetPage(name: editProfileScreen, page: ()=> const EditProfile()),
-  GetPage(name: rideHistory, page: ()=> const RideHistory()),
-  GetPage(name: supportScreen, page: ()=> const Support()),
-  /*GetPage(name: contactUs, page: ()=> const ContactUs()),*/
-  GetPage(name: writeSupport, page: ()=> const WriteSupport()),
-  GetPage(name: frequently, page: ()=> const FrequentlyScreen()),
-  GetPage(name: privacyPolicy, page: ()=> const PrivacyPolicy()),
-  GetPage(name: termCondition, page: ()=> const TermCondition()),
-  GetPage(name: cancelBooking, page: ()=> const CancelBooking()),
-  GetPage(name: startRideOtp, page: ()=> const StartRideOtp()),
-  GetPage(name: addBankDetails, page: ()=> const AddBankDetails()),
-  GetPage(name: selectVehicle, page: ()=> const SelectVehicle()),
-  GetPage(name: vehicleDetail, page: ()=> const VehicleDetail()),
-  GetPage(name: wallet, page: ()=> const WalletScreen()),
-  /*GetPage(name: wallethistory, page: ()=> const WalletHistory()),*/
-  /*GetPage(name: addCard, page: ()=>  AddNewCardScreen()),*/
-  GetPage(name: fetchCard, page: ()=>  FetchCard()),
-  GetPage(name: report, page: ()=>  ReportPage()),
-  GetPage(name: message, page: ()=>  Messages()),
-  GetPage(name: fetchSingleQuery, page: ()=>  FetchSingleQuery()),
-  GetPage(name: fetchSingleCom, page: ()=>  FetchSingleComplane()),
-  GetPage(name: locationPermissionPage, page: ()=>  LocationPermissionPage()),
-  GetPage(name: signupOTP, page: ()=>  SignupOTP()),
+  static getForgotPasswordScreenRoute() => forgetPassword;
 
+  static getOtpScreenRoute() => otp;
+
+  static getSetPasswordScreenRoute() => setPassword;
+
+  static getPasswordChangeSuccessScreenRoute() => changePassSuccess;
+
+  static getSelectAddressScreenRoute() => selectAddress;
+
+  static getHomeScreenScreenRoute() => homeScreen;
+
+  static getReadyForRideScreenRoute() => readyForRide;
+
+  static getNotificationScreenRoute() => notificationScreen;
+
+  static getWalletScreenScreenRoute() => walletScreen;
+
+  static getMyRideScreenScreenRoute() => myRide;
+
+  static getRatingScreenScreenRoute() => rating;
+
+  static getInviteFriendScreenScreenRoute() => inviteFriend;
+
+  static getProfileScreenScreenRoute() => profileScreen;
+
+  static getEditProfileScreenRoute() => editProfileScreen;
+
+  static getRideHistoryScreenRoute() => rideHistory;
+
+  static getSupportScreenRoute() => supportScreen;
+
+  static getContactUsScreenRoute() => contactUs;
+
+  static getWriteSupportScreenRoute() => writeSupport;
+
+  static getFrequentlyScreenScreenRoute() => frequently;
+
+  static getPrivacyPolicyScreenRoute() => privacyPolicy;
+
+  static getTermConditionScreenRoute() => termCondition;
+
+  static getCancelBookingScreenRoute() => cancelBooking;
+
+  static getStartRideOtpScreenRoute() => startRideOtp;
+
+  static getAddBankDetailsScreenRoute() => addBankDetails;
+
+  static getSelectVehicleScreenRoute() => selectVehicle;
+
+  static getVehicleDetailScreenRoute() => vehicleDetail;
+
+  static getWallletScreenRout() => wallet;
+
+  static getWallletHistoryScreenRout() => wallethistory;
+
+  static getAddCardScreenRout() => addCard;
+
+  static getFetchCardScreenRout() => fetchCard;
+
+  static getReportScreenRout() => report;
+
+  static getMessageScreenRout() => message;
+
+  static getSingleQueryScreen() => fetchSingleQuery;
+
+  static getSingleQueryComScreen() => fetchSingleCom;
+
+  static getLocationPermissionPageScreen() => locationPermissionPage;
+
+  static getSignupOTPScreen() => signupOTP;
+
+  static List<GetPage> routes = [
+    GetPage(name: splash, page: () => SplashScreen()),
+    GetPage(name: onBoarding, page: () => const OnboardingScreen()),
+    GetPage(name: login, page: () => const LoginScreen()),
+    GetPage(name: signUp, page: () => const SignUpScreen(),transition: Transition.downToUp,transitionDuration: Duration(milliseconds: 500)),
+    GetPage(name: forgetPassword, page: () => const ForgotPassword(),transition: Transition.rightToLeft,transitionDuration: Duration(milliseconds: 500)),
+    GetPage(name: otp, page: () => const OtpScreen()),
+    GetPage(name: setPassword, page: () => const SetPassword()),
+    GetPage(name: changePassSuccess, page: () => const PasswordChangeSuccess()),
+    GetPage(name: selectAddress, page: () => const SelectAddress()),
+    GetPage(name: homeScreen, page: () => const BottomNavScreen()),
+    GetPage(name: readyForRide, page: () => const ReadyForRide()),
+    GetPage(name: notificationScreen, page: () => const NotificationScreen()),
+    /* GetPage(name: walletScreen, page: ()=> const WalletScreen()),*/
+    GetPage(name: myRide, page: () => const MyRideScreen()),
+    GetPage(name: rating, page: () => const RatingScreen()),
+    GetPage(name: inviteFriend, page: () => const InviteFriendScreen()),
+    GetPage(name: profileScreen, page: () => const ProfileScreen()),
+    GetPage(name: editProfileScreen, page: () => const EditProfile()),
+    GetPage(name: rideHistory, page: () => const RideHistory()),
+    GetPage(name: supportScreen, page: () => const Support()),
+    /*GetPage(name: contactUs, page: ()=> const ContactUs()),*/
+    GetPage(name: writeSupport, page: () => const WriteSupport()),
+    GetPage(name: frequently, page: () => const FrequentlyScreen()),
+    GetPage(name: privacyPolicy, page: () => const PolicyScreen()),
+    GetPage(name: termCondition, page: () => const TermConditionScreen()),
+    GetPage(name: cancelBooking, page: () => const CancelBooking()),
+    GetPage(name: startRideOtp, page: () => const StartRideOtp()),
+    GetPage(
+      name: addBankDetails,
+      page: () => const AddBankDetails(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 500),
+    ),
+    GetPage(name: selectVehicle, page: () => const SelectVehicle(),  transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 500),),
+    GetPage(name: vehicleDetail, page: () => const VehicleDetail(), transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 500),),
+    GetPage(name: wallet, page: () => const WalletScreen()),
+    /*GetPage(name: wallethistory, page: ()=> const WalletHistory()),*/
+    /*GetPage(name: addCard, page: ()=>  AddNewCardScreen()),*/
+    GetPage(name: fetchCard, page: () => FetchCard()),
+    GetPage(name: report, page: () => ReportPage()),
+    GetPage(name: message, page: () => Messages()),
+    GetPage(name: fetchSingleQuery, page: () => FetchSingleQuery()),
+    GetPage(name: fetchSingleCom, page: () => FetchSingleComplane()),
+    GetPage(name: locationPermissionPage, page: () => LocationPermissionPage()),
+    GetPage(name: signupOTP, page: () => SignupOTP(),  transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 500),),
   ];
-
-
 }

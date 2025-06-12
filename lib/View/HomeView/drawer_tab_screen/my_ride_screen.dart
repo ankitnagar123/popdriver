@@ -278,7 +278,7 @@ class _MyRideScreenState extends State<MyRideScreen> {
                                                 fontSize: 10),
                                           ),
                                           Text(
-                                            "KSh ${list.totalPrice}",
+                                            "\$ ${list.totalPrice}",
                                             style: TextStyle(
                                                 fontSize: 12),
                                           ),
@@ -521,7 +521,7 @@ class _MyRideScreenState extends State<MyRideScreen> {
                           style: TextStyle(fontSize: 12),
                         ),
                         Text(
-                          "KSh ${list.totalPrice}",
+                          "\$ ${list.totalPrice}",
                           style: TextStyle(fontSize: 12),
                         ),
                       ],
@@ -698,7 +698,7 @@ class _MyRideScreenState extends State<MyRideScreen> {
                       _buildInfoRow("Vehicle Type".tr, list.carTypeName),
                       _buildInfoRow("Date Of Ride".tr, "${list.rideTime} ${list.rideDate}"),
                       _buildInfoRow("Ride ID".tr, list.bookingId),
-                      _buildInfoRow("Final Cost".tr, "KSh ${list.totalPrice}"),
+                      _buildInfoRow("Final Cost".tr, "\$ ${list.totalPrice}"),
                       _buildInfoRow("Payment Type".tr, list.paymentMode),
 
                       SizedBox(height: 15),

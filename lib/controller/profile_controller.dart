@@ -28,6 +28,10 @@ class ProfileController extends GetxController{
   var updateDetailLoader = false.obs;
   var updateImageLoader = false.obs;
 
+  var changePasswordLoader = false.obs;
+
+
+
   var Name = "".obs;
   var Email = "".obs;
   var lastName = "".obs;
@@ -50,6 +54,7 @@ class ProfileController extends GetxController{
   var year = "".obs;
   var color = "".obs;
   var carId = "".obs;
+  var identityNo = "".obs;
   var resultVar = RxnInt(0);
 
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
@@ -100,6 +105,7 @@ class ProfileController extends GetxController{
         String member_expiry_date = jsonString["member_expiry_date"].toString();
         String membership_type = jsonString["membership_type"].toString();
         String membership_commission = jsonString["membership_commission"].toString();
+        String identity_no = jsonString["identity_no"].toString();
 
 
         Image.value = image;
@@ -124,6 +130,7 @@ class ProfileController extends GetxController{
         vehicleModel.value = model;
         color.value = vehicle_colour;
         carId.value = car_id;
+        identityNo.value = identity_no;
         MyColors.InviteCode = invite;
         MyColors.walletAmount = walletAmount;
         MyColors.name = "$name $lastname";
@@ -158,7 +165,7 @@ class ProfileController extends GetxController{
     }
   }
 
-  void updateDriveDetail(String name,String lastName,String email,
+/*  void updateDriveDetail(String name,String lastName,String email,
       String contact,String currentPass,String newPass,String countryCode,String flag,
       String vehicle_name,String vehicle_number,String year,String colour,String expiry_date_lic,
       String identity_expiry_date, String rc_expiry_date,String insurance_expiry_date,
@@ -217,7 +224,85 @@ class ProfileController extends GetxController{
       updateDetailLoader.value = false;
      log("Exception-----",error: e.toString());
     }
+  }*/
+
+  void driverProfileUpdate(
+      String vehicleId,
+      String vehicleNames,
+      String firstName,
+      String lastName,
+      String countryCode,
+      String flag,
+      String contact,
+      String email,
+      VoidCallback callback
+      ) async {
+    updateDetailLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "driver_id":  await secure.readData(secure.user_id) ,
+      "car_id": vehicleId,
+      "vehicle_number": vehicleNames,
+      "first_name": firstName,
+      "last_name": lastName,
+      "country_code": countryCode,
+      "contact": contact,
+      "email":email,
+      "country_flag": flag,
+    };
+    log("driver Profile Update  parameter ------>:$map");
+
+    try {
+      final response = await apiService.postData(URLS.DRIVER_UPDATE_DETAIL, map);
+
+      var jsonString = jsonDecode(response.body);
+      log("driver Profile Update response----->:$jsonString");
+      if (jsonString['result'] == "successfully update") {
+        updateDetailLoader.value = false;
+        callback();
+        fetchDriverDetail();
+        callback();
+      } else {
+        updateDetailLoader.value = false;
+        customSnackBar(jsonString['result'].toString());
+      }
+    } catch (e) {
+      updateDetailLoader.value = false;
+      log("Exception--------", error: e.toString());
+    }
   }
+
+
+
+  Future<void> changePassword(
+      String current_password, new_password, VoidCallback call) async {
+    changePasswordLoader.value = true;
+
+    Map<String, dynamic> map = {
+      "driver_id": await secure.readData(secure.user_id),
+      "current_password": current_password,
+      "new_password": new_password,
+    };
+    log("password change Params: $map");
+
+    try {
+      final response =
+      await apiService.postDatatoken(URLS.DRIVER_UPDATE_PASSWORD, map);
+      var jsonString = jsonDecode(response.data);
+      log("password change Response: ${jsonString['result']}");
+
+      if (jsonString['result'] == "successfully update") {
+        call();
+      } else {
+        customSnackBar("⚠️ ${jsonString['result']}");
+      }
+    } catch (e) {
+      customSnackBar("❌ Error updating password.");
+    } finally {
+      changePasswordLoader.value = false;
+    }
+  }
+
 
 
   void updateDriverProfile(File? file)async{

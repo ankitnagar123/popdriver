@@ -61,7 +61,7 @@ class _AddTopUpScreenState extends State<AddTopUpScreen> {
               children: [
                 Image.asset(
                   'assets/images/headLogo.png',
-                  height: 28,
+                  height: 40,
                 ),  Image.asset(
                   color: Colors.white,
                   'assets/images/stearing.png',
@@ -156,8 +156,8 @@ class _AddTopUpScreenState extends State<AddTopUpScreen> {
                                     ),
                                     Text(
                                       controller.walletBalance.value == ""
-                                          ? "KSh 0"
-                                          : "KSh ${controller.walletBalance.value}",
+                                          ? "\$ 0"
+                                          : "\$ ${controller.walletBalance.value}",
                                       style: TextStyle(
                                           fontFamily: "Poppins",
                                           decoration: controller
@@ -200,7 +200,7 @@ class _AddTopUpScreenState extends State<AddTopUpScreen> {
                         children: [
                           _buildTextField(
                             controller: amtController,
-                            label: 'Amount (kSh)',
+                            label: 'Amount (\$)',
                             keyboardType: TextInputType.number,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -221,7 +221,7 @@ class _AddTopUpScreenState extends State<AddTopUpScreen> {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter mobile number';
                               }
-                              /*  if (!RegExp(r'^\+254\d{9}$').hasMatch(value)) { // Updated regex
+                              /*  if (!RegExp(r'^\+61\d{9}$').hasMatch(value)) { // Updated regex
                                 return 'Invalid Kenyan number'; // Updated error message
                               }*/
                               return null;

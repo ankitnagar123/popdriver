@@ -228,7 +228,7 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
                 fontWeight: FontWeight.bold,
                 color: Colors.grey[800])),
         SizedBox(height: 12),
-        Text("Invite your friends to join Mtaani Taxi and earn rewards together!",
+        Text("Invite your friends to join POP Taxi and earn rewards together!",
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 16,

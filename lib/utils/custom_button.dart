@@ -43,7 +43,7 @@ class custom_buttons extends StatelessWidget {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor:MyColors.black,shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10),), ),
         onPressed: voidCallback,
-        child: loading ? myIndicator():Text(text,style: TextStyle(color: MyColors.white),),
+        child: loading ? myIndicator():Text(text,style: TextStyle(color: MyColors.white,letterSpacing: 1,fontWeight: FontWeight.w600),),
       ),
     );
   }

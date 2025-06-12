@@ -326,44 +326,67 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                     );
                   },
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Stack(
+                      SizedBox(height: 50,),
+                      SlideTransition(
+                        position: _titleAnimation,
+                        child: Column(
                           children: [
-                            AnimatedBuilder(
-                              animation: _imageAnimation,
-                              builder: (context, child) {
-                                return Transform.scale(
-                                  scale: _imageAnimation.value,
-                                  child: child,
-                                );
-                              },
-                              child: Image.asset(
-                                items[index].middleImage.toString(),
-                                height: Get.height/2.5,
-                                width: Get.width,
-                                fit: BoxFit.cover,
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40,vertical: 10),
+                              child: Text(
+                                items[index].title.toString(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: MyColors.primary,
+                                ),
                               ),
                             ),
-                            // ... skip button ...
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              child: Text(
+                                items[index].subTitle.toString(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: MyColors.DarkBlue,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      SlideTransition(
-                        position: _titleAnimation,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: Text(
-                            items[index].title.toString(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.w600,
-                              color: MyColors.DarkBlue,
-                            ),
-                          ),
+                      SizedBox(height: 50,),
+
+                      AnimatedBuilder(
+                        animation: _imageAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _imageAnimation.value,
+                            child: child,
+                          );
+                        },
+                        child: Image.asset(
+                          items[index].middleImage.toString(),
+                          height: Get.height/2.9,
+                          width: Get.width,
+                          fit: BoxFit.cover,
                         ),
                       ),
+                    /*  Expanded(
+                        child: Stack(
+                          children: [
+
+
+                            // ... skip button ...
+                          ],
+                        ),
+                      ),*/
+
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -451,7 +474,7 @@ class AnimatedNextButton extends StatelessWidget {
         child: const Text(
           'Get Started',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),

@@ -4,7 +4,6 @@ import 'dart:io';
 import '../../controller/permision_controller.dart';
 import '../../controller/splace_controller.dart';
 import '../../route_helper/route_helper.dart';
-import '../../utils/colors.dart';
 import '../../utils/shared_preferences.dart';
 import '../../controller/auth_controller.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -13,8 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:root_check/root_check.dart';
-
+import 'package:root_checker_plus/root_checker_plus.dart';
 class SplashScreen extends StatefulWidget {
    SplashScreen({Key? key,}) : super(key: key);
 
@@ -52,11 +50,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+       backgroundColor: Colors.white,
+      // bottomSheet:  Image.asset("assets/images/splashFooter.png",height: 225,fit: BoxFit.fitWidth,width: double.infinity,),
         body: Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-            Center(child: Image.asset("assets/images/logo.png",height: 220,))
+            Image.asset("assets/images/POP DRIVER.gif",),
+
+
+
             ],
           ),
         )
@@ -81,12 +84,12 @@ class _SplashScreenState extends State<SplashScreen> {
         _isDeveloperModeOn = androidInfo.isPhysicalDevice && isDeveloperModeEnabled;
       });
 
-      bool isRooted = await RootCheck.isRooted??false;
+      bool? isRooted = await RootCheckerPlus.isRootChecker();
       bool hasRootDirectories = await checkRootDirectories();
 
       if (_isDeveloperModeOn) {
         _showDeveloperModeAlert();
-      } else if(isRooted || hasRootDirectories){
+      } else if(isRooted! || hasRootDirectories){
         handleRootDetection();
       }else {
         requestLocationPermission();

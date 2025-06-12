@@ -10,6 +10,7 @@ import '../drawer_tab_screen/my_ride_screen.dart';
 import '../drawer_tab_screen/ride_history/ride_history.dart';
 import '../home_screen.dart';
 import '../profile_screens/profile.dart';
+import '../wallet_screen/EarningList.dart';
 import '../wallet_screen/wallet_screen.dart';
 
 
@@ -26,8 +27,10 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   RouteController routeController = Get.put(RouteController());
   final List<Widget> _pages = [
     const HomeScreen(),
-    const MyRideScreen(),
-    const WalletScreen(),
+    const RideHistory(),
+    const RideHistory(),
+     // Earninglist(),
+    // const WalletScreen(),
     // const ProfileScreen(),
     MtaaniSidebar(),
   ];
@@ -189,7 +192,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                         style: ButtonStyle(
                             shape: WidgetStatePropertyAll(CircleBorder(side: BorderSide(color:routeController.pageIndex.value == 1? Colors.white70:Colors.transparent)))
                         ),
-                        icon: Icon(Icons.library_books_rounded,
+                        icon: Icon(Icons.work_history_outlined,
                           size: 25,
                           color: routeController.pageIndex.value == 1
                               ? Colors.white
@@ -211,7 +214,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                                 CircleBorder(side: BorderSide(color:routeController.pageIndex.value == 2? Colors.white70:Colors.transparent)))
                         ),
                         icon: Icon(
-                          Icons.wallet,
+                          Icons.payments,
                           size: 25,
                           color: routeController.pageIndex.value == 2
                               ? Colors.white

@@ -169,6 +169,93 @@ class WalletController extends GetxController{
 
   }
 
+  void fetchTransaction1() async {
+    walletFetchHistoryLoader.value = true;
+
+    // Dummy Data
+    await Future.delayed(Duration(seconds: 1)); // simulate loading
+
+    transactionList.value = [
+      WalletHistoryModel(
+        bookingId: "BKG123",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "25.50",
+        date: "2025-05-01",
+        time: "10:30 AM",
+      ),
+      WalletHistoryModel(
+        bookingId: "BKG124",
+        paymentMode: "Card",
+        status: "Completed",
+        driverEarning: "32.75",
+        date: "2025-05-02",
+        time: "11:00 AM",
+      ),
+      WalletHistoryModel(
+        bookingId: "BKG125",
+        paymentMode: "Wallet",
+        status: "Pending",
+        driverEarning: "18.00",
+        date: "2025-05-10",
+        time: "09:45 AM",
+      ),
+      WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "40.25",
+        date: "2025-05-04",
+        time: "02:15 PM",
+      ),   WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "100.25",
+        date: "2025-05-15",
+        time: "02:15 PM",
+      ),   WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "40.25",
+        date: "2025-05-17",
+        time: "02:15 PM",
+      ),   WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "40.28",
+        date: "2025-05-25",
+        time: "02:15 PM",
+      ),   WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "50.25",
+        date: "2025-05-24",
+        time: "02:15 PM",
+      ), WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "50.25",
+        date: "2025-05-24",
+        time: "02:15 PM",
+      ), WalletHistoryModel(
+        bookingId: "BKG126",
+        paymentMode: "Cash",
+        status: "Completed",
+        driverEarning: "50.25",
+        date: "2025-05-24",
+        time: "02:15 PM",
+      ),
+    ];
+
+    walletFetchHistoryLoader.value = false;
+  }
+
+
 
 
   void printReceipt(String start_date, String end_date,BuildContext context)async{

@@ -15,6 +15,34 @@ class SharedPreferencesCrDriver{
   String DRIVER_ONLINE_STATUS = "DRIVER_ONLINE_STATUS";
   String Token = "Token";
 
+  String MOBILE_NO = "MOBILE_NO";
+  String PASSWORD = "PASSWORD";
+  String FLAG = "FLAG";
+  String COUNTRY_CODE = "COUNTRY_CODE";
+
+
+
+  Future<void> clearDataExceptLoginFields() async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
+
+    // List of keys to keep
+    List<String> keysToKeep = [
+      MOBILE_NO,
+      PASSWORD,
+      FLAG,
+      COUNTRY_CODE,
+    ];
+
+    // Get all saved keys
+    Set<String> allKeys = sp.getKeys();
+
+    // Remove all keys except those in keysToKeep
+    for (String key in allKeys) {
+      if (!keysToKeep.contains(key)) {
+        await sp.remove(key);
+      }
+    }
+  }
   void setBoolValue(String key,bool value)async{
     SharedPreferences sp = await SharedPreferences.getInstance();
     sp.setBool(key, value);
@@ -35,7 +63,7 @@ class SharedPreferencesCrDriver{
     return sp.getString(key);
 }
 
-  void clearData() async {
+  void  clearData() async {
     SharedPreferences sp = await SharedPreferences.getInstance();
     await sp.clear();
   }
@@ -80,4 +108,5 @@ class SecureStorageService {
   Future<void> deleteAllData() async {
     await _storage.deleteAll();
   }
+
 }

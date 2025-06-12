@@ -36,6 +36,7 @@ class _EditProfileState extends State<EditProfile> {
   AuthController authController = Get.find<AuthController>();
 
   TextEditingController firstNameCtr = TextEditingController();
+  TextEditingController identityNoCtr = TextEditingController();
   TextEditingController lastNameCtr = TextEditingController();
   TextEditingController phoneCtr = TextEditingController();
   TextEditingController emailCtr = TextEditingController();
@@ -51,7 +52,6 @@ class _EditProfileState extends State<EditProfile> {
   TextEditingController registrationDateCtr = TextEditingController();
   TextEditingController InsuranceDateCtr = TextEditingController();
   TextEditingController idExpiry = TextEditingController();
-  String carId = "";
   FilePickerResult? result;
   String fitnessFileName = "";
   File? fitnessDisplayFile;
@@ -82,6 +82,7 @@ class _EditProfileState extends State<EditProfile> {
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       controller.fetchDriverDetail();
+      controllers.fetchVehicle();
       /* authController.fetchTaxiCompany();*/
     });
     super.initState();
@@ -92,10 +93,11 @@ class _EditProfileState extends State<EditProfile> {
     return Obx(() {
       if (controller.resultVar.value == 1) {
         controller.resultVar.value = 0;
+        identityNoCtr.text = controller.identityNo.value;
         firstNameCtr.text = controller.Name.value;
         lastNameCtr.text = controller.lastName.value;
         phoneCtr.text = controller.Contact.value;
-        /*emailCtr.text = controller.Email.value;*/
+        emailCtr.text = controller.Email.value;
         countryCode = controller.CountryCode.value;
         CountryFlag = controller.flags.value;
         fitnessDateCtr.text = controller.fitnessExpiry.value;
@@ -107,7 +109,9 @@ class _EditProfileState extends State<EditProfile> {
         vehicleNumberCtr.text = controller.vehicleModel.value;
         vehicleYear.text = controller.year.value;
         vehicleColour.text = controller.color.value;
-        carId = controller.carId.value;
+
+        controllers.selectedCarId.value = controller.carId.value;
+
         companyValue = controller.vehicleModel.value;
         log('id date------>${idExpiry.text}');
       }
@@ -148,18 +152,28 @@ class _EditProfileState extends State<EditProfile> {
                         style: TextStyle(fontSize: 18, color: MyColors.black,fontFamily: "Poppins"),),
                     ),
 
-                    custom_textfield(
-                      manditory: "*",
-                      labletext: "First Name".tr,
-                      textInputType: TextInputType.text,
-                      textEditingController: firstNameCtr,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: custom_textfield(
+                            manditory: "*",
+                            labletext: "First Name".tr,
+                            textInputType: TextInputType.text,
+                            textEditingController: firstNameCtr,
+                          ),
+                        ),
+                        SizedBox(width: 8,),
+                        Expanded(
+                          child: custom_textfield(
+                            manditory: "*",
+                            labletext: "Last Name".tr,
+                            textInputType: TextInputType.text,
+                            textEditingController: lastNameCtr,
+                          ),
+                        ),
+                      ],
                     ),
-                    custom_textfield(
-                      manditory: "*",
-                      labletext: "Last Name".tr,
-                      textInputType: TextInputType.text,
-                      textEditingController: lastNameCtr,
-                    ),
+                  
                     Padding(
                       padding: EdgeInsets.only(top: 12),
                       child: Column(
@@ -185,7 +199,7 @@ class _EditProfileState extends State<EditProfile> {
                             height: 50,
                             width: context.width,
                             margin: EdgeInsets.only(top: 5),
-                            padding: EdgeInsets.only(left: 10),
+                            padding: EdgeInsets.only(left: 10,top: 2),
                             decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: MyColors.TextField),
@@ -225,105 +239,43 @@ class _EditProfileState extends State<EditProfile> {
                         ],
                       ),
                     ),
-                   /* custom_textfield(
+                    custom_textfield(
                       readOnly: true,
                       manditory: "*",
                       labletext: "Email Address".tr,
                       textInputType: TextInputType.text,
                       textEditingController: emailCtr,
-                    ),*/
+                    ),
                     SizedBox(
                       height: 10,
                     ),
-                    Text(
-                      "Change Password".tr,
-                      style: TextStyle(fontSize: 20, color: MyColors.DarkBlue),
-                    ),
                     custom_textfield(
-                      allowSpecialCharacters: false,
                       manditory: "*",
-                      labletext: "Current Password".tr,
+                      labletext: "Vehicle Number".tr,
+                      textEditingController: vehicleNumberCtr,
                       textInputType: TextInputType.text,
-                      textEditingController: currentPassCtr,
-                      ishide: isHide,
-                      icon: InkWell(
-                          onTap: () {
-                            setState(() {
-                              isHide = !isHide;
-                            });
-                          },
-                          child: isHide
-                              ? Icon(
-                                  Icons.visibility_off,
-                                  color: MyColors.DarkBlue,
-                                )
-                              : Icon(
-                                  Icons.visibility,
-                                  color: MyColors.DarkBlue,
-                                )),
-                    ),
-                    custom_textfield(
-                      allowSpecialCharacters: false,
+                    ), custom_textfield(
+                      readOnly: true,
                       manditory: "*",
-                      labletext: "New Password".tr,
+                      labletext: "Identity Number".tr,
+                      textEditingController: identityNoCtr,
                       textInputType: TextInputType.text,
-                      textEditingController: newPassCtr,
-                      ishide: isVisible,
-                      icon: InkWell(
-                          onTap: () {
-                            setState(() {
-                              isVisible = !isVisible;
-                            });
-                          },
-                          child: isVisible
-                              ? Icon(
-                                  Icons.visibility_off,
-                                  color: MyColors.DarkBlue,
-                                )
-                              : Icon(
-                                  Icons.visibility,
-                                  color: MyColors.DarkBlue,
-                                )),
-                    ),
-                    custom_textfield(
-                      allowSpecialCharacters: false,
-                      manditory: "*",
-                      labletext: "Re- enter New Password".tr,
-                      textInputType: TextInputType.text,
-                      textEditingController: reNewPassCtr,
-                      ishide: isHides,
-                      icon: InkWell(
-                          onTap: () {
-                            setState(() {
-                              isHides = !isHides;
-                            });
-                          },
-                          child: isHides
-                              ? Icon(
-                                  Icons.visibility_off,
-                                  color: MyColors.DarkBlue,
-                                )
-                              : Icon(
-                                  Icons.visibility,
-                                  color: MyColors.DarkBlue,
-                                )),
                     ),
                     SizedBox(
-                      height: 20,
+                      height: 15,
                     ),
-                    custom_textfield(
-                      manditory: "*",
-                      labletext: "Vehicle Make".tr,
-                      textEditingController: vehicleNameCtr,
-                      textInputType: TextInputType.text,
-                    ),
-                    custom_textfield(
+
+                    _buildCarListDropdown(controllers),
+
+
+
+                    /*custom_textfield(
                       manditory: "*",
                       labletext: "Vehicle Model".tr,
                       textEditingController: vehicleNumberCtr,
                       textInputType: TextInputType.text,
                     ),
-                    /*SizedBox(
+                    *//*SizedBox(
                 height: 10,
               ),
               Container(
@@ -378,7 +330,7 @@ class _EditProfileState extends State<EditProfile> {
                         },
                       ),
                     ),
-                  )),*/
+                  )),*//*
                     custom_textfield(
                       isEmail: true,
                       manditory: "*",
@@ -973,16 +925,16 @@ class _EditProfileState extends State<EditProfile> {
                           ),
                         ),
                       ),
-                    ),
+                    ),*/
                     SizedBox(
-                      height: 20,
+                      height: 25,
                     ),
                     custom_buttons(
                         loading: controller.updateDetailLoader.value,
                         voidCallback: () {
                           valid();
                         },
-                        text: "Submit".tr)
+                        text: "Update".tr)
                   ],
                 ),
               ),
@@ -1103,56 +1055,23 @@ class _EditProfileState extends State<EditProfile> {
       customSnackBar("Please Enter First Name".tr);
     } else if (lastNameCtr.text.isEmpty) {
       customSnackBar("Please Enter Last Name".tr);
-    } /*else if (emailCtr.text.isEmpty) {
+    } else if (emailCtr.text.isEmpty) {
       customSnackBar("Please Enter Email Address".tr);
     } else if (EmailValidator.validate(emailCtr.text.toString()) != true) {
       customSnackBar("Enter Valid Email Address".tr);
-    }*/ else if (phoneCtr.text.isEmpty) {
+    } else if (phoneCtr.text.isEmpty) {
       customSnackBar("Please Enter Mobile Number".tr);
-    }/* else if (!_isValid) {
-      customSnackBar("Please Enter Valid Mobile Number".tr);
-    }*/ else if (newPassCtr.text.isNotEmpty &&
-        newPassCtr.text != reNewPassCtr.text) {
-      customSnackBar("New Password Doesn't Match".tr);
-    } else if (newPassCtr.text.isEmpty && reNewPassCtr.text.isNotEmpty) {
-      customSnackBar("Please Enter New Password".tr);
-    }else if (reNewPassCtr.text.isEmpty && newPassCtr.text.isNotEmpty) {
-      customSnackBar("Please Re Enter New Password".tr);
-    }else if (vehicleNameCtr.text.isEmpty) {
-      customSnackBar("Please Enter Vehicle Make".tr);
     } else if (vehicleNumberCtr.text.isEmpty) {
-      customSnackBar("Please Enter Vehicle Model".tr);
-    } else if (vehicleYear.text.isEmpty) {
-      customSnackBar("Please Enter Vehicle Year".tr);
-    } else if (vehicleColour.text.isEmpty) {
-      customSnackBar("Please Enter Vehicle Colour".tr);
-    } else if (fitnessDisplayFile == null &&
-        controller.fitnessImage.value.isEmpty) {
-      customSnackBar("Please Choose Fitness Image".tr);
-    } else if (fitnessDateCtr.text.isEmpty) {
-      customSnackBar("Please Enter Fitness Expiry Date".tr);
-    } else if (LicenceDisplayFile == null &&
-        controller.licenceImage.value.isEmpty) {
-      customSnackBar("Please Choose Licence Image".tr);
-    } else if (LicenceDateCtr.text.isEmpty) {
-      customSnackBar("Please Enter Licence Expiry Date".tr);
-    } else if (registrationDisplayFile == null &&
-        controller.registrationImage.value.isEmpty) {
-      customSnackBar("Please Choose Registration Image".tr);
-    } else if (registrationDateCtr.text.isEmpty) {
-      customSnackBar("Please Enter Registration Expiry Date".tr);
-    } else if (InsuranceDisplayFile == null &&
-        controller.insuranceImage.value.isEmpty) {
-      customSnackBar("Please Choose Insurance Image".tr);
-    } else if (InsuranceDateCtr.text.isEmpty) {
-      customSnackBar("Please Enter Insurance Expiry Date".tr);
-    } else if (IdProofImageDisplayFile == null &&
-        controller.IdProofImage.value.isEmpty) {
-      customSnackBar("Please Choose IDProof Image".tr);
-    } else if (idExpiry.text.isEmpty) {
-      customSnackBar("Please Enter Id Expiry Date".tr);
-    } else {
-      controller.updateDriveDetail(
+      customSnackBar("Please Enter Vehicle Registration Number".tr);
+    }else if (controllers.selectedCarId.value.isEmpty) {
+      customSnackBar("Please Enter Vehicle Type".tr);
+    }else{
+      controller.driverProfileUpdate(controllers.selectedCarId.value, vehicleNumberCtr.text,
+          firstNameCtr.text, lastNameCtr.text, countryCode, CountryFlag, phoneCtr.text, emailCtr.text, () {
+
+          },);
+    }
+   /*   controller.updateDriveDetail(
           firstNameCtr.text,
           lastNameCtr.text,
           emailCtr.text,
@@ -1177,9 +1096,59 @@ class _EditProfileState extends State<EditProfile> {
           idExpiry.text,
           carId, () {
         Navigator.pop(context);
-      });
+      });*/
+
     }
   }
+
+
+  Widget _buildCarListDropdown(VehicleController controllers) {
+    return Obx(() {
+      return DropdownButtonFormField<String>(
+
+
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: MyColors.TextField,
+          labelText: "Select Vehicle Type",
+          labelStyle: TextStyle(fontSize: 13),
+          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          // reduced height
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white70),
+            borderRadius: BorderRadius.circular(5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white70),
+            borderRadius: BorderRadius.circular(5),
+          ),
+        ),
+        value: controllers.selectedCarId.value.isEmpty
+            ? null
+            : controllers.selectedCarId.value,
+        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+        isExpanded: true,
+        items: controllers.vehicleList.map((make) {
+          return DropdownMenuItem<String>(
+            value: make.carId,
+            child: Text(
+              make.carName,
+              style: TextStyle(fontFamily: "Poppins"),
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) {
+            controllers.selectedCarId.value = value;
+            log("------------$value");
+          }
+        },
+      );
+    });
+
 }
 
 class DetailScreen extends StatefulWidget {
