@@ -1,4 +1,3 @@
-
 // To parse this JSON data, do
 //
 //     final vehicleFetchModel = vehicleFetchModelFromJson(jsonString);
@@ -21,9 +20,9 @@ class VehicleFetchModel {
   });
 
   factory VehicleFetchModel.fromJson(Map<String, dynamic> json) => VehicleFetchModel(
-    carId: json["car_id"],
-    carName: json["car_name"],
-    carImage: json["car_image"],
+    carId: json["car_id"].toString(),
+    carName: json["car_name"].toString(),
+    carImage: json["car_image"].toString(),
   );
 
   Map<String, dynamic> toJson() => {

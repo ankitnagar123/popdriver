@@ -92,87 +92,6 @@ class AuthController extends GetxController {
     });
   }
 
-/*  void driverSignUp(
-      String vehicleId,
-      String names,
-      String vehicleNumber,
-      String licenceDate,
-      File? licenceFile,
-      File? rcfile,
-      String rcExpriry,
-      File? IdProof,
-      String identityDate,
-      File? insuranceFile,
-      String insuranceDate,
-      String year,
-      String Colors,
-      File? idProofImageFile,
-      String idProofExpiry,
-      VoidCallback callback) async {
-    signUpLoader.value = true;
-    DIO.FormData formdata = DIO.FormData.fromMap({
-      "vehicle_id": vehicleId,
-      "vehicle_name": names,
-      "vehicle_number": vehicleNumber,
-      "year": year,
-      "colour": Colors,
-      "expiry_date": licenceDate,
-      "license_image": await DIO.MultipartFile.fromFile(licenceFile!.path,
-          filename: licenceFile.path.split("/").last),
-      "identity_image": await DIO.MultipartFile.fromFile(IdProof!.path,
-          filename: IdProof.path.split("/").last),
-      "identity_expiry_date": identityDate,
-      "rc_image": await DIO.MultipartFile.fromFile(rcfile!.path,
-          filename: rcfile.path.split("/").last),
-      "rc_expiry_date": rcExpriry,
-      "insurance_image": await DIO.MultipartFile.fromFile(insuranceFile!.path,
-          filename: insuranceFile.path.split("/").last),
-      "insurance_expiry_date": insuranceDate,
-      'id_expiry_date': idProofExpiry,
-      "id_proof_image": await DIO.MultipartFile.fromFile(idProofImageFile!.path,
-          filename: idProofImageFile.path.split("/").last),
-      "first_name": name.value,
-      "middle_name": middleName.value,
-      "sur_name": lastname.value,
-      "country_code": countryCode.value,
-      "contact": contacts.value,
-      "email": emailID.value,
-      "password": passwords.value,
-      "gender": genders.value,
-      "flag": flags.value,
-      "refel_code": referral.value,
-      'longitude': "",
-      'latitude': "",
-      'address': "",
-      'image': '',
-      'image_string': ''
-    });
-    log("parameter ------ ${formdata.fields}");
-
-    try {
-      final response = await dioClient.post(
-          "https://cisswork.com/Android/PopRide/API/driver_signup.php",
-          data: formdata);
-
-      var jsonString = jsonDecode(response.data);
-      log("Driver SignUp Response---------$jsonString");
-      var id = jsonString["id"];
-      var result = jsonString['result'];
-      if (result == "successfully") {
-        secure.writeData(secure.user_id, id.toString());
-        signUpLoader.value = false;
-        updateDeviceId();
-        addBankDetail();
-        callback();
-      } else {
-        signUpLoader.value = false;
-        customSnackBar("Something Went Wrong".tr);
-      }
-    } catch (e) {
-      signUpLoader.value = false;
-      log("Exception------", error: e.toString());
-    }
-  }*/
 
   void saveLoginDetails(
       String contact, String code, String flag, String password) {
@@ -503,14 +422,14 @@ class AuthController extends GetxController {
     }
   }
 
-  void forgetPassword(String countryCode, String contact) async {
+  void forgetPassword(String email) async {
     forgetPasswordLoader.value = true;
     Map<String, dynamic> forgetParameter = {
-      "country_code": countryCode,
-      "contact": contact,
+      "email": email,
+
     };
 
-    log("forget password parameter------>:$forgetParameter");
+    log("forget password parameter ------>:$forgetParameter");
     try {
       var response = await apiService.postDatatoken(
           URLS.DRIVER_FORGET_PASSWORD, forgetParameter);
@@ -519,6 +438,7 @@ class AuthController extends GetxController {
       var result = jsonString["result"];
       var driverId = jsonString["driver_id"];
       if (result == "success") {
+        emailID.value = email;
         startOtpTimer();
         otp.value = jsonString["OTP"].toString();
         customSnackBar("OTP ${jsonString["OTP"].toString()}");
@@ -526,8 +446,7 @@ class AuthController extends GetxController {
         forgetPasswordLoader.value = false;
         Get.offNamed(RouteHelper.getOtpScreenRoute(), arguments: {
           "id": driverId,
-          "code": countryCode,
-          "contact": contact,
+          "email": email,
         });
       } else {
         forgetPasswordLoader.value = false;
@@ -915,97 +834,6 @@ class AuthController extends GetxController {
     });
   }
 
-/*  void buyMemberShip(String membership_id, type) async {
-    memberShipLoader1.value = true;
-    Map<String, dynamic> map = {
-      "driver_id": await secure.readData(secure.user_id),
-      "membership_id": membership_id
-    };
-    log("parameter ------$map");
-    try {
-      final response =
-          await apiService.postDatatoken(URLS.driver_add_membership, map);
-
-      var jsonString = jsonDecode(response.data);
-      log("Membership-----------------${jsonString['result']}");
-
-      if (jsonString['result'] ==
-          "Payment request sent successfully. Enter M-PESA PIN to complete.") {
-        checkPaymentStatus(membership_id,type);
-        customSnackBar(jsonString['result'].toString());
-      */ /*  if (type == "signup") {
-          _showSuccessDialog();
-        } else {
-          Get.back();
-          customSnackBar("Plane upgraded");
-        }*/ /*
-      } else {
-        customSnackBar(jsonString['result'].toString());
-      }
-      memberShipLoader1.value = false;
-    } on Exception catch (e) {
-      memberShipLoader1.value = false;
-      log("Exception ------", error: e.toString());
-    }
-  }
-
-  void checkPaymentStatus(String membership_id, type) async {
-    memberShipLoader1.value = true;
-    Map<String, dynamic> map = {
-      "driver_id": await secure.readData(secure.user_id),
-    };
-    log("parameter ------$map");
-    try {
-      final response =
-          await apiService.postDatatoken(URLS.check_payment_status, map);
-
-      var jsonString = jsonDecode(response.data);
-      log("Membership-----------------${jsonString['result']}");
-
-      if (jsonString['result'] == "paid") {
-        customSnackBar(jsonString['result'].toString());
-        buyMemberShipComplete(membership_id,type);
-
-      } else {
-        customSnackBar(jsonString['result'].toString());
-      }
-      memberShipLoader1.value = false;
-    } on Exception catch (e) {
-      memberShipLoader1.value = false;
-      log("Exception ------", error: e.toString());
-    }
-  }
-
-  void buyMemberShipComplete(String membership_id, type) async {
-    memberShipLoader1.value = true;
-    Map<String, dynamic> map = {
-      "driver_id": await secure.readData(secure.user_id),
-      "membership_id": membership_id
-    };
-    log("parameter ------$map");
-    try {
-      final response =
-      await apiService.postDatatoken(URLS.driver_add_membership_complete, map);
-
-      var jsonString = jsonDecode(response.data);
-      log("Membership-----------------${jsonString['result']}");
-
-      if (jsonString['result'] == "success") {
-        if (type == "signup") {
-          _showSuccessDialog();
-        } else {
-          Get.back();
-          customSnackBar("Plane upgraded");
-        }
-      } else {
-        customSnackBar(jsonString['result'].toString());
-      }
-      memberShipLoader1.value = false;
-    } on Exception catch (e) {
-      memberShipLoader1.value = false;
-      log("Exception ------", error: e.toString());
-    }
-  }*/
 
   void signupOtp(String type, VoidCallback callback) async {
     otpLoader.value = true;

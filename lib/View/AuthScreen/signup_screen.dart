@@ -154,6 +154,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ],
                     )),
                 Container(
+
                   height: 50,
                   width: context.width,
                   margin: EdgeInsets.only(top: 5),
@@ -371,7 +372,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       customSnackBar("Please Enter Mobile Number".tr);
     } else if (passwordCtr.text.isEmpty) {
       customSnackBar("Please Enter Your Password".tr);
-    } else if (passwordCtr.text.length < 6) {
+    }/* else if (passwordCtr.text.length < 6) {
       customSnackBar(" Password length should be 6 digit".tr);
     } else if (!hasUppercase) {
       customSnackBar('Password must contain at least one uppercase letter'.tr);
@@ -381,7 +382,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       customSnackBar('Password must contain at least one digit'.tr);
     } else if (!hasSpecialCharacter) {
       customSnackBar('Password must contain at least one special character'.tr);
-    } else if (vehicleNumberCtr.text.isEmpty) {
+    }*/ else if (vehicleNumberCtr.text.isEmpty) {
       customSnackBar("Please Enter Vehicle Registration Number".tr);
     } else if (identityNoCtr.text.isEmpty) {
       customSnackBar("Please Enter Identity Number".tr);

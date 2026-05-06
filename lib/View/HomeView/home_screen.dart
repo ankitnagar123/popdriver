@@ -408,6 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 /*-----------------painButton-------------------*/
+/*
                   Visibility(
                     visible: contoller.painButton.value,
                     child: Positioned(
@@ -451,6 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+*/
                   contoller.hide.value == false
                       ? SizedBox.shrink()
                       : Visibility(
@@ -1077,9 +1079,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildInfoCard("🛣️", "Extra Travel", "\$3 per km", context),
-                    Container(
-                        width: MediaQuery.of(context).size.width *
-                            0.35), // Empty space
+
+                    _buildInfoCard("💸️", "Prepaid Service", "", context),
                   ],
                 ),
                 SizedBox(height: 8),

@@ -75,14 +75,14 @@ class _ChangePasswordState extends State<ChangePassword> {
         newPassError = 'Please enter new password';
       });
       isValid = false;
-    } else if (!_isValidPassword(newPassword)) {
+    } /*else if (!_isValidPassword(newPassword)) {
       setState(() {
         hasNewPassError = true;
         newPassError =
         'Password must contain:\n- 8+ characters\n- 1 uppercase & lowercase\n- 1 number\n- 1 special character';
       });
       isValid = false;
-    }
+    }*/
 
     // Confirm Password Validation
     if (confirmPassword.isEmpty) {
@@ -102,6 +102,7 @@ class _ChangePasswordState extends State<ChangePassword> {
     return isValid;
   }
 
+/*
   bool _isValidPassword(String password) {
     return password.length >= 8 &&
         password.contains(RegExp(r'[A-Z]')) &&
@@ -109,6 +110,7 @@ class _ChangePasswordState extends State<ChangePassword> {
         password.contains(RegExp(r'[0-9]')) &&
         password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
   }
+*/
 
   @override
   Widget build(BuildContext context) {

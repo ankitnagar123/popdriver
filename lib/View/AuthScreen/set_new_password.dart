@@ -121,14 +121,14 @@ class _SetPasswordState extends State<SetPassword> {
 
    String password = passCtr.value.text.toString();
 
-   final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+/*   final hasUppercase = password.contains(RegExp(r'[A-Z]'));
    final hasLowercase = password.contains(RegExp(r'[a-z]'));
    final hasDigit = password.contains(RegExp(r'[0-9]'));
-   final hasSpecialCharacter = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+   final hasSpecialCharacter = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));*/
 
     if(passCtr.text.isEmpty){
       customSnackBar("Please enter New Password".tr);
-    }else if (password.length < 6) {
+    }/*else if (password.length < 6) {
       customSnackBar("Password must be at least 6 characters long".tr);
     }else
     if (!hasUppercase) {
@@ -142,7 +142,7 @@ class _SetPasswordState extends State<SetPassword> {
     }
     else if (!hasSpecialCharacter) {
       customSnackBar('Password must contain at least one special character'.tr);
-    }else if(rePassCtr.text.isEmpty){
+    }*/else if(rePassCtr.text.isEmpty){
       customSnackBar("Please Re-enter Password".tr);
     }else if(passCtr.text != rePassCtr.text){
       customSnackBar("Password Does Not Match".tr);

@@ -44,8 +44,9 @@ class VehicleController extends GetxController{
 
      final response = await dioClient.get(URLS.VEHICLE_FETCH,);
      log("vehicle fetch response -------${response.data}");
+     vehicleList.value = vehicleFetchModelFromJson(json.encode(response.data));
 
-     vehicleList.value = vehicleFetchModelFromJson(response.data);
+     // vehicleList.value = vehicleFetchModelFromJson(response.data);
      vehicleFetchLoader.value = false;
    }catch(e){
      vehicleFetchLoader.value = false;

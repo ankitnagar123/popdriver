@@ -52,7 +52,7 @@ class _OtpScreenState extends State<OtpScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             SizedBox(height: 120,),
-            Text("Enter the 6-digit code send to you at\n ${Get.arguments['code']+" "+Get.arguments['contact']}".tr,
+            Text("Enter the 6-digit code send to you at\n ${Get.arguments['email']}".tr,
               style: TextStyle(fontSize: 15),),
             SizedBox(height: 15,),
             Text("Enter OTP".tr),
@@ -84,8 +84,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     return controller.remainingTime.value == 0?
                     InkWell(
                         onTap: () {
-                          controller.forgetPassword(Get.arguments['code'].toString(),
-                              Get.arguments['contact'].toString());
+                          controller.forgetPassword(Get.arguments['email'].toString(),);
                         },
                         child: controller.forgetPasswordLoader.value?
                         myIndicator():

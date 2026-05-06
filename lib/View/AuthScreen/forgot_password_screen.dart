@@ -193,6 +193,7 @@ import 'package:phone_number/phone_number.dart';
 import '../../controller/auth_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/text_field.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({Key? key}) : super(key: key);
@@ -202,10 +203,9 @@ class ForgotPassword extends StatefulWidget {
 }
 
 class _ForgotPasswordState extends State<ForgotPassword> {
-  TextEditingController phoneCtr = TextEditingController();
+  TextEditingController emailCtr = TextEditingController();
   AuthController controller = Get.find<AuthController>();
-  String countryFlag = "AU";
-  String countryCode = "+61";
+
 
   @override
   Widget build(BuildContext context) {
@@ -265,44 +265,17 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mobile Number'.tr,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: MyColors.black,
-                        )),
                     SizedBox(height: 8),
-                    IntlPhoneField(
-                      controller: phoneCtr,
-                      style: TextStyle(fontSize: 16),
-                      dropdownIconPosition: IconPosition.trailing,
-                      dropdownIcon: Icon(Icons.arrow_drop_down_rounded,
-                          color: MyColors.primary),
-                      flagsButtonPadding: EdgeInsets.only(left: 12),
-                      showCountryFlag: true,
-                      initialCountryCode: countryFlag,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                            vertical: 16, horizontal: 16),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: MyColors.TextField,
-                        hintText: 'Enter Mobile Number'.tr,
-                        hintStyle: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 14),
-                      ),
-                      onChanged: (phone) {
-                        setState(() {
-                          countryCode = phone.countryCode;
-                          countryFlag = phone.countryISOCode;
-                        });
-                      },
+                    custom_textfield(
+                      allowSpecialCharacters: true,
+                      isEmail: true,
+                      manditory: "*",
+                      labletext: "Email Address".tr,
+                      textInputType: TextInputType.emailAddress,
+                      textEditingController: emailCtr,
                     ),
+                    SizedBox(height: 8),
+
                   ],
                 ),
               ),
@@ -331,10 +304,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
               ),
               child: ElevatedButton(
                 onPressed: () async {
-                  if(phoneCtr.text.isEmpty) {
-                      customSnackBar("Please enter mobile number".tr);
+                  if(emailCtr.text.isEmpty) {
+                      customSnackBar("Please enter email address".tr);
                   }else{
-                    controller.forgetPassword(countryCode, phoneCtr.text);
+                    controller.forgetPassword(emailCtr.text);
 
                   }
                 },

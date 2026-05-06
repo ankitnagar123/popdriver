@@ -23,7 +23,7 @@ List<onboardingData> items=[
   ),
   onboardingData(
     middleImage: "assets/images/onboarding3.png",
-    title: "Earn Money".tr,
+    title: "No commission and more earnings".tr,
     subTitle: "💸 Start accepting ride requests nearby — boost your income effortlessly.".tr,
   ),
 

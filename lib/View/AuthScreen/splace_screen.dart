@@ -13,8 +13,11 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
+
 class SplashScreen extends StatefulWidget {
-   SplashScreen({Key? key,}) : super(key: key);
+  SplashScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -23,8 +26,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   SecureStorageService secure = SecureStorageService();
-  PermissionController controller = Get.find<PermissionController>();
-  AuthController controllers = Get.find<AuthController>();
+  PermissionController? controller;
+  AuthController? controllers;
   SplashController splashController = Get.put(SplashController());
   static const platform = MethodChannel('com.taxi.columbia/developer_mode');
   bool _isDeveloperModeOn = false;
@@ -32,39 +35,75 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    /*requestLocationPermission();*/
-    /*controllers.sendEncryptedData("12", "vishnu", "vishnuprajapati6131@gmail.com")*/
-   if(Platform.isAndroid){
-     if (kReleaseMode) {
-       _checkDeveloperMode();
-     } else {
-       requestLocationPermission();
-     }
-   }else{
-     requestLocationPermission();
-   }
+    _initializeControllers();
+  }
 
-    /*  getData();*/
+  void _initializeControllers() {
+    try {
+      print("Attempting to find controllers...");
+      controller = Get.find<PermissionController>();
+      controllers = Get.find<AuthController>();
+      print("Controllers found successfully");
+
+      if (Platform.isAndroid) {
+        if (kReleaseMode) {
+          _checkDeveloperMode();
+        } else {
+          requestLocationPermission();
+        }
+      } else {
+        requestLocationPermission();
+      }
+    } catch (e) {
+      print("Error initializing controllers: $e");
+      print("Stack trace: ${StackTrace.current}");
+      // Fallback: try to get controllers with put if find fails
+      try {
+        controller = Get.put(PermissionController());
+        controllers = Get.put(AuthController());
+        print("Controllers created successfully as fallback");
+
+        if (Platform.isAndroid) {
+          if (kReleaseMode) {
+            _checkDeveloperMode();
+          } else {
+            requestLocationPermission();
+          }
+        } else {
+          requestLocationPermission();
+        }
+      } catch (fallbackError) {
+        print("Error in fallback controller creation: $fallbackError");
+        // If even fallback fails, just proceed without controllers
+        if (Platform.isAndroid) {
+          if (kReleaseMode) {
+            _checkDeveloperMode();
+          } else {
+            requestLocationPermission();
+          }
+        } else {
+          requestLocationPermission();
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       backgroundColor: Colors.white,
-      // bottomSheet:  Image.asset("assets/images/splashFooter.png",height: 225,fit: BoxFit.fitWidth,width: double.infinity,),
+        backgroundColor: Colors.white,
+        // bottomSheet:  Image.asset("assets/images/splashFooter.png",height: 225,fit: BoxFit.fitWidth,width: double.infinity,),
         body: Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-            Image.asset("assets/images/POP DRIVER.gif",),
-
-
-
+              Image.asset(
+                "assets/images/POP DRIVER.gif",
+              ),
             ],
           ),
-        )
-    
-    );
+        ));
   }
 
   Future<void> _checkDeveloperMode() async {
@@ -74,14 +113,16 @@ class _SplashScreenState extends State<SplashScreen> {
       bool isDeveloperModeEnabled = false;
 
       try {
-        final bool result = await platform.invokeMethod('isDeveloperModeEnabled');
+        final bool result =
+            await platform.invokeMethod('isDeveloperModeEnabled');
         isDeveloperModeEnabled = result;
       } on PlatformException catch (e) {
         print("Failed to check developer mode: '${e.message}'.");
       }
 
       setState(() {
-        _isDeveloperModeOn = androidInfo.isPhysicalDevice && isDeveloperModeEnabled;
+        _isDeveloperModeOn =
+            androidInfo.isPhysicalDevice && isDeveloperModeEnabled;
       });
 
       bool? isRooted = await RootCheckerPlus.isRootChecker();
@@ -89,13 +130,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (_isDeveloperModeOn) {
         _showDeveloperModeAlert();
-      } else if(isRooted! || hasRootDirectories){
+      } else if (isRooted! || hasRootDirectories) {
         handleRootDetection();
-      }else {
+      } else {
         requestLocationPermission();
       }
     }
   }
+
   Future<void> _openDeveloperOptions() async {
     try {
       await platform.invokeMethod('openDeveloperOptions');
@@ -103,13 +145,15 @@ class _SplashScreenState extends State<SplashScreen> {
       print("Failed to open developer options: '${e.message}'.");
     }
   }
+
   void _showDeveloperModeAlert() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text("Turn of USB debugging"),
-          content: Text("USB debugging mode seems to be active on your phone. This makes your device vulnerable to data theft"),
+          content: Text(
+              "USB debugging mode seems to be active on your phone. This makes your device vulnerable to data theft"),
           actions: <Widget>[
             TextButton(
               child: Text("OK"),
@@ -125,14 +169,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void handleRootDetection() {
-
     // Show an alert or prevent app functionality
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Rooted Device Detected'),
-          content: Text('Your device is rooted. This app cannot run on rooted devices for security reasons.'),
+          content: Text(
+              'Your device is rooted. This app cannot run on rooted devices for security reasons.'),
           actions: <Widget>[
             TextButton(
               child: Text('OK'),
@@ -145,21 +189,30 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       },
     );
-
   }
 
-
   void requestLocationPermission() async {
-    var status = await Permission.location.request();
+    final status = await Permission.location.status;
+
     if (status.isGranted) {
-      // Permission granted, proceed to get data
       getData();
-      controller.getCurrentPosition();
-      controller.permissionHandle();
-    } else if (status.isDenied) {
-      requestLocationPermission();
-    } else if (status.isPermanentlyDenied) {
-      Get.snackbar('', "Location permission is permanently denied. Please enable it from settings.",
+      controller?.getCurrentPosition();
+      controller?.permissionHandle();
+      return;
+    }
+
+    final requestedStatus = await Permission.location.request();
+    if (requestedStatus.isGranted) {
+      getData();
+      controller?.getCurrentPosition();
+      controller?.permissionHandle();
+      return;
+    }
+
+    if (requestedStatus.isDenied || requestedStatus.isPermanentlyDenied) {
+      Get.snackbar(
+        '',
+        "Location permission is required. Please enable it from settings.",
         snackPosition: SnackPosition.BOTTOM,
       );
       Get.offNamed(RouteHelper.getLocationPermissionPageScreen());
@@ -170,28 +223,22 @@ class _SplashScreenState extends State<SplashScreen> {
     log("OnBoarding key ------>:${await sp.getBoolValue(sp.ON_BOARDING_KEY)}");
     log("Language key ------>:${await sp.getStringValue(sp.LANGUAGE)}");
     log("secure key ------>:${await secure.readData(secure.user_id)}");
-   controllers.updateDeviceId();
+    controllers?.updateDeviceId();
     if (await sp.getStringValue(sp.LANGUAGE) == "en_US") {
       Get.updateLocale(Locale('en', 'US'));
-    }else{
+    } else {
       var local = Locale('es', 'ES');
       sp.setStringValue(sp.LANGUAGE, local.toString());
     }
-    if (await sp.getBoolValue(sp.ON_BOARDING_KEY) != true)
-    {
+    if (await sp.getBoolValue(sp.ON_BOARDING_KEY) != true) {
       Timer(const Duration(seconds: 3), () {
         Get.offNamed(RouteHelper.getOnBoardingScreenRoute());
-      }
-      );
-    }
-    else if (await sp.getBoolValue(sp.LOGIN_KEY) != true)
-    {
+      });
+    } else if (await sp.getBoolValue(sp.LOGIN_KEY) != true) {
       Timer(const Duration(seconds: 3), () {
         Get.offNamed(RouteHelper.getLoginScreenRoute());
-      }
-      );
-    }
-    else {
+      });
+    } else {
       Timer(const Duration(seconds: 3), () {
         Get.offNamed(RouteHelper.getHomeScreenScreenRoute(),
             arguments: {"ArriveDriver": ""});
@@ -218,5 +265,4 @@ class _SplashScreenState extends State<SplashScreen> {
     }
     return false;
   }
-
 }

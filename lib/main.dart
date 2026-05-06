@@ -1,4 +1,3 @@
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -11,10 +10,8 @@ import 'package:mtaanidriver/utils/my_binding.dart';
 import 'firebase_options.dart';
 import 'language/language.dart';
 
-
-
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
- FlutterLocalNotificationsPlugin();
+    FlutterLocalNotificationsPlugin();
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -22,48 +19,62 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
   print("Message data: ${message.data}");
 }
-void main()async {
 
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform
-  );
-  await NotificationService.initialize();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+void main() async {
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+    await NotificationService.initialize();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp,DeviceOrientation.portraitDown]);
+    SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
-  runApp(GoyaDriver());
+    runApp(GoyaDriver());
+  } catch (e) {
+    print("Error initializing app: $e");
+    // You can add error reporting here
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Text('App initialization failed: $e'),
+        ),
+      ),
+    ));
+  }
 }
 
-
 class GoyaDriver extends StatefulWidget {
-  const GoyaDriver({super.key,});
+  const GoyaDriver({
+    super.key,
+  });
 
   @override
   State<GoyaDriver> createState() => _GoyaDriverState();
 }
 
 class _GoyaDriverState extends State<GoyaDriver> {
-
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      theme: ThemeData(
-          fontFamily: 'Poppins'
-      ),
-     /* navigatorKey: widget.navigatorKey,*/
+      theme: ThemeData(fontFamily: 'Poppins'),
+      /* navigatorKey: widget.navigatorKey,*/
       translations: Locales(),
       locale: Locale('en', 'US'),
-      fallbackLocale: Locale('en','US'),
+      fallbackLocale: Locale('en', 'US'),
       title: 'POP Driver',
       debugShowCheckedModeBanner: false,
       initialBinding: MyBinding(),
       initialRoute: RouteHelper.getSplashScreenRoute(),
       getPages: RouteHelper.routes,
       home: null,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: child!,
+        );
+      },
     );
   }
-
-
 }
