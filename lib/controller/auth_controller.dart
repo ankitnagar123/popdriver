@@ -907,6 +907,11 @@ class AuthController extends GetxController {
     try {
       var response = await apiService.postData(
           URLS.varify_booking_start_otp, otpParameter);
+      if (response.body.trim().isEmpty) {
+        otpVerify2.value = false;
+        customSnackBar("Server returned an empty response. Please try again.");
+        return;
+      }
       var jsonString = jsonDecode(response.body);
       log("otp response ------>:$jsonString");
       var result = jsonString["result"].toString();

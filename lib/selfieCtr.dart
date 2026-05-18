@@ -8,7 +8,6 @@ import 'package:get/get.dart';
 import 'package:mtaanidriver/controller/home_screen_controller.dart';
 import 'package:mtaanidriver/utils/shared_preferences.dart';
 import 'package:mtaanidriver/utils/snackBar.dart';
-import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -20,7 +19,7 @@ class SelfieController extends GetxController {
   Future<void> initCamera() async {
     final status = await Permission.camera.request();
     if (!status.isGranted) {
-      Get.snackbar("Permission Denied", "Camera permission is required");
+      customSnackBar("Camera permission is required");
       return;
     }
 
@@ -47,8 +46,7 @@ class SelfieController extends GetxController {
   Future<void> captureSelfie() async {
     if (!cameraController.value.isInitialized) return;
 
-    final directory = await getTemporaryDirectory();
-    final filePath = join(directory.path, "${DateTime.now().millisecondsSinceEpoch}.jpg");
+    await getTemporaryDirectory();
     await cameraController.takePicture().then((XFile file) {
       capturedImage.value = File(file.path);
     });

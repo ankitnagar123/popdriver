@@ -161,7 +161,7 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Get.back(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         backgroundColor: MyColors.primary,
         elevation: 4,

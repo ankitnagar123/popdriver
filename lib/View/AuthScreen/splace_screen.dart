@@ -5,13 +5,14 @@ import '../../controller/permision_controller.dart';
 import '../../controller/splace_controller.dart';
 import '../../route_helper/route_helper.dart';
 import '../../utils/shared_preferences.dart';
+import '../../utils/snackBar.dart';
 import '../../controller/auth_controller.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -191,31 +192,108 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  void requestLocationPermission() async {
-    final status = await Permission.location.status;
-
-    if (status.isGranted) {
-      getData();
-      controller?.getCurrentPosition();
-      controller?.permissionHandle();
-      return;
-    }
-
-    final requestedStatus = await Permission.location.request();
-    if (requestedStatus.isGranted) {
-      getData();
-      controller?.getCurrentPosition();
-      controller?.permissionHandle();
-      return;
-    }
-
-    if (requestedStatus.isDenied || requestedStatus.isPermanentlyDenied) {
-      Get.snackbar(
-        '',
-        "Location permission is required. Please enable it from settings.",
-        snackPosition: SnackPosition.BOTTOM,
+  Future<void> requestLocationPermission() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Turn on Location Services'),
+          content: const Text(
+            'Location services are turned off. Please enable them to continue.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Geolocator.openLocationSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await requestLocationPermission();
+              },
+              child: const Text('Check again'),
+            ),
+          ],
+        ),
       );
-      Get.offNamed(RouteHelper.getLocationPermissionPageScreen());
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always) {
+      getData();
+      controller?.getCurrentPosition();
+      controller?.permissionHandle();
+      return;
+    }
+
+    if (permission == LocationPermission.denied) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Location permission required'),
+          content: const Text(
+            'To show your live location on the map, please allow location access.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await requestLocationPermission();
+              },
+              child: const Text('Allow'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Enable location access'),
+          content: const Text(
+            'Location permission is permanently denied. Please open app settings and set Location to "While Using".',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openAppSettings();
+              },
+              child: const Text('Open App Settings'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final latest = await Geolocator.checkPermission();
+                if (latest == LocationPermission.whileInUse ||
+                    latest == LocationPermission.always) {
+                  Navigator.of(context).pop();
+                  getData();
+                  controller?.getCurrentPosition();
+                  controller?.permissionHandle();
+                } else {
+                  customSnackBar('Location permission is still not granted.');
+                }
+              },
+              child: const Text('I have enabled it'),
+            ),
+          ],
+        ),
+      );
     }
   }
 

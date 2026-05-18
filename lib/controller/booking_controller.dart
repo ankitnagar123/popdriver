@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:ui';
-import '../../Model/fetch_cart_model.dart';
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
@@ -11,7 +10,6 @@ import '../../utils/snackBar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../Model/ride_later_booking_model.dart';
 import '../Model/ride_now_booking_model.dart';
 import '../Model/user_accept_booking_model.dart';
 import '../route_helper/route_helper.dart';
@@ -73,6 +71,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   }
 
   void adminApprove() {
+    timer?.cancel();
     timer = Timer.periodic(Duration(seconds: 5), (timer) => adminLogout());
   }
 
@@ -190,7 +189,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void userAcceptBooking(VoidCallback callback) async {
+  Future<void> userAcceptBooking([VoidCallback? callback]) async {
     final user = {"driver_id": await secure.readData(secure.user_id)};
     try {
       final response = await apiService.postData(URLS.USER_ACCEPT_BOOKING, user);
@@ -202,6 +201,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         updateBookingState(data);
       }
       log("response user data accept${data}");
+      callback?.call();
+      update();
     } catch (e) {
       log("Exception-----booking", error: e.toString());
     }
@@ -294,18 +295,23 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     log("status change----------->:$statusData");
     try {
       final response = await apiService.postData(URLS.STATUS_CHANGE, statusData);
-      final data = jsonDecode(response.body);
-      callback();
-      final result = data['result'];
-      log("status change response: $data");
-      if (result == "arrived successfully") {
-       /* sp.setStringValue(sp.DRIVER_START_RIDE_OTP, otp);*/
-      }else if(result == "arrived successfully"){
-
+      final data = _decodeJsonSafely(response.body);
+      if (data == null) {
+        statusChangeLoader.value = false;
+        customSnackBar("Invalid response from server. Please try again.");
+        return;
       }
-
-      userAcceptBooking(() {});
+      final result = (data['result'] ?? '').toString();
+      log("status change response: $data");
+      if (_isStatusChangeSuccessful(result)) {
+        _applyImmediateStateForStatus(status);
+        await userAcceptBooking();
+        callback();
+      } else {
+        customSnackBar(result.isEmpty ? "Something went wrong".tr : result);
+      }
       statusChangeLoader.value = false;
+      update();
     } catch (e) {
       statusChangeLoader.value = false;
       log("Exception -------->", error: e.toString());
@@ -335,7 +341,12 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     log("logout id :------>:$logout");
     try {
       final response = await apiService.postData(URLS.check_driver_admin_status, logout);
-      final jsonString = jsonDecode(response.body);
+      final jsonString = _decodeJsonSafely(response.body);
+      if (jsonString == null) {
+        // Avoid crashing polling loop when API occasionally returns empty body.
+        log("adminLogout: received non-JSON/empty response");
+        return;
+      }
       log("logout response Admin:-------->$jsonString}");
       final result = jsonString['result'];
       if (result == "Success") {
@@ -363,5 +374,51 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     });
     Get.offAllNamed(RouteHelper.getLoginScreenRoute());
     customSnackBar(result);
+  }
+
+  bool _isStatusChangeSuccessful(String result) {
+    final lower = result.toLowerCase();
+    return lower.contains('success');
+  }
+
+  void _applyImmediateStateForStatus(String status) {
+    switch (status) {
+      case "arrived":
+        completeText.value = "Start Ride".tr;
+        controller.arriveDriver.value = "Arrived";
+        controller.driverArriveValue.value = true;
+        controller.hide.value = true;
+        controller.painButton.value = true;
+        break;
+      case "start_ride":
+        completeText.value = "Complete Ride".tr;
+        controller.arriveDriver.value = "";
+        controller.driverArriveValue.value = true;
+        controller.hide.value = true;
+        controller.painButton.value = true;
+        break;
+      case "end_ride":
+        resetControllerState();
+        controller.onOff.value = true;
+        break;
+      default:
+        break;
+    }
+  }
+
+  Map<String, dynamic>? _decodeJsonSafely(String body) {
+    if (body.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }

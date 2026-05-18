@@ -44,6 +44,11 @@ class HomeController extends GetxController {
   // var googleMapController = Rx<GoogleMapController?>(null);
 
   Rx<GoogleMapController?> googleMapController = Rx<GoogleMapController?>(null);
+  Uint8List? _driverMarkerBytes;
+  DateTime? _lastDriverLatLongSyncAt;
+  DateTime? _lastRideRefreshAt;
+  LatLng? _lastCameraTarget;
+  bool _isListening = false;
 
   void setGoogleMapController(GoogleMapController controller) {
     googleMapController.value = controller;
@@ -52,12 +57,25 @@ class HomeController extends GetxController {
   void updateCameraPosition(LatLng location) {
     final controller = googleMapController.value;
     if (controller != null) {
-      controller.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: location,
-          zoom: 16,
+      // Avoid over-animating camera on each GPS tick; it causes jitter on iOS.
+      if (_lastCameraTarget != null) {
+        final distance = Geolocator.distanceBetween(
+          _lastCameraTarget!.latitude,
+          _lastCameraTarget!.longitude,
+          location.latitude,
+          location.longitude,
+        );
+        if (distance < 8) return;
+      }
+      _lastCameraTarget = location;
+      controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: location,
+            zoom: 16,
+          ),
         ),
-      ));
+      );
     }
   }
 
@@ -106,6 +124,8 @@ class HomeController extends GetxController {
   }
 
   void startListening() {
+    if (_isListening) return;
+    _isListening = true;
     streamSubscription =
         Geolocator.getPositionStream().listen((Position position) {
       print("listening -----");
@@ -117,6 +137,7 @@ class HomeController extends GetxController {
 
   void stopListening() {
     try {
+      _isListening = false;
       streamSubscription.cancel().then((_) {
         try {
           Get.find<PermissionController>().mapSubscription?.cancel();
@@ -151,7 +172,7 @@ class HomeController extends GetxController {
 */
 
   Future<void> updateMarker(Position position) async {
-    Uint8List imageData = await getMarkers();
+    _driverMarkerBytes ??= await getMarkers();
     final marker =
         markers.firstWhereOrNull((m) => m.markerId == const MarkerId("1"));
 
@@ -167,7 +188,7 @@ class HomeController extends GetxController {
       zIndex: 2,
       flat: true,
       anchor: const Offset(0.5, 0.5),
-      icon: BitmapDescriptor.fromBytes(imageData),
+      icon: BitmapDescriptor.fromBytes(_driverMarkerBytes!),
     ));
   }
 
@@ -179,6 +200,7 @@ class HomeController extends GetxController {
   // User pickup Location Marker
   Future<void> userPickupMarker(BuildContext context) async {
     Uint8List imageData = await getMarker(context);
+    markers.removeWhere((m) => m.markerId == const MarkerId("2"));
     markers.add(Marker(
       markerId: MarkerId("2"),
       position: endLocation.value,
@@ -226,30 +248,34 @@ class HomeController extends GetxController {
     try {
       // Check if Google Map controller is available
       if (googleMapController.value != null) {
-        CameraPosition cameraPosition = CameraPosition(
-          target: LatLng(position.latitude, position.longitude),
-          zoom: 16,
-        );
-        googleMapController.value!
-            .animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+        updateCameraPosition(LatLng(position.latitude, position.longitude));
       }
 
-      var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-      var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-      var authController = Get.find<AuthController>();
-      authController.loginCheck(loginKey.toString(), accessToken, context);
-      Get.find<BookingController>().rideNowBooking();
-      Get.find<BookingController>().userAcceptBooking(
-        () {},
-      );
+      final now = DateTime.now();
+      final shouldRefreshRideState = _lastRideRefreshAt == null ||
+          now.difference(_lastRideRefreshAt!).inSeconds >= 8;
+      if (shouldRefreshRideState) {
+        _lastRideRefreshAt = now;
+        var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+        var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+        var authController = Get.find<AuthController>();
+        authController.loginCheck(loginKey.toString(), accessToken, context);
+        Get.find<BookingController>().rideNowBooking();
+        Get.find<BookingController>().userAcceptBooking();
+      }
 
       if (onOff.value == true) {
-        updateDriverLatLong(
-          position.latitude.toString(),
-          position.longitude.toString(),
-          position.heading.toString(),
-          "Available",
-        );
+        final shouldSyncDriver = _lastDriverLatLongSyncAt == null ||
+            now.difference(_lastDriverLatLongSyncAt!).inSeconds >= 3;
+        if (shouldSyncDriver) {
+          _lastDriverLatLongSyncAt = now;
+          updateDriverLatLong(
+            position.latitude.toString(),
+            position.longitude.toString(),
+            position.heading.toString(),
+            "Available",
+          );
+        }
       } else {
         updateDriverLatLong("0", "0", "0", "UnAvailable");
       }

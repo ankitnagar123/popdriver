@@ -13,7 +13,6 @@ import '../../controller/route_controller.dart';
 import '../../route_helper/route_helper.dart';
 import '../../utils/CustomRideStart.dart';
 import '../../utils/colors.dart';
-import '../../utils/custom_button.dart';
 import '../../utils/polyline_handler.dart';
 import '../../utils/redirect_map.dart';
 import '../../utils/shared_preferences.dart';
@@ -73,9 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
     log("onOff------------Direct ${contoller.onOff.value}");
 
     getData();
+    contrl.getCurrentPosition();
     contoller.getLocation();
     controller.adminApprove();
-    controller.userAcceptBooking(() {});
+    controller.userAcceptBooking();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       contoller.arriveDriver.value = Get.arguments["ArriveDriver"];
@@ -105,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    controller.cancel();
     super.dispose();
   }
 
@@ -281,31 +282,33 @@ class _HomeScreenState extends State<HomeScreen> {
             : Stack(
                 children: [
                   GoogleMap(
+                    key: const ValueKey("driver_home_map"),
                     myLocationButtonEnabled: false,
                     myLocationEnabled: true,
                     zoomControlsEnabled: false,
                     zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
                     padding: const EdgeInsets.all(0),
                     buildingsEnabled: true,
                     cameraTargetBounds: CameraTargetBounds.unbounded,
                     compassEnabled: true,
                     indoorViewEnabled: false,
-                    mapToolbarEnabled: true,
+                    mapToolbarEnabled: false,
                     rotateGesturesEnabled: true,
                     tiltGesturesEnabled: true,
+                    minMaxZoomPreference:
+                        const MinMaxZoomPreference(3, 20),
                     markers: Set<Marker>.of(contoller.markers),
                     polylines: Set<Polyline>.of(polyline.values),
                     mapType: MapType.normal,
                     onMapCreated: (GoogleMapController controller) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        contoller.setGoogleMapController(controller);
-                        contoller.updateCameraPosition(
-                            contrl.mapInitialLocation.value);
-                      });
+                      contoller.setGoogleMapController(controller);
+                      contoller.updateCameraPosition(
+                          contrl.mapInitialLocation.value);
                     },
                     initialCameraPosition: CameraPosition(
                       target: contrl.mapInitialLocation.value.latitude == 0
-                          ? const LatLng(0.0, 0.0)
+                          ? contoller.startLocation.value
                           : LatLng(contrl.mapInitialLocation.value.latitude,
                               contrl.mapInitialLocation.value.longitude),
                       zoom: 16,

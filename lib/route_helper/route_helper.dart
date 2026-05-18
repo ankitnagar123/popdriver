@@ -17,7 +17,6 @@ import '../View/HomeView/drawer_tab_screen/my_ride_screen.dart';
 import '../View/HomeView/drawer_tab_screen/notification_screen.dart';
 import '../View/HomeView/drawer_tab_screen/rating_screen.dart';
 import '../View/HomeView/drawer_tab_screen/ride_history/ride_history.dart';
-import '../View/HomeView/home_screen.dart';
 import '../View/HomeView/message_screen.dart';
 import '../View/HomeView/profile_screens/edit_profile_screen.dart';
 import '../View/HomeView/profile_screens/profile.dart';
@@ -36,7 +35,6 @@ import '../View/HomeView/wallet_screen/fetch_card_screen.dart';
 import '../View/HomeView/wallet_screen/wallet_screen.dart';
 import '../View/onboarding_screens/onboarding_screen.dart';
 import '../View/single_complane_screen.dart';
-import '../permission.dart';
 
 class RouteHelper {
   static const String initial = '/';
@@ -78,7 +76,6 @@ class RouteHelper {
   static const String message = '/message';
   static const String fetchSingleQuery = '/fetchSingleQuery';
   static const String fetchSingleCom = '/fetchSingleCom';
-  static const String locationPermissionPage = '/locationPermissionPage';
   static const String signupOTP = '/signupOTP';
 
   static String getInitialRoute() => initial;
@@ -159,8 +156,6 @@ class RouteHelper {
 
   static getSingleQueryComScreen() => fetchSingleCom;
 
-  static getLocationPermissionPageScreen() => locationPermissionPage;
-
   static getSignupOTPScreen() => signupOTP;
 
   static List<GetPage> routes = [
@@ -209,7 +204,6 @@ class RouteHelper {
     GetPage(name: message, page: () => Messages()),
     GetPage(name: fetchSingleQuery, page: () => FetchSingleQuery()),
     GetPage(name: fetchSingleCom, page: () => FetchSingleComplane()),
-    GetPage(name: locationPermissionPage, page: () => LocationPermissionPage()),
     GetPage(name: signupOTP, page: () => SignupOTP(),  transition: Transition.downToUp,
       transitionDuration: const Duration(milliseconds: 500),),
   ];

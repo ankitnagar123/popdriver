@@ -5,6 +5,12 @@ import 'colors.dart';
 
 void customSnackBar(String? message){
   if (message != null && message.isNotEmpty) {
+    // Prevent GetX snackbar crashes when no Overlay/Navigator is ready.
+    final hasOverlay = Get.overlayContext != null;
+    if (!hasOverlay) {
+      debugPrint("Snackbar skipped (no overlay): $message");
+      return;
+    }
     Get.showSnackbar(GetSnackBar(
       backgroundColor: MyColors.black,
       borderRadius: 10,

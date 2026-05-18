@@ -1,19 +1,13 @@
-import 'dart:developer';
-
 import '../../../controller/auth_controller.dart';
 import '../../../controller/booking_controller.dart';
-import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/custom_button.dart';
 import '../../../utils/shared_preferences.dart';
 import '../../../utils/snackBar.dart';
-import '../../../utils/text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_otp_text_field/flutter_otp_text_field.dart';
 import 'package:get/get.dart';
-import '../../../utils/colors.dart';
-import '../../../utils/snackBar.dart';
 
 class StartRideOtp extends StatefulWidget {
   const StartRideOtp({Key? key}) : super(key: key);
@@ -100,7 +94,7 @@ class _StartRideOtpState extends State<StartRideOtp> {
                           {
                             Get.find<AuthController>().verifyOtp2(otp, id,(){
                               controller.statusChange("start_ride",
-                                  controller.useracceptmodel.bookingId, "", "", () {
+                                  id, "", "", () {
                                   Navigator.pop(context);
                                   });
                             });
