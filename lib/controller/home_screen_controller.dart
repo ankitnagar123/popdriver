@@ -49,6 +49,8 @@ class HomeController extends GetxController {
   DateTime? _lastRideRefreshAt;
   LatLng? _lastCameraTarget;
   bool _isListening = false;
+  /// Bump so `HomeScreen` rebuilds polylines after async Directions fetch.
+  final RxInt mapPolylineEpoch = 0.obs;
 
   void setGoogleMapController(GoogleMapController controller) {
     googleMapController.value = controller;
@@ -68,14 +70,51 @@ class HomeController extends GetxController {
         if (distance < 8) return;
       }
       _lastCameraTarget = location;
-      controller.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: location,
-            zoom: 16,
+      try {
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: location,
+              zoom: 16,
+            ),
           ),
-        ),
+        );
+      } on PlatformException catch (e) {
+        log('animateCamera skipped: ${e.message}');
+      }
+    }
+  }
+
+  /// Called after the route polyline is decoded so the map refreshes and fits the path.
+  void onRoutePolylineReady(List<LatLng> points) {
+    if (points.isEmpty) return;
+    mapPolylineEpoch.value++;
+    _fitCameraToRoute(points);
+  }
+
+  void _fitCameraToRoute(List<LatLng> points) {
+    final mapCtl = googleMapController.value;
+    if (mapCtl == null || points.length < 2) return;
+    try {
+      double minLat = points.first.latitude;
+      double maxLat = points.first.latitude;
+      double minLng = points.first.longitude;
+      double maxLng = points.first.longitude;
+      for (final p in points) {
+        minLat = minLat < p.latitude ? minLat : p.latitude;
+        maxLat = maxLat > p.latitude ? maxLat : p.latitude;
+        minLng = minLng < p.longitude ? minLng : p.longitude;
+        maxLng = maxLng > p.longitude ? maxLng : p.longitude;
+      }
+      final bounds = LatLngBounds(
+        southwest: LatLng(minLat, minLng),
+        northeast: LatLng(maxLat, maxLng),
       );
+      mapCtl.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+    } on PlatformException catch (e) {
+      log('fitCameraToRoute skipped: ${e.message}');
+    } catch (e) {
+      log('fitCameraToRoute skipped: $e');
     }
   }
 
@@ -235,7 +274,10 @@ class HomeController extends GetxController {
     try {
       final response =
           await apiService.postData(URLS.DRIVER_LATLONG_UPDATE, latlong);
-      var jsonString = jsonDecode(response.body);
+      if (response.statusCode == 429) return;
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith("<")) return;
+      var jsonString = jsonDecode(body);
       log("update driver latlong response ---->:$jsonString");
       var result = jsonString['result'];
       log("result------->:$result");
@@ -252,8 +294,9 @@ class HomeController extends GetxController {
       }
 
       final now = DateTime.now();
+      // Slightly looser polling reduces duplicate requests (helps with HTTP 429).
       final shouldRefreshRideState = _lastRideRefreshAt == null ||
-          now.difference(_lastRideRefreshAt!).inSeconds >= 8;
+          now.difference(_lastRideRefreshAt!).inSeconds >= 12;
       if (shouldRefreshRideState) {
         _lastRideRefreshAt = now;
         var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());

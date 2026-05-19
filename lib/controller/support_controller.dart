@@ -31,8 +31,13 @@ ApiService apiService = ApiService();
 
 SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
-  void writeSupport(BuildContext context,String email,String subject,String message)async{
-  writeSupportLoader.value = true;
+  Future<bool> writeSupport(
+    BuildContext context,
+    String email,
+    String subject,
+    String message,
+  ) async {
+    writeSupportLoader.value = true;
   Map<String, dynamic> map = {
 
   "driver_id":await secure.readData(secure.user_id),
@@ -50,23 +55,26 @@ SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
     var jsonString = jsonDecode(response.body);
     log("response------->$jsonString");
 
-    if(jsonString['result']=='successfully'){
+    if (jsonString['result'] == 'successfully') {
       customSnackBar('support submitted'.tr);
-      fetchQuery("fetch");
-     /* Navigator.of(context).pop();*/
+      fetchQuery('refresh');
       writeSupportLoader.value = false;
-    }else{
-      writeSupportLoader.value = false;
-      customSnackBar('something went wrong'.tr);
+      return true;
     }
-  }catch(e){
     writeSupportLoader.value = false;
-    log("Exception-----",error: e.toString());
+    customSnackBar('something went wrong'.tr);
+    return false;
+  } catch (e) {
+    writeSupportLoader.value = false;
+    log('Exception-----', error: e.toString());
+    return false;
   }
 }
 
-  void fetchQuery(String status)async{
-    if(status == ""){
+  /// [showBlockingLoader] — only true when a full-screen loader is intended.
+  /// Write Support loads tickets in the background without blocking the form.
+  void fetchQuery(String status, {bool showBlockingLoader = false}) async {
+    if (showBlockingLoader || status == 'refresh') {
       fetchQueryLoader.value = true;
     }
     Map<String,dynamic> map = {
@@ -88,8 +96,8 @@ SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
   }
 
-  void fetchSingleQuery(String complain_number,String status)async{
-    if(status == ""){
+  Future<void> fetchSingleQuery(String complain_number, String status) async {
+    if (status.isEmpty) {
       fetchSingleQueryLoader.value = true;
     }
 
@@ -145,7 +153,7 @@ SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
   }
 
-  void replyThread(String complain_number,message)async{
+  Future<bool> replyThread(String complain_number, String message) async {
     replyLoader.value = true;
     Map<String,dynamic> map = {
       'driver_id' : await secure.readData(secure.user_id)??"",
@@ -161,20 +169,20 @@ SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
       log(" reply query response -----$jsonString");
 
-      if(jsonString['result'] == "successfully"){
-        Get.back();
-        customSnackBar("Reply sent successfully");
-        fetchSingleQuery(complain_number,"hii");
-      }else{
-        customSnackBar("something went wrong");
+      if (jsonString['result'] == 'successfully') {
+        customSnackBar('Reply sent successfully'.tr);
+        fetchSingleQuery(complain_number, 'poll');
+        replyLoader.value = false;
+        return true;
       }
-
+      customSnackBar('something went wrong'.tr);
       replyLoader.value = false;
-    }catch(e){
+      return false;
+    } catch (e) {
       replyLoader.value = false;
-      log("close Query Exception ---",error: e.toString());
+      log('replyThread Exception ---', error: e.toString());
+      return false;
     }
-
   }
 
 }

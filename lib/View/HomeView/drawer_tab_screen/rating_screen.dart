@@ -5,368 +5,493 @@ import 'package:get/get.dart';
 import '../../../Model/rating_model.dart';
 import '../../../controller/rating_controller.dart';
 import '../../../utils/colors.dart';
+import '../../../utils/custom_button.dart';
 
+/// Drawer — driver ratings & reviews (fetch list).
 class RatingScreen extends StatefulWidget {
-  const RatingScreen({Key? key}) : super(key: key);
+  const RatingScreen({super.key});
 
   @override
   State<RatingScreen> createState() => _RatingScreenState();
 }
 
 class _RatingScreenState extends State<RatingScreen> {
-  RatingController controller = Get.put(RatingController());
+  final RatingController controller = Get.put(RatingController());
 
   @override
   void initState() {
-    controller.rating();
     super.initState();
+    controller.rating();
+  }
+
+  double _safeDouble(String value) => double.tryParse(value.trim()) ?? 0;
+
+  Future<void> _refresh() async {
+    await controller.refreshRatings();
+    var attempts = 0;
+    while (controller.isLoading.value && attempts < 60) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MyColors.background,
       appBar: AppBar(
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: MyColors.primary,
-        elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.3),
-        title:  Row(
-          children: [
-            Image.asset(
-              'assets/images/headLogo.png',
-              height: 28,
-            ),  Image.asset(
-              color: Colors.white,
-              'assets/images/stearing.png',
-              height: 37,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF02B3BE),
+                Color(0xFF019BA5),
+                Color(0xFF017A82),
+              ],
             ),
-
-          ],
+          ),
+        ),
+        title: Text(
+          'Rate & Reviews'.tr,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            color: Colors.white,
+          ),
         ),
         centerTitle: true,
+       
       ),
       body: Obx(() {
-        if (controller.isLoading.value) {
-          return Center(
-            child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(MyColors.primary)),
-          );
-        } else {
-          var list = controller.ratingList.value!;
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  Center(
-                    child: Text("Rate & Reviews".tr,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,)),
-                  ),
-                  // Overall Rating Card
-                  _buildOverallRating(list),
-                  const SizedBox(height: 24),
-                  // Rating Distribution
-                  _buildRatingDistribution(list),
-                  const SizedBox(height: 24),
-                  // Reviews List
-                  _buildReviewsHeader(),
-                  const SizedBox(height: 16),
-                  _buildReviewsList(list),
-                ],
-              ),
-            ),
-          );
+        if (controller.isLoading.value && controller.ratingList.value == null) {
+          return Center(child: myIndicator());
         }
+
+        final data = controller.ratingList.value;
+        if (data == null) {
+          return _buildEmptyBody();
+        }
+
+        return RefreshIndicator(
+          color: MyColors.primary,
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _buildOverallCard(data),
+              const SizedBox(height: 16),
+              _buildDistributionCard(data),
+              const SizedBox(height: 16),
+              _buildReviewsHeader(data.list.length),
+              const SizedBox(height: 10),
+              if (data.list.isEmpty)
+                _buildNoReviews()
+              else
+                ...data.list.reversed.map(_buildReviewCard),
+            ],
+          ),
+        );
       }),
     );
   }
 
-  Widget _buildOverallRating(list) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Overall Rating",
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 8),
-                Text(list.totalRating,
-                    style: const TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.bold,
-                        color: MyColors.primary)),
-
-              ],
-            ),
-            const Spacer(),
-            Column(
-              children: [
-                RatingBarIndicator(
-                  rating: double.parse(list.totalRating),
-                  itemBuilder: (context, index) => const Icon(
-                    Icons.star_rounded,
-                    color: Colors.amber,
-                  ),
-                  itemCount: 5,
-                  itemSize: 32.0,
-                ),
-                const SizedBox(height: 8),
-
-                Text("Based on ${controller.ratingList.value!.list.length} Rating",
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRatingDistribution(list) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildEmptyBody() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       children: [
-        const Text("Rating Distribution",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 16),
-        Column(
-          children: [
-            _buildDistributionRow('Excellent', double.parse(list.rating5), Colors.green),
-            _buildDistributionRow('Very Good', double.parse(list.rating4), Colors.lightGreen),
-            _buildDistributionRow('Good', double.parse(list.rating3), Colors.orange),
-            _buildDistributionRow('Average', double.parse(list.rating2), Colors.orangeAccent),
-            _buildDistributionRow('Poor', double.parse(list.rating1), Colors.red),
-          ],
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
+        Icon(Icons.star_border_rounded, size: 72, color: Colors.grey.shade400),
+        const SizedBox(height: 12),
+        Text(
+          'No ratings yet'.tr,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            fontFamily: 'Poppins',
+            color: Colors.grey.shade600,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildDistributionRow(String label, double pct, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+  Widget _buildOverallCard(RatingModel list) {
+    final avg = _safeDouble(list.totalRating);
+    final count = list.list.length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF017A82),
+            Color(0xFF019BA5),
+            Color(0xFF02B3BE),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: MyColors.primary.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          const Icon(Icons.star, size: 18, color: Colors.amber),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Overall Rating'.tr,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontFamily: 'Poppins',
                 ),
-                LayoutBuilder(
-                  builder: (context, constraints) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeOut,
-                    width: constraints.maxWidth * (pct / 100),
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: LinearGradient(
-                        colors: [color, color.withOpacity(0.7)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                avg.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Poppins',
                 ),
-              ],
-            ),
+              ),
+              Text(
+                '${'Based on'.tr} $count ${'ratings'.tr}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text('${pct.toStringAsFixed(0)}',
-              style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500)),
+          const Spacer(),
+          RatingBarIndicator(
+            rating: avg.clamp(0, 5),
+            itemBuilder: (_, __) =>
+                const Icon(Icons.star_rounded, color: Colors.amber),
+            itemCount: 5,
+            itemSize: 26,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildReviewsHeader() {
-    return const Text("User Reviews",
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600));
+  Widget _buildDistributionCard(RatingModel list) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Rating Distribution'.tr,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildDistributionRow('Excellent', _safeDouble(list.rating5), Colors.green),
+          _buildDistributionRow('Very Good', _safeDouble(list.rating4), Colors.lightGreen),
+          _buildDistributionRow('Good', _safeDouble(list.rating3), Colors.orange),
+          _buildDistributionRow('Average', _safeDouble(list.rating2), Colors.orangeAccent),
+          _buildDistributionRow('Poor', _safeDouble(list.rating1), Colors.red),
+        ],
+      ),
+    );
   }
 
-  Widget _buildReviewsList(list) {
-    return ListView.separated(
-      physics: const NeverScrollableScrollPhysics(),  // Disable inner scroll
-    shrinkWrap: true,
-      itemCount: list.list.length,
-      separatorBuilder: (context, index) => const Divider(height: 32),
-      itemBuilder: (context, index) {
-        var reverseList = list.list.reversed.toList();
-        var review = reverseList[index];
-        return _buildReviewCard(review);
-      },
+  Widget _buildDistributionRow(String label, double pct, Color color) {
+    final clamped = pct.clamp(0, 100);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 72,
+            child: Text(
+              label.tr,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+          const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+          const SizedBox(width: 6),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: clamped / 100,
+                minHeight: 10,
+                backgroundColor: Colors.grey.shade200,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 32,
+            child: Text(
+              '${clamped.toStringAsFixed(0)}%',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade700,
+                fontFamily: 'Poppins',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsHeader(int count) {
+    return Row(
+      children: [
+        Text(
+          'User Reviews'.tr,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: MyColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: MyColors.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoReviews() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Text(
+        'No user reviews yet'.tr,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontFamily: 'Poppins',
+        ),
+      ),
     );
   }
 
   Widget _buildReviewCard(ListElement review) {
-    return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Info Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Avatar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(40),
-                  child: Image.network(
-                    review.image,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, o, s) => Container(
-                      width: 48,
-                      height: 48,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.person, color: Colors.grey),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // User Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(review.userName,
-                          style: const TextStyle(
-                              color: Colors.black87,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Text(
-                        "${review.date} • ${review.time}",
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                // Rating and Ride ID
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    RatingBarIndicator(
-                      rating: double.parse(review.rating),
-                      itemBuilder: (context, index) => const Icon(
-                        Icons.star_rounded,
-                        color: Colors.amber,
-                      ),
-                      itemCount: 5,
-                      itemSize: 20,
-                    ),
-                    const SizedBox(height: 4),
-                    Text("Ride ID: ${review.rateId}",
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[500])),
-                  ],
-                ),
-              ],
-            ),
-            // Feedback and Points
-            if (review.feedback.isNotEmpty ||
-                review.positivePointList.isNotEmpty ||
-                review.negativePointList.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 60, top: 12),
+    final stars = _safeDouble(review.rating);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: review.image.trim().isNotEmpty
+                    ? NetworkImage(review.image.trim())
+                    : null,
+                child: review.image.trim().isEmpty
+                    ? const Icon(Icons.person, color: MyColors.primary)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Feedback Text
-                    if (review.feedback.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: MyColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          review.feedback,
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
-                              color: Colors.black87),
-                        ),
+                    Text(
+                      review.userName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
                       ),
-                    // Positive Points
-                    if (review.positivePointList.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: review.positivePointList.map((point) => Chip(
-                            backgroundColor: Colors.green.withOpacity(0.1),
-                            label: Text(point.positivePoint,
-                                style: const TextStyle(color: Colors.green)),
-                            avatar: const Icon(Icons.check_circle,
-                                size: 16,
-                                color: Colors.green),
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                          )).toList(),
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${review.date} • ${review.time}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                        fontFamily: 'Poppins',
                       ),
-                    // Negative Points
-                    if (review.negativePointList.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 4,
-                          children: review.negativePointList.map((point) => Chip(
-                            backgroundColor: Colors.red.withOpacity(0.1),
-                            label: Text(point.negativePoint,
-                                style: const TextStyle(color: Colors.red)),
-                            avatar: const Icon(Icons.cancel,
-                                size: 16,
-                                color: Colors.red),
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                          )).toList(),
-                        ),
-                      ),
+                    ),
                   ],
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  RatingBarIndicator(
+                    rating: stars.clamp(0, 5),
+                    itemBuilder: (_, __) =>
+                        const Icon(Icons.star_rounded, color: Colors.amber),
+                    itemCount: 5,
+                    itemSize: 16,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '#${review.rateId}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade500,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (review.feedback.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: MyColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                review.feedback,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade800,
+                  fontFamily: 'Poppins',
+                  height: 1.35,
+                ),
+              ),
+            ),
           ],
-        ),
+          if (review.positivePointList.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: review.positivePointList
+                  .map(
+                    (p) => _tagChip(
+                      p.positivePoint,
+                      Colors.green.shade700,
+                      Colors.green.shade50,
+                      Icons.thumb_up_alt_outlined,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          if (review.negativePointList.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: review.negativePointList
+                  .map(
+                    (p) => _tagChip(
+                      p.negativePoint,
+                      Colors.red.shade700,
+                      Colors.red.shade50,
+                      Icons.thumb_down_alt_outlined,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
       ),
     );
-  }}
+  }
+
+  Widget _tagChip(
+    String label,
+    Color textColor,
+    Color bgColor,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: textColor,
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

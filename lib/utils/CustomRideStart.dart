@@ -30,10 +30,12 @@ class CustomRideStart extends StatefulWidget {
   String time;
   String distance;
   String bookingId;
+  final ScrollController sheetScrollController;
   String userID;
 
   CustomRideStart({
     super.key,
+    required this.sheetScrollController,
     required this.callCallback,
     required this.mapCallback,
     required this.msgCallBack,
@@ -61,243 +63,335 @@ class _CustomRideStartState extends State<CustomRideStart> {
 
   BookingController controller = Get.find<BookingController>();
 
+  bool _isValidNetworkImageUrl(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return false;
+    final uri = Uri.tryParse(s);
+    return uri != null &&
+        uri.hasAuthority &&
+        (uri.isScheme('http') || uri.isScheme('https'));
+  }
+
+  Widget _circleActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(40),
+        child: Container(
+          height: 48,
+          width: 48,
+          decoration: BoxDecoration(
+            color: MyColors.buttonColor,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: MyColors.DarkBlue.withOpacity(0.35),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, color: MyColors.white, size: 22),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardTopActionRow() {
+    return Obx(
+      () => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _circleActionButton(
+              icon: Icons.location_on,
+              onTap: widget.mapCallback,
+            ),
+            _circleActionButton(
+              icon: Icons.call,
+              onTap: () => makePhoneCall(controller.useracceptmodel.contact),
+            ),
+            _circleActionButton(
+              icon: Icons.chat,
+              onTap: widget.msgCallBack,
+            ),
+            if (controller.cancelStartBookLoader.value)
+              SizedBox(
+                height: 48,
+                width: 48,
+                child: Center(child: myIndicator()),
+              )
+            else if (controller.useracceptmodel.status == "Start Ride")
+              const SizedBox(height: 48, width: 48)
+            else
+              _circleActionButton(
+                icon: Icons.clear,
+                onTap: widget.cancelCallBack,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dragHandle() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4),
+      child: Center(
+        child: Container(
+          width: 44,
+          height: 5,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade400,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return ListView(
+      controller: widget.sheetScrollController,
+      padding: EdgeInsets.zero,
+      physics: const ClampingScrollPhysics(),
       children: [
+        _dragHandle(),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-          child: Column(
-            children: [
-              SizedBox(
-                height: 50,
-              ),
-              Card(
-                color: MyColors.white,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Material(
+            color: MyColors.white,
+            elevation: 12,
+            shadowColor: Colors.black26,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildCardTopActionRow(),
+                  Row(
                     children: [
-                      SizedBox(
-                        height: 20,
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            height: 40,
-                            width: 40,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(80)),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(80),
-                              child: FadeInImage.assetNetwork(
-                                placeholder: 'assets/images/loader.gif',
-                                fit: BoxFit.cover,
-                                image: widget.image,
-                                imageErrorBuilder: (c, o, s) =>
-                                    Image.asset(
-                                      "assets/images/logo.png",
-                                      fit: BoxFit.cover,
-                                    ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 10),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(widget.userName,
-                                        style: TextStyle(fontSize: 15)),
-                                    Text(
-                                      widget.paymentType,
-                                      style: TextStyle(
-                                          color: MyColors.primary,
-                                          fontSize: 11),
-                                    )
-                                  ],
-                                ),
-                              )),
-                          Align(
-                            alignment: Alignment.topRight,
-                            child: Column(
-                              children: [
-                                Text(
-                                  widget.price,
-                                  style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                InkWell(
-                                  onTap: () {
-                                    String message =
-                                        controller.useracceptmodel.locationUrl;
-                                    Share.share(message);
-                                  },
-                                  child: Text(
-                                    "Share Location".tr,
-                                    style: TextStyle(
-                                        fontSize: 15,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold),
+                      Container(
+                        height: 40,
+                        width: 40,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(80)),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(80),
+                          child: _isValidNetworkImageUrl(widget.image)
+                              ? FadeInImage.assetNetwork(
+                                  placeholder: 'assets/images/loader.gif',
+                                  fit: BoxFit.cover,
+                                  image: widget.image.trim(),
+                                  imageErrorBuilder: (c, o, s) => Image.asset(
+                                    "assets/images/logo.png",
+                                    fit: BoxFit.cover,
                                   ),
                                 )
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(
-                        height: 10,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 23),
-                        child: Text(
-                          "pickup point".tr,
-                          style: TextStyle(fontSize: 13,fontFamily: "Poppins"),
+                              : Image.asset(
+                                  "assets/images/logo.png",
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.green,
-                          ),
-                          SizedBox(
-                            width: Get.width / 1.5,
-                            child: Text(
-                              widget.pickupLocation,
-                              maxLines: 2,
-                              softWrap: false,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12,fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: SizedBox(
-                          height: 30,
-                          child: VerticalDivider(
-                            color: MyColors.black,
-                          ),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: MyColors.primary,
-                          ),
-                          Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Destination Point".tr,
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  SizedBox(
-                                    width: Get.width / 1.5,
-                                    child: Text(
-                                      widget.dropLocation,
-                                      maxLines: 2,
-                                      softWrap: false,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 12,fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ],
-                              ))
-                        ],
-                      ),
-                      SizedBox(height: 5,),
-                      Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Expanded(
+                          child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                        Container(
-                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
+                            Text(widget.userName,
+                                style: TextStyle(fontSize: 15)),
+                            Text(
+                              widget.paymentType,
+                              style: TextStyle(
+                                  color: MyColors.primary, fontSize: 11),
+                            )
+                          ],
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      )),
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Icon( Icons.attach_money, size: 16, color: Colors.green),
-                            SizedBox(width: 4),
                             Text(
                               widget.price,
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.green,
+                                  fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 5),
+                            InkWell(
+                              onTap: () {
+                                final message =
+                                    controller.useracceptmodel.locationUrl
+                                        .trim();
+                                if (message.isEmpty) return;
+                                Share.share(message);
+                              },
+                              child: Text(
+                                "Share Location".tr,
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold),
                               ),
-                            ),
+                            )
                           ],
                         ),
                       ),
-                           /* _buildInfoBadge(
-                              icon: Icons.attach_money,
-                              value: widget.price,
-                              color: Colors.green,
-                            ),*/
-                            _buildInfoBadge(
-                              icon: Icons.directions_car,
-                              value: widget.distance,
-                              color: MyColors.primary,
-                            ),
-                            _buildInfoBadge(
-                              icon: Icons.access_time,
-                              value: widget.time,
-                              color: Colors.blue,
-                            ),
-                          ],
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 23),
+                    child: Text(
+                      "pickup point".tr,
+                      style:
+                          TextStyle(fontSize: 13, fontFamily: "Poppins"),
+                    ),
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: Colors.green,
+                      ),
+                      Expanded(
+                        child: Text(
+                          widget.pickupLocation,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
-
-                      GestureDetector(
-                        onTap: () {
-                          showMoreInfo();
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: SizedBox(
+                      height: 30,
+                      child: VerticalDivider(
+                        color: MyColors.black,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: MyColors.primary,
+                      ),
+                      Expanded(
+                          child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Destination Point".tr,
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            widget.dropLocation,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ))
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                  Padding(
+                    padding: const EdgeInsets.all(5.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            color: Colors.green.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon( Icons.info, size: 25, color: Colors.red),
-
+                              Icon(Icons.attach_money,
+                                  size: 16, color: Colors.green),
+                              SizedBox(width: 4),
+                              Text(
+                                widget.price,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green,
+                                ),
+                              ),
                             ],
                           ),
                         ),
+                        _buildInfoBadge(
+                          icon: Icons.directions_car,
+                          value: widget.distance,
+                          color: MyColors.primary,
+                        ),
+                        _buildInfoBadge(
+                          icon: Icons.access_time,
+                          value: widget.time,
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () {
+                        showMoreInfo();
+                      },
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.info, size: 25, color: Colors.red),
+                          ],
+                        ),
                       ),
-                      SizedBox(height: 5,),
-                      Obx(
-                            () =>
-                        controller.statusChangeLoader.value ||
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Obx(
+                    () => controller.statusChangeLoader.value ||
                             myRidesController.fetchBookLoader.value
-                            ? Center(
-                          child: myIndicator(),
-                        )
-                            : HorizontalSlidableButton(
+                        ? Center(
+                            child: myIndicator(),
+                          )
+                        : HorizontalSlidableButton(
                             height: 45.0,
                             borderRadius: BorderRadius.circular(5.0),
-                            width: MediaQuery
-                                .of(context)
-                                .size
-                                .width,
+                            width: MediaQuery.sizeOf(context).width - 32,
                             buttonWidth: 45.0,
                             color: MyColors.TextField,
                             buttonColor: MyColors.primary,
@@ -332,36 +426,38 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                 String cdate = DateFormat("dd-MM-yyyy")
                                     .format(DateTime.now());
                                 print(cdate);
-                                if (controller.useracceptmodel.status == "Confirmed") {
-                                  controller.statusChange("arrived",
+                                if (controller.useracceptmodel.status ==
+                                    "Confirmed") {
+                                  controller.statusChange(
+                                      "arrived",
                                       controller.useracceptmodel.bookingId,
                                       "",
-                                      "",
-                                          () {
-                                        setState(() {
-
-                                        });
-                                      });
+                                      "", () {
+                                    setState(() {});
+                                  });
 
                                   /* contoller.arriveDriver.value = "Start";*/
                                 } else if (controller.useracceptmodel.status ==
                                     "Arrived") {
-                                  setState(() {
-
-                                  });
-                                  Get.toNamed(RouteHelper.getStartRideOtpScreenRoute(),arguments: {
-                                    'id' : controller.useracceptmodel.bookingId
-                                  }
-                                  );
+                                  setState(() {});
+                                  Get.toNamed(
+                                      RouteHelper.getStartRideOtpScreenRoute(),
+                                      arguments: {
+                                        'id': controller
+                                            .useracceptmodel.bookingId
+                                      });
                                 } else if (controller.useracceptmodel.status ==
                                     "Start Ride") {
-                                  controller.statusChange("end_ride",
+                                  controller.statusChange(
+                                    "end_ride",
                                     controller.useracceptmodel.bookingId,
                                     cdate,
                                     tdata,
-                                        () {
-                                    Get.to(()=>RatingScreen(userId: widget.userID,bookigid: widget.bookingId,));
-
+                                    () {
+                                      Get.to(() => RatingScreen(
+                                            userId: widget.userID,
+                                            bookigid: widget.bookingId,
+                                          ));
 
                                       setState(() {
                                         customSnackBar("Booking completed");
@@ -374,16 +470,14 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                         contoller.polylineVariable2.value = "";
                                         myRidesController
                                             .fetchDriverBookingDetails(
-                                          controller
-                                              .useracceptmodel.bookingId,
-                                              () {},
+                                          controller.useracceptmodel.bookingId,
+                                          () {},
                                         );
                                         contoller.driverArriveValue.value =
-                                        false;
+                                            false;
                                         contoller.arriveDriver.value = "";
                                         controller.completeText.value = "";
                                         contoller.painButton.value = false;
-
                                       });
 
                                       dialogueBox(context);
@@ -393,150 +487,17 @@ class _CustomRideStartState extends State<CustomRideStart> {
                               } else {
                                 print('Button is on the left');
                               }
-                            }),
-                      ),
-                      SizedBox(
-                        height: 20,
-                      ),
-                    ],
+                            },
+                          ),
                   ),
-                ),
+                  SizedBox(
+                    height: 12,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-        Positioned(
-          top: 15,
-          left: controller.useracceptmodel.status == "Start Ride"?Get.width / 2.5:Get.width / 3.5,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              InkWell(
-                onTap: widget.mapCallback,
-                child: Container(
-                  height: 50,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: MyColors.buttonColor,
-                    borderRadius: BorderRadius.circular(80),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MyColors.DarkBlue,
-                        offset: const Offset(
-                          0.0,
-                          0.0,
-                        ),
-                        blurRadius: 2.0,
-                        spreadRadius: 0.0,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.location_on,
-                      color: MyColors.white,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8,),
-              /*ZegoSendCallInvitationButton(
-                isVideoCall: false,
-                invitees: getInvitesFromTextCtrl(
-                    '${controller.useracceptmodel.userId}',
-                    '${controller.useracceptmodel.userName}'),
-                resourceID: 'zego_data',
-                iconSize: const Size(50, 50),
-                buttonSize: const Size(50, 50),
-                onPressed: onSendCallInvitationFinished,
-                clickableBackgroundColor: MyColors.white,
-                icon: ButtonIcon(
-                    icon: Icon(
-                      Icons.call,
-                      color: MyColors.white,
-                    ),
-                    backgroundColor: MyColors.buttonColor),
-              ),*/
-              ElevatedButton(onPressed: () {
-                makePhoneCall('${controller.useracceptmodel.contact}');
-              }, style: ElevatedButton.styleFrom(
-                  minimumSize: Size(50, 50),
-                  shape: CircleBorder(),
-                  backgroundColor: MyColors.buttonColor
-              ),
-                  child: Icon(Icons.call, color: Colors.white,)),
-              SizedBox(
-                width: 8,
-              ),
-              InkWell(
-                onTap: widget.msgCallBack,
-                child: Container(
-                  height: 50,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: MyColors.buttonColor,
-                    borderRadius: BorderRadius.circular(80),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MyColors.DarkBlue,
-                        offset: const Offset(
-                          0.0,
-                          0.0,
-                        ),
-                        blurRadius: 2.0,
-                        spreadRadius: 0.0,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.chat,
-                      color: MyColors.white,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 8,
-              ),
-
-              controller.cancelStartBookLoader.value
-                  ? Center(
-                child: myIndicator(),
-              )
-                  : controller.useracceptmodel.status == "Start Ride"?
-                  SizedBox():
-                  InkWell(
-                onTap: widget.cancelCallBack,
-                child: Container(
-                  height: 50,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    color: MyColors.buttonColor,
-                    borderRadius: BorderRadius.circular(80),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MyColors.DarkBlue,
-                        offset: const Offset(
-                          0.0,
-                          0.0,
-                        ),
-                        blurRadius: 2.0,
-                        spreadRadius: 0.0,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.clear,
-                      color: MyColors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        )
       ],
     );
   }

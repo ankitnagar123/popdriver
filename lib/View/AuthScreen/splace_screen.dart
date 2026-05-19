@@ -298,28 +298,51 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void getData() async {
-    log("OnBoarding key ------>:${await sp.getBoolValue(sp.ON_BOARDING_KEY)}");
+    final onboardingDone =
+        await sp.getBoolValue(sp.ON_BOARDING_KEY) == true;
+    final loginKeyTrue = await sp.getBoolValue(sp.LOGIN_KEY) == true;
+    final uid = await secure.readData(secure.user_id);
+    final token = await secure.readData(secure.Token);
+
+    log("OnBoarding key ------>:$onboardingDone");
     log("Language key ------>:${await sp.getStringValue(sp.LANGUAGE)}");
-    log("secure key ------>:${await secure.readData(secure.user_id)}");
+    log("secure key ------>:$uid");
+
+    /// Treat as logged in if secure storage has a session, even when
+    /// [ON_BOARDING_KEY] was lost (fixes returning to onboarding after restart).
+    final hasSecureSession = uid != null &&
+        uid.isNotEmpty &&
+        token != null &&
+        token.isNotEmpty;
+    final isLoggedIn = hasSecureSession ||
+        (loginKeyTrue && uid != null && uid.isNotEmpty);
+
     controllers?.updateDeviceId();
     if (await sp.getStringValue(sp.LANGUAGE) == "en_US") {
       Get.updateLocale(Locale('en', 'US'));
     } else {
-      var local = Locale('es', 'ES');
-      sp.setStringValue(sp.LANGUAGE, local.toString());
+      final local = Locale('es', 'ES');
+      await sp.setStringValue(sp.LANGUAGE, local.toString());
     }
-    if (await sp.getBoolValue(sp.ON_BOARDING_KEY) != true) {
-      Timer(const Duration(seconds: 3), () {
-        Get.offNamed(RouteHelper.getOnBoardingScreenRoute());
-      });
-    } else if (await sp.getBoolValue(sp.LOGIN_KEY) != true) {
-      Timer(const Duration(seconds: 3), () {
-        Get.offNamed(RouteHelper.getLoginScreenRoute());
-      });
-    } else {
+
+    if (isLoggedIn) {
+      if (!onboardingDone) {
+        await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+      }
+      if (!loginKeyTrue && hasSecureSession) {
+        await sp.setBoolValue(sp.LOGIN_KEY, true);
+      }
       Timer(const Duration(seconds: 3), () {
         Get.offNamed(RouteHelper.getHomeScreenScreenRoute(),
             arguments: {"ArriveDriver": ""});
+      });
+    } else if (!onboardingDone) {
+      Timer(const Duration(seconds: 3), () {
+        Get.offNamed(RouteHelper.getOnBoardingScreenRoute());
+      });
+    } else {
+      Timer(const Duration(seconds: 3), () {
+        Get.offNamed(RouteHelper.getLoginScreenRoute());
       });
     }
   }

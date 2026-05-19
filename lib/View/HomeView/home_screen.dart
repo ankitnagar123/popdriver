@@ -111,11 +111,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
+  /// Keep trip sheet above [BottomNavScreen]'s BottomAppBar (`height: 60`) and
+  /// system gesture/nav bar. Scaffold uses `extendBody: true`.
+  double _rideSheetBottomClearance(BuildContext context) {
+    const bottomAppBarHeight = 60.0;
+    final gestureInset = MediaQuery.viewPaddingOf(context).bottom;
+    // Center-docked FAB extends above the BottomAppBar and can clip the sheet.
+    const fabOverhang = 26.0;
+    return bottomAppBarHeight + gestureInset + fabOverhang;
+  }
+
   @override
   Widget build(BuildContext context) {
     print("-----------message");
 
     return Obx(() {
+      // Rebuild when route polyline finishes decoding (global `polyline` is not observable).
+      contoller.mapPolylineEpoch.value;
       return Scaffold(
         key: _scaffoldKey,
         body: contoller.onOff.value == false
@@ -288,7 +300,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     zoomControlsEnabled: false,
                     zoomGesturesEnabled: true,
                     scrollGesturesEnabled: true,
-                    padding: const EdgeInsets.all(0),
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.paddingOf(context).top + 56,
+                    ),
                     buildingsEnabled: true,
                     cameraTargetBounds: CameraTargetBounds.unbounded,
                     compassEnabled: true,
@@ -296,13 +310,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     mapToolbarEnabled: false,
                     rotateGesturesEnabled: true,
                     tiltGesturesEnabled: true,
+                    liteModeEnabled: false,
                     minMaxZoomPreference:
                         const MinMaxZoomPreference(3, 20),
                     markers: Set<Marker>.of(contoller.markers),
                     polylines: Set<Polyline>.of(polyline.values),
                     mapType: MapType.normal,
-                    onMapCreated: (GoogleMapController controller) {
-                      contoller.setGoogleMapController(controller);
+                    onMapCreated: (GoogleMapController mapCtl) {
+                      contoller.setGoogleMapController(mapCtl);
                       contoller.updateCameraPosition(
                           contrl.mapInitialLocation.value);
                     },
@@ -371,29 +386,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               contoller.hide.value == false
                                   ? Switch(
                                       value: contoller.onOff.value,
-                                      activeColor: contoller.onOff.value == true
-                                          ? Colors.green
-                                          : Colors.grey,
+                                      activeColor:
+                                          contoller.onOff.value == true
+                                              ? Colors.green
+                                              : Colors.grey,
                                       onChanged: (value) {
                                         if (value == true) {
                                           Get.to(() => SelfieScreen());
-                                          /*   sp.setBoolValue(
-                                    sp.DRIVER_ONLINE_STATUS, true);
-                                controller.rideNowBooking();*/
-                                          /* timer1 = Timer.periodic(
-                                        Duration(seconds: 5), (timer) {
-                                      controller.rideNowBooking();
-                                    });*/
-                                          /*startStreaming();*/
                                         } else {
                                           contoller.onOff.value = value;
-
                                           sp.setBoolValue(
                                               sp.DRIVER_ONLINE_STATUS, false);
-                                          contoller.updateDriverLatLong(
-                                              "0", "0", "0", "UnAvailable");
-                                          /* timer1!.cancel();
-                                    timer2!.cancel();*/
+                                          contoller.updateDriverLatLong("0",
+                                              "0", "0", "UnAvailable");
                                         }
                                       })
                                   : Switch(
@@ -460,16 +465,29 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? SizedBox.shrink()
                       : Visibility(
                           visible: contoller.driverArriveValue.value,
-                          child: Positioned(
-                            top: Get.height /3.2,
-                            child: Column(
-                              children: [
-                                Stack(
-                                  children: [
-                                    Container(
-                                      height: Get.height / 1.3,
-                                      width: Get.width,
-                                      child: CustomRideStart(
+                          child: Positioned.fill(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    _rideSheetBottomClearance(context),
+                              ),
+                              child: SafeArea(
+                                top: false,
+                                bottom: false,
+                                child: DraggableScrollableSheet(
+                                initialChildSize: 0.32,
+                                minChildSize: 0.16,
+                                maxChildSize: 0.93,
+                                snap: true,
+                                snapSizes: const <double>[
+                                  0.16,
+                                  0.32,
+                                  0.55,
+                                  0.93,
+                                ],
+                                builder: (context, scrollController) {
+                                  return CustomRideStart(
+                                    sheetScrollController: scrollController,
                                         bookingId: controller
                                             .useracceptmodel.bookingId,
                                         userID:
@@ -533,14 +551,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                             );
                                           }
                                         },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                      );
+                                },
+                              ),
                             ),
                           ),
                         ),
+                      ),
                   contoller.driverArriveValue.value == true
                       ? SizedBox.shrink()
                       : contoller.onOff.value == true
@@ -548,13 +565,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               top: 80,
                               left: 5,
                               right: 15,
-                              child: SizedBox(
-                                  height: Get.height *
-                                      0.85, // Occupying 70% of screen height
-
-                                  child: rideNow()),
+                              child: IgnorePointer(
+                                ignoring: controller.rideNowList.isEmpty,
+                                child: SizedBox(
+                                  height: Get.height * 0.85,
+                                  child: rideNow(),
+                                ),
+                              ),
                             )
-                          : SizedBox(),
+                          : SizedBox.shrink(),
                 ],
               ),
       );
@@ -564,8 +583,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget rideNow() {
     return Obx(() {
       return ListView.builder(
-        physics: AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(),
         shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         itemCount: controller.rideNowList.length,
         itemBuilder: (context, index) {
           var reverseList = controller.rideNowList.reversed.toList();

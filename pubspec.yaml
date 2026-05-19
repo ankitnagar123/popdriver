@@ -79,6 +79,7 @@ dependencies:
   pin_code_fields:
   syncfusion_flutter_charts: ^29.2.10
   root_checker_plus: ^0.0.4
+  audioplayers: ^6.6.0
 
 
 
@@ -110,6 +111,8 @@ flutter:
     - assets/images/carmarker.png
     - assets/menu/
     - assets/video/
+    - assets/sound/booking_ring.mp3
+    - assets/sound/bookingcancel.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

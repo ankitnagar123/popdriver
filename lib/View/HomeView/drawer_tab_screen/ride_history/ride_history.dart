@@ -1,482 +1,232 @@
-
-import 'package:mtaanidriver/View/HomeView/drawer_tab_screen/ride_history/ride_history_tab.dart';
-
-import '../../../../controller/auth_controller.dart';
-import '../../../../route_helper/route_helper.dart';
-import '../../../../utils/colors.dart';
-import '../../../../utils/custom_button.dart';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../../../../controller/my_ride_controller.dart';
+import 'package:mtaanidriver/Model/driver_ride_history_model.dart';
 
-import '../my_ride_screen.dart';
+import '../../../../controller/my_ride_controller.dart';
+import '../../../../route_helper/route_helper.dart';
+import '../../../../utils/colors.dart';
+import '../../../../utils/custom_button.dart';
+import '../my_ride_screen.dart' show showErrorDialog;
 
 class RideHistory extends StatefulWidget {
-  const RideHistory({Key? key}) : super(key: key);
+  const RideHistory({super.key});
 
   @override
   State<RideHistory> createState() => _RideHistoryState();
 }
 
 class _RideHistoryState extends State<RideHistory> {
-  MyRidesController controller = Get.find<MyRidesController>();
+  final MyRidesController controller = Get.find<MyRidesController>();
 
+  static const List<String> _filters = ['All', 'Completed', 'Cancelled'];
+  int _selectedFilter = 0;
 
-  final List<String> tabs = ["All", "Completed","Cancelled"];
   @override
   void initState() {
-    controller.rideHistory("", "","All");
-    controller.driverTotalBooking();
     super.initState();
+    controller.rideHistory('', '', 'All');
+    controller.driverTotalBooking();
   }
+
+  Future<void> _refresh() async {
+    controller.driverTotalBooking();
+    controller.rideHistory(
+      _dateOrEmpty(controller.HistoryStartDate.value),
+      _dateOrEmpty(controller.HistoryEndDate.value),
+      _filters[_selectedFilter],
+    );
+    var attempts = 0;
+    while ((controller.historyLoader.value || controller.rideLoader.value) &&
+        attempts < 60) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+  }
+
+  void _applyFilter(int index) {
+    setState(() => _selectedFilter = index);
+    controller.rideHistory(
+      _dateOrEmpty(controller.HistoryStartDate.value),
+      _dateOrEmpty(controller.HistoryEndDate.value),
+      _filters[index],
+    );
+  }
+
+  String _dateOrEmpty(String value) =>
+      value == 'Select' || value.isEmpty ? '' : value;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: IconThemeData(
-            color: MyColors.white
-        ),
-        backgroundColor: MyColors.primary,
-        title:   Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/headLogo.png',
-              height: 28,
-            ),  Image.asset(
-              color: Colors.white,
-              'assets/images/stearing.png',
-              height: 33,
-            ),
+    final bottomInset = MediaQuery.paddingOf(context).bottom + 72;
 
-          ],
+    return Scaffold(
+      backgroundColor: MyColors.background,
+      appBar: AppBar(
+        elevation: 0,
+        iconTheme: const IconThemeData(color: MyColors.white),
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF02B3BE),
+                Color(0xFF019BA5),
+                Color(0xFF017A82),
+              ],
+            ),
+          ),
+        ),
+        title: Text(
+          'Ride History'.tr,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            color: Colors.white,
+          ),
         ),
         centerTitle: true,
-
+   
       ),
-
       body: Obx(() {
-        if (controller.historyLoader.value && controller.rideLoader.value) {
-          return Center(
-            child: myIndicator(),
-          );
-        }
-       /* else if (controller.historyList.length == 0)
-          return Center(
-            child: Text('No History Found'),
-          );*/
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Text("Ride History".tr,
-                  style: TextStyle(fontSize: 18, color: MyColors.black,fontFamily: "Poppins"),),
-              ),
-              SizedBox(height: 5,),
-              _buildStatsRow(),
-              SizedBox(
-                height: 20,
-              ),
+        final statsLoading =
+            controller.rideLoader.value && controller.totalBooking.value.isEmpty;
 
-
-              _buildDateFilters(
-                 ),
-              // Expanded(child: RideHistoryTab(startDate: controller.HistoryStartDate.value,endDate: controller.HistoryEndDate.value,)),
-              Expanded(child: _buildRideList())
-
-            ],
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeaderSection(statsLoading),
+            _buildFilterChips(),
+            _buildDateFilters(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _buildHistoryBody(bottomInset),
+            ),
+          ],
         );
       }),
     );
   }
 
-  void dialogueBox() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black54,
-      pageBuilder: (context, anim1, anim2) {
-        return Obx(() {
-          if (controller.fetchBookLoader.value) {
-            return Center(
-              child: myIndicator(),
-            );
-          } else {
-            var list = controller.bookingDetailsModel!;
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(5.0),
+  Widget _buildHeaderSection(bool statsLoading) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF017A82),
+            Color(0xFF019BA5),
+            Color(0xFF02B3BE),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MyColors.primary.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      child: statsLoading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
                 child: SizedBox(
-                  height: MediaQuery.of(context).size.height / 1.8,
-                  width: MediaQuery.of(context).size.width,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0, vertical: 10),
-                    child: StatefulBuilder(
-                      builder: (context, setState) {
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Vehicle Type".tr,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      list.carTypeName,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Date Of Ride".tr,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      "${list.rideTime}" +
-                                          " " +
-                                          "${list.rideDate}",
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Ride ID".tr,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      list.bookingId,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Final Cost".tr,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      "\$ ${list.totalPrice}",
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 5,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Payment Type".tr,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    Text(
-                                      list.paymentMode,
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      height: 40,
-                                      width: 40,
-                                      decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(80)),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(80),
-                                        child: FadeInImage.assetNetwork(
-                                          placeholder: 'assets/images/loader.gif',
-                                          fit: BoxFit.cover,
-                                          image: list.image,
-                                          imageErrorBuilder: (c, o, s) => Image.asset(
-                                            "assets/images/logo.png",
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                        child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(list.userName),
-                                          /*Text(
-                                                "★★★★★(you Rated)",
-                                                style: TextStyle(
-                                                    color: Colors.black45,
-                                                    fontSize: 12),
-                                              )*/
-                                        ],
-                                      ),
-                                    ))
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      list.rideTime,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.location_on,
-                                      color: Colors.green,
-                                    ),
-                                    SizedBox(
-                                      width: Get.width / 1.8,
-                                      child: Text(
-                                        list.sourceAdd,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                        softWrap: false,
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 53),
-                                  child: SizedBox(
-                                    height: 35,
-                                    child: VerticalDivider(
-                                      color: MyColors.black,
-                                    ),
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 45,
-                                      child: Text(
-                                        list.rideEndTime == ""
-                                            ? "End...".tr
-                                            : list.rideEndTime,
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.location_on,
-                                      color: MyColors.primary,
-                                    ),
-                                    Expanded(
-                                        child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          width: Get.width / 1.5,
-                                          child: Text(
-                                            list.destinationAdd,
-                                            maxLines: 2,
-                                            softWrap: false,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                        ),
-                                      ],
-                                    ))
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    Column(
-                                      children: [
-                                        Text(
-                                          "${list.distance} Km".tr,
-                                          style: TextStyle(fontSize: 14),
-                                        ),
-                                        Text(
-                                          "Distance".tr,
-                                          style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.black45),
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      children: [
-                                        Text(
-                                          list.duration,
-                                          style: TextStyle(fontSize: 14),
-                                        ),
-                                        Text(
-                                          "Duration".tr,
-                                          style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.black45),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
                   ),
                 ),
               ),
-            );
-          }
-        });
-      },
-    );
-  }
-
-  datePicker() async {
-    DateTime? pickedDate = await showDatePicker(
-        context: context,
-        initialDate: DateTime.now(),
-        firstDate: DateTime(1950),
-        //DateTime.now() - not to allow to choose before today.
-        lastDate: DateTime(2100),
-        builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: MyColors.primary, // <-- SEE HERE
-                onPrimary: MyColors.white, // <-- SEE HERE
-                onSurface: MyColors.DarkBlue, // <-- SEE HERE
-              ),
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(
-                  foregroundColor: MyColors.primary, // button text color
+            )
+          : Row(
+              children: [
+                _buildStatTile(
+                  icon: Icons.directions_car_rounded,
+                  label: 'Total Rides'.tr,
+                  value: controller.displayTotalRides,
                 ),
-              ),
+                const SizedBox(width: 8),
+                _buildStatTile(
+                  icon: Icons.payments_rounded,
+                  label: 'Earnings'.tr,
+                  value: '\$ ${controller.displayTotalEarnings}',
+                ),
+              ],
             ),
-            child: child!));
-
-    if (pickedDate != null) {
-      print(pickedDate); //pickedDate output format => 2021-03-10 00:00:00.000
-      String formattedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
-      print(
-          formattedDate); //formatted date output using intl package =>  2021-03-16
-      setState(() {
-        if (controller.dateStatus.value == "0") {
-          controller.HistoryStartDate.value = formattedDate;
-        } else {
-          controller.HistoryEndDate.value = formattedDate;
-          final DateFormat _dateFormat = DateFormat('dd-MM-yyyy');
-          DateTime fromDate = _dateFormat.parse(controller.HistoryStartDate.value);
-          DateTime toDate = _dateFormat.parse(controller.HistoryEndDate.value);
-          if (fromDate.isAfter(toDate)) {
-            showErrorDialog('Invalid date: "From" date must be earlier than or equal to "To" date.',context);
-          }
-        }
-        //set output date to TextField value.
-      });
-    } else {}
-  }
-
-
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        _buildStatCard(
-          icon: Icons.directions_car,
-          title: "Total Rides",
-          value: controller.totalBooking.value,
-          color: MyColors.primary,
-        ),
-        SizedBox(width: 10),
-        _buildStatCard(
-          icon: Icons.attach_money,
-          title: "Earnings",
-          value: "\$ ${controller.totalEarning.value}",
-          color: Colors.green,
-        ),
-      ],
     );
   }
 
-  Widget _buildStatCard({IconData? icon, String? title, String? value, Color? color}) {
+  Widget _buildStatTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(15),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: color?.withOpacity(0.15),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.22),
+              Colors.white.withValues(alpha: 0.08),
+            ],
+          ),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color ?? MyColors.primary, width: 1.5),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: color),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title!.tr,
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontFamily: 'Poppins',
+                    ),
                   ),
-                ),
-                Text(value!,
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: color,
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Poppins'
+                      color: Colors.white,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -484,67 +234,448 @@ class _RideHistoryState extends State<RideHistory> {
     );
   }
 
+  Widget _buildFilterChips() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(_filters.length, (index) {
+            final selected = _selectedFilter == index;
+            return Padding(
+              padding: EdgeInsets.only(right: index < _filters.length - 1 ? 8 : 0),
+              child: FilterChip(
+                label: Text(_filters[index].tr),
+                selected: selected,
+                onSelected: (_) => _applyFilter(index),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                selectedColor: MyColors.primary.withValues(alpha: 0.15),
+                checkmarkColor: MyColors.primary,
+                labelStyle: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: selected ? MyColors.primary : MyColors.DarkBlue,
+                ),
+                side: BorderSide(
+                  color: selected ? MyColors.primary : Colors.grey.shade300,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
 
   Widget _buildDateFilters() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildDatePickerField(
-                label: "From",
-                value: controller.HistoryStartDate.value,
-                onTap: () => _handleDatePicker(0),
-              ),
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: _buildDatePickerField(
-                label: "To",
-                value: controller.HistoryEndDate.value,
-                onTap: () => _handleDatePicker(1),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildFilterButton(
-                text: "Submit",
-                onPressed: () => controller.rideHistory(
-                  controller.HistoryStartDate.value,
-                  controller.HistoryEndDate.value,
-                  "All"
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildDatePickerField(
+                  label: 'From'.tr,
+                  value: controller.HistoryStartDate.value,
+                  onTap: () => _handleDatePicker(0),
                 ),
-                isLoading: controller.historyLoader.value,
               ),
-            ),
-            SizedBox(width: 10),
-            Expanded(
-              child: _buildFilterButton(
-                text: "Reset",
-                onPressed: () {
-                  controller.HistoryEndDate.value = "";
-                  controller.HistoryStartDate.value = "";
-                  controller.rideHistory("", "","");
-                },
-                color: Colors.grey,
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildDatePickerField(
+                  label: 'To'.tr,
+                  value: controller.HistoryEndDate.value,
+                  onTap: () => _handleDatePicker(1),
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterButton(
+                  text: 'Submit'.tr,
+                  onPressed: () => controller.rideHistory(
+                    _dateOrEmpty(controller.HistoryStartDate.value),
+                    _dateOrEmpty(controller.HistoryEndDate.value),
+                    _filters[_selectedFilter],
+                  ),
+                  isLoading: controller.historyLoader.value,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildFilterButton(
+                  text: 'Reset'.tr,
+                  onPressed: () {
+                    controller.HistoryEndDate.value = 'Select';
+                    controller.HistoryStartDate.value = 'Select';
+                    setState(() => _selectedFilter = 0);
+                    controller.rideHistory('', '', 'All');
+                  },
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryBody(double bottomInset) {
+    if (controller.historyLoader.value && controller.historyList.isEmpty) {
+      return Center(child: myIndicator());
+    }
+
+    if (controller.historyList.isEmpty) {
+      return _buildEmptyState(bottomInset);
+    }
+
+    final rides = controller.historyList.reversed.toList();
+
+    return RefreshIndicator(
+      color: MyColors.primary,
+      onRefresh: _refresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset),
+        itemCount: rides.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) => _buildRideCard(rides[index]),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(double bottomInset) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      children: [
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.12),
+        Icon(Icons.history_toggle_off_rounded,
+            size: 72, color: Colors.grey.shade400),
+        const SizedBox(height: 16),
+        Text(
+          'No ride history found'.tr,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 16,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Try changing the date range or filter'.tr,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 13,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRideCard(DriverRideHistoryModel ride) {
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      shadowColor: Colors.black12,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => _handleRideTap(ride),
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: MyColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '#${ride.bookingId}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: MyColors.primary,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        ride.carTypeName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    _buildStatusChip(ride.status),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${ride.rideDate} • ${ride.rideTime}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.payments_outlined,
+                        size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      ride.paymentMode,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _buildLocationRow(
+                  icon: Icons.trip_origin,
+                  address: ride.sourceAdd,
+                  color: Colors.green,
+                  label: 'Pickup'.tr,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 11),
+                  child: Container(
+                    height: 20,
+                    width: 2,
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+                _buildLocationRow(
+                  icon: Icons.place_rounded,
+                  address: ride.destinationAdd,
+                  color: MyColors.primary,
+                  label: 'Drop'.tr,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _buildMetaChip(
+                      icon: Icons.route_outlined,
+                      text: '${ride.distance} km',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetaChip(
+                      icon: Icons.schedule_outlined,
+                      text: ride.duration,
+                    ),
+                    const Spacer(),
+                    Text(
+                      '\$ ${ride.totalPrice}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => Get.toNamed(
+                      RouteHelper.getReportScreenRout(),
+                      arguments: {'id': ride.bookingId},
+                    ),
+                    icon: const Icon(Icons.flag_outlined, size: 12),
+                    label: Text(
+                      'Report Issue'.tr,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: MyColors.primary,
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: const Size(0, 28),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      backgroundColor:
+                          MyColors.primary.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaChip({required IconData icon, required String text}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey.shade700),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade800,
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    final normalized = status.toLowerCase();
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+
+    if (normalized.contains('complete')) {
+      bgColor = Colors.green.shade50;
+      textColor = Colors.green.shade800;
+      icon = Icons.check_circle_outline;
+    } else if (normalized.contains('cancel')) {
+      bgColor = Colors.red.shade50;
+      textColor = Colors.red.shade800;
+      icon = Icons.cancel_outlined;
+    } else {
+      bgColor = Colors.orange.shade50;
+      textColor = Colors.orange.shade800;
+      icon = Icons.hourglass_empty_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            status.tr,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationRow({
+    required IconData icon,
+    required String address,
+    required Color color,
+    required String label,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              Text(
+                address,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
   void _handleDatePicker(int status) async {
-    final DateTime? pickedDate = await showDatePicker(
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: ColorScheme.light(
@@ -553,64 +684,67 @@ class _RideHistoryState extends State<RideHistory> {
             onSurface: Colors.black87,
           ),
           textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: MyColors.primary,
-            ),
+            style: TextButton.styleFrom(foregroundColor: MyColors.primary),
           ),
         ),
         child: child!,
       ),
     );
 
-    if (pickedDate != null) {
-      final formattedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
-      setState(() {
-        if (status == 0) { // Start date
-          controller.HistoryStartDate.value = formattedDate;
-        } else { // End date
-          controller.HistoryEndDate.value = formattedDate;
+    if (pickedDate == null) return;
 
-          // Validate date range
-          final DateFormat format = DateFormat('dd-MM-yyyy');
-          final DateTime start = format.parse(controller.HistoryStartDate.value);
-          final DateTime end = format.parse(controller.HistoryEndDate.value);
-
+    final formattedDate = DateFormat('dd-MM-yyyy').format(pickedDate);
+    setState(() {
+      if (status == 0) {
+        controller.HistoryStartDate.value = formattedDate;
+      } else {
+        controller.HistoryEndDate.value = formattedDate;
+        if (controller.HistoryStartDate.value != 'Select') {
+          final format = DateFormat('dd-MM-yyyy');
+          final start = format.parse(controller.HistoryStartDate.value);
+          final end = format.parse(formattedDate);
           if (start.isAfter(end)) {
             showErrorDialog(
-              'Invalid date range: Start date must be before end date',
+              'Invalid date range: Start date must be before end date'.tr,
               context,
             );
           }
         }
-      });
-    }
+      }
+    });
   }
 
-  Widget _buildDatePickerField({String? label, String? value, VoidCallback? onTap}) {
+  Widget _buildDatePickerField({
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    final isPlaceholder = value == 'Select' || value.isEmpty;
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[300]!),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade300),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, size: 18, color: MyColors.primary),
-            SizedBox(width: 10),
-            Text(value ?? "Select $label",
-              style: TextStyle(
-                fontSize: 14,
-                color: value == "Select" ? Colors.grey : Colors.black87,
+            Icon(Icons.calendar_month_rounded,
+                size: 16, color: MyColors.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isPlaceholder ? label : value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isPlaceholder ? Colors.grey : Colors.black87,
+                  fontFamily: 'Poppins',
+                ),
               ),
             ),
           ],
@@ -618,396 +752,249 @@ class _RideHistoryState extends State<RideHistory> {
       ),
     );
   }
-
 
   Widget _buildFilterButton({
-    String? text,
-    VoidCallback? onPressed,
+    required String text,
+    required VoidCallback onPressed,
     bool isLoading = false,
-    Color? color
+    Color? color,
   }) {
-    return ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color ?? MyColors.primary,
-        padding: EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      height: 34,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color ?? MyColors.primary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          minimumSize: const Size(0, 34),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-      ),
-      child: isLoading
-          ? SizedBox(
-        height: 20,
-        width: 20,
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2.5,
-        ),
-      )
-          : Text(
-        text!.tr,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-
-
-  Widget _buildRideList() {
-    if (controller.historyList.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.history, size: 60, color: Colors.grey[400]),
-            SizedBox(height: 10),
-            Text("No ride history found".tr,
-              style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      
-      itemCount: controller.historyList.length,
-      separatorBuilder: (_, __) => SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final ride = controller.historyList.reversed.toList()[index];
-        return _buildRideCard(ride);
-      },
-    );
-  }
-
-  Widget _buildRideCard(dynamic ride) {
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _handleRideTap(ride),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            // Header Row
-            Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "${ride.carTypeName} • ${ride.rideTime}",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: MyColors.primary,
-                ),
-              ),
-              _buildStatusChip(ride.status),
-            ],
-          ),
-          SizedBox(height: 12),
-          // Route Information
-          _buildLocationRow(
-            icon: Icons.location_on_outlined,
-            time: ride.rideTime,
-            address: ride.sourceAdd,
-            color: Colors.green,
-          ),
-          _buildDivider(),
-          _buildLocationRow(
-            icon: Icons.flag_outlined,
-            time: ride.rideEndTime.isEmpty ? "End..." : ride.rideEndTime,
-            address: ride.destinationAdd,
-            color: Colors.red,
-          ),
-          SizedBox(height: 12),
-          // Footer Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "\$ ${ride.totalPrice}",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
-                ),
-              ),
-              TextButton(
-                onPressed: () => Get.toNamed(
-                  RouteHelper.getReportScreenRout(),
-                  arguments: {"id": ride.bookingId},
-                ),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  backgroundColor: MyColors.primary.withOpacity(0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child:  Text(
-                  "Report Issue".tr,
-                  style: TextStyle(
-                      color: MyColors.primary,
-                      fontWeight: FontWeight.w500
-                  ),
+        child: isLoading
+            ? const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
                 ),
               )
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(String status) {
-    Color bgColor;
-    Color textColor;
-
-    switch (status) {
-      case "Complete":
-        bgColor = Colors.green[100]!;
-        textColor = Colors.green[800]!;
-        break;
-      case "Cancelled":
-        bgColor = Colors.red[100]!;
-        textColor = Colors.red[800]!;
-        break;
-      default:
-        bgColor = Colors.orange[100]!;
-        textColor = Colors.orange[800]!;
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status.tr,
-        style: TextStyle(
-            color: textColor,
-            fontSize: 12,
-            fontWeight: FontWeight.w500
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLocationRow({IconData? icon, String? time, String? address, Color? color}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Icon(icon, size: 20, color: color),
-            SizedBox(height: 4),
-            Text(time ?? "",
-              style: TextStyle(
+            : Text(
+                text,
+                style: const TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[600]
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Poppins',
+                ),
               ),
-            ),
-          ],
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text(address!,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: Colors.grey[200],
-        indent: 32,
       ),
     );
   }
 
-
-  void _handleRideTap(dynamic ride) {
-    // if (ride.status == "Complete") {
-      controller.fetchDriverBookingDetails(
-        ride.bookingId,
-            () {
-          // Show details dialog after data loads
-          showDialog(
-            context: context,
-            builder: (context) => _buildRideDetailsDialog(),
-          );
-        },
-      );
-    // }
-  }
-
-  Widget _buildRideDetailsDialog() {
-    return Obx(() {
-      if (controller.fetchBookLoader.value) {
-        return Center(child: myIndicator());
-      }
-
-      final details = controller.bookingDetailsModel!;
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDialogSectionTitle("Ride Details"),
-              _buildDetailRow("Vehicle Type", details.carTypeName),
-              _buildDetailRow("Date", "${details.rideTime} ${details.rideDate}"),
-              _buildDetailRow("Ride ID", details.bookingId),
-              _buildDetailRow("Total Cost", "\$ ${details.totalPrice}"),
-              _buildDetailRow("Payment Mode", details.paymentMode),
-
-              SizedBox(height: 20),
-              _buildDialogSectionTitle("User Info"),
-              _buildUserInfoRow(details),
-
-              SizedBox(height: 20),
-              _buildDialogSectionTitle("Route Details"),
-              _buildRouteDetails(details),
-
-              SizedBox(height: 20),
-              _buildRideStatsRow(details),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Close", style: TextStyle(color: MyColors.primary)),
-          ),
-        ],
+  void _handleRideTap(DriverRideHistoryModel ride) {
+    controller.fetchDriverBookingDetails(ride.bookingId, () {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _buildRideDetailsSheet(),
       );
     });
   }
 
-// Helper widgets for dialog
-  Widget _buildDialogSectionTitle(String title) => Padding(
-    padding: EdgeInsets.symmetric(vertical: 8),
-    child: Text(title,
-      style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: MyColors.primary
-      ),
-    ),
-  );
+  Widget _buildRideDetailsSheet() {
+    return Obx(() {
+      if (controller.fetchBookLoader.value || controller.bookingDetailsModel == null) {
+        return Container(
+          height: 200,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Center(child: myIndicator()),
+        );
+      }
 
-  Widget _buildDetailRow(String label, String value) => Padding(
-    padding: EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text("$label:",
-            style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey[700])),
-        Text(value, style: TextStyle(color: Colors.black87)),
-      ],
-    ),
-  );
+      final details = controller.bookingDetailsModel!;
 
-  Widget _buildUserInfoRow(dynamic details) => Row(
-    children: [
-      CircleAvatar(
-        backgroundImage: NetworkImage(details.image),
-        radius: 24,
-      ),
-      SizedBox(width: 12),
-      Column(
+      return DraggableScrollableSheet(
+        initialChildSize: 0.72,
+        minChildSize: 0.45,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (context, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ride Details'.tr,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    color: MyColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildDetailRow('Vehicle Type'.tr, details.carTypeName),
+                _buildDetailRow('Date'.tr, '${details.rideDate} ${details.rideTime}'),
+                _buildDetailRow('Ride ID'.tr, details.bookingId),
+                _buildDetailRow('Total Cost'.tr, '\$ ${details.totalPrice}'),
+                _buildDetailRow('Payment Mode'.tr, details.paymentMode),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: details.image.trim().isNotEmpty
+                          ? NetworkImage(details.image.trim())
+                          : null,
+                      child: details.image.trim().isEmpty
+                          ? const Icon(Icons.person, color: MyColors.primary)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        details.userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildLocationRow(
+                  icon: Icons.trip_origin,
+                  address: details.sourceAdd,
+                  color: Colors.green,
+                  label: 'Pickup'.tr,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 11),
+                  child: Container(
+                    height: 20,
+                    width: 2,
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+                _buildLocationRow(
+                  icon: Icons.place_rounded,
+                  address: details.destinationAdd,
+                  color: MyColors.primary,
+                  label: 'Drop'.tr,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem('${details.distance} km', 'Distance'.tr),
+                    _buildStatItem(details.duration, 'Duration'.tr),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Close'.tr,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(details.userName,
-              style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 4),
-          Text("★★★★☆ (4.0)",
-              style: TextStyle(color: Colors.amber[700])),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontFamily: 'Poppins',
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+          ),
         ],
       ),
-    ],
-  );
+    );
+  }
 
-  Widget _buildRouteDetails(dynamic details) => Column(
-    children: [
-      _buildLocationDetail(
-        icon: Icons.location_on,
-        time: details.rideTime,
-        address: details.sourceAdd,
-        color: Colors.green,
-      ),
-      Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Divider(height: 1),
-      ),
-      _buildLocationDetail(
-        icon: Icons.flag,
-        time: details.rideEndTime.isEmpty ? "End..." : details.rideEndTime,
-        address: details.destinationAdd,
-        color: Colors.red,
-      ),
-    ],
-  );
-
-  Widget _buildLocationDetail({IconData? icon, String? time, String? address, Color? color}) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Icon(icon, size: 20, color: color),
-      SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(time!, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            Text(address!,
-                style: TextStyle(fontWeight: FontWeight.w500)),
-          ],
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
         ),
-      ),
-    ],
-  );
-
-  Widget _buildRideStatsRow(dynamic details) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-      _buildStatItem("${details.distance} km", "Distance"),
-      _buildStatItem(details.duration, "Duration"),
-    ],
-  );
-
-  Widget _buildStatItem(String value, String label) => Column(
-    children: [
-      Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      Text(label, style: TextStyle(color: Colors.grey[600])),
-    ],
-  );
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        ),
+      ],
+    );
+  }
 }

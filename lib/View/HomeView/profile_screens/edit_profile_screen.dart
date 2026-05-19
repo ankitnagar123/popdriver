@@ -21,6 +21,7 @@ import 'package:photo_view/photo_view.dart';
 
 import '../../../controller/auth_controller.dart';
 import '../../../controller/vehicle_controller.dart';
+import '../../../Model/vehicle_fetch_model.dart';
 import '../../../utils/colors.dart';
 
 class EditProfile extends StatefulWidget {
@@ -1104,6 +1105,29 @@ class _EditProfileState extends State<EditProfile> {
 
   Widget _buildCarListDropdown(VehicleController controllers) {
     return Obx(() {
+      /// API / timing: profile can set car_id before `vehicleList` loads, or
+      /// duplicate `car_id` rows break DropdownButton ("exactly one item" assertion).
+      final uniqueByCarId = <String, VehicleFetchModel>{};
+      for (final make in controllers.vehicleList) {
+        final id = make.carId.trim();
+        uniqueByCarId.putIfAbsent(id, () => make);
+      }
+      final items = uniqueByCarId.entries
+          .map(
+            (e) => DropdownMenuItem<String>(
+              value: e.key,
+              child: Text(
+                e.value.carName,
+                style: TextStyle(fontFamily: "Poppins"),
+              ),
+            ),
+          )
+          .toList();
+
+      final sel = controllers.selectedCarId.value.trim();
+      final String? fieldValue =
+          sel.isNotEmpty && uniqueByCarId.containsKey(sel) ? sel : null;
+
       return DropdownButtonFormField<String>(
 
 
@@ -1126,20 +1150,10 @@ class _EditProfileState extends State<EditProfile> {
             borderRadius: BorderRadius.circular(5),
           ),
         ),
-        value: controllers.selectedCarId.value.isEmpty
-            ? null
-            : controllers.selectedCarId.value,
+        value: fieldValue,
         icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
         isExpanded: true,
-        items: controllers.vehicleList.map((make) {
-          return DropdownMenuItem<String>(
-            value: make.carId,
-            child: Text(
-              make.carName,
-              style: TextStyle(fontFamily: "Poppins"),
-            ),
-          );
-        }).toList(),
+        items: items,
         onChanged: (value) {
           if (value != null) {
             controllers.selectedCarId.value = value;

@@ -59,6 +59,33 @@ class UserAcceptBookingModel {
     required this.locationUrl,
   });
 
+  /// Safe default before the first successful `userAcceptBooking` response.
+  factory UserAcceptBookingModel.empty() => UserAcceptBookingModel(
+        bookingId: "",
+        userId: "",
+        carTypeName: "",
+        sourceAdd: "",
+        sourceLat: "0",
+        sourceLong: "0",
+        destinationAdd: "",
+        destinationLat: "0",
+        destinationLong: "0",
+        totalPrice: "",
+        rideType: "",
+        paymentMode: "",
+        distance: "",
+        rideDate: "",
+        rideTime: "",
+        duration: "",
+        userName: "",
+        contact: "",
+        image: "",
+        rating: "",
+        status: "",
+        confirmationCode: "",
+        locationUrl: "",
+      );
+
   factory UserAcceptBookingModel.fromJson(Map<String, dynamic> json) => UserAcceptBookingModel(
     bookingId: json["booking_id"],
     userId: json["user_id"],

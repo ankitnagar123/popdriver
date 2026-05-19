@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:ui';
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
@@ -21,7 +20,6 @@ import 'my_ride_controller.dart';
 class BookingController extends GetxController with WidgetsBindingObserver {
   final HomeController controller = Get.find<HomeController>();
   final SecureStorageService secure = SecureStorageService();
-  final SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   final ApiService apiService = ApiService();
   final selectedIndex = RxnInt(-1);
   final reason = "".obs;
@@ -39,7 +37,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   final deleteId = "".obs;
   Timer? timer;
 
-  late UserAcceptBookingModel _userAcceptBookingModel;
+  UserAcceptBookingModel _userAcceptBookingModel = UserAcceptBookingModel.empty();
   UserAcceptBookingModel get useracceptmodel => _userAcceptBookingModel;
 
   @override
@@ -79,7 +77,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     timer?.cancel();
   }
 
-  void rideNowBooking() async {
+  Future<void> rideNowBooking() async {
     final rideNowBooking = {'driver_id': await secure.readData(secure.user_id)};
     try {
       final response = await apiService.postData(URLS.FETCH_RIDE_NOW_BOOKING, rideNowBooking);
@@ -114,7 +112,18 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     };
     try {
       final response = await apiService.postData(URLS.DRIVER_ACCEPT_BOOKING, accept);
-      final data = jsonDecode(response.body);
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith("<")) {
+        acceptBookLoader.value = false;
+        customSnackBar("Server busy. Please try again.");
+        return;
+      }
+      final data = _decodeJsonSafely(body);
+      if (data == null) {
+        acceptBookLoader.value = false;
+        customSnackBar("Invalid response from server.");
+        return;
+      }
       if (data['result'] == "success") {
         userAcceptBooking(() {});
         acceptBookLoader.value = false;
@@ -141,7 +150,18 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     log("parameter----------->$accept");
     try {
       final response = await apiService.postData(URLS.DRIVER_CANCEL_BOOKING, accept);
-      final data = jsonDecode(response.body);
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith("<")) {
+        cancelBookLoader.value = false;
+        customSnackBar("Server busy. Please try again.");
+        return;
+      }
+      final data = _decodeJsonSafely(body);
+      if (data == null) {
+        cancelBookLoader.value = false;
+        customSnackBar("Invalid response from server.");
+        return;
+      }
       if (data['result'] == "success") {
         completeText.value = "";
         cancelBookLoader.value = false;
@@ -168,7 +188,18 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     log("parameter----------->$accept");
     try {
       final response = await apiService.postData(URLS.CANCEL_BOOKING, accept);
-      final data = jsonDecode(response.body);
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith("<")) {
+        cancelStartBookLoader.value = false;
+        customSnackBar("Server busy. Please try again.");
+        return;
+      }
+      final data = _decodeJsonSafely(body);
+      if (data == null) {
+        cancelStartBookLoader.value = false;
+        customSnackBar("Invalid response from server.");
+        return;
+      }
       if (data['result'] == "success") {
         polyline.clear();
         controller.markers.clear();
@@ -193,18 +224,37 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     final user = {"driver_id": await secure.readData(secure.user_id)};
     try {
       final response = await apiService.postData(URLS.USER_ACCEPT_BOOKING, user);
-      final data = jsonDecode(response.body);
-      deleteId.value = data['booking_id'];
-      if (data['booking_id'] == "") {
+      if (response.statusCode == 429) {
+        log("userAcceptBooking: rate limited (429)");
+        callback?.call();
+        return;
+      }
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith("<")) {
+        log("userAcceptBooking: non-JSON response (status ${response.statusCode})");
+        callback?.call();
+        return;
+      }
+      final data = _decodeJsonSafely(body);
+      if (data == null) {
+        log("userAcceptBooking: failed to parse JSON");
+        callback?.call();
+        return;
+      }
+      final bookingIdRaw = data['booking_id'];
+      final bookingIdStr = bookingIdRaw == null ? "" : bookingIdRaw.toString();
+      deleteId.value = bookingIdStr;
+      if (bookingIdStr.isEmpty) {
         resetControllerState();
       } else {
         updateBookingState(data);
       }
-      log("response user data accept${data}");
+      log("response user data accept$data");
       callback?.call();
       update();
     } catch (e) {
       log("Exception-----booking", error: e.toString());
+      callback?.call();
     }
   }
 
@@ -238,8 +288,17 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     controller.endLocation.value = LatLng(sourceLat, sourceLong);
     controller.hide.value = true;
     if (controller.polylineVariable.value == "") {
-      getPolyLine(LatLng(controller.startLocation.value.latitude, controller.startLocation.value.longitude),
-          LatLng(sourceLat, sourceLong));
+      getPolyLine(
+        LatLng(
+          controller.startLocation.value.latitude,
+          controller.startLocation.value.longitude,
+        ),
+        LatLng(sourceLat, sourceLong),
+      ).then((pts) {
+        if (pts != null && pts.isNotEmpty) {
+          controller.onRoutePolylineReady(pts);
+        }
+      });
       controller.polylineVariable.value = "hello";
     }
     if (controller.arriveDriver.value == "") {
@@ -266,8 +325,17 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     controller.endLocation.value = LatLng(0.0, 0.0);
     controller.endLocation.value = LatLng(destinationLat, destinationLong);
     if (controller.polylineVariable2.value == "") {
-      getPolyLine(LatLng(controller.startLocation.value.latitude, controller.startLocation.value.longitude),
-          LatLng(destinationLat, destinationLong));
+      getPolyLine(
+        LatLng(
+          controller.startLocation.value.latitude,
+          controller.startLocation.value.longitude,
+        ),
+        LatLng(destinationLat, destinationLong),
+      ).then((pts) {
+        if (pts != null && pts.isNotEmpty) {
+          controller.onRoutePolylineReady(pts);
+        }
+      });
       controller.polylineVariable2.value = "hello";
     }
   }
@@ -327,7 +395,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     log('latlong---------->$map');
     try {
       final response = await apiService.postData(URLS.DRIVER_UPDATE_LAT_LONG, map);
-      final jsonString = jsonDecode(response.body);
+      final jsonString = _decodeJsonSafely(response.body);
+      if (jsonString == null) return;
       log('latlng response----------${response.body}');
       final result = jsonString['result'];
       log('latlng result----------$result');
@@ -361,14 +430,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   void handleAdminLogout(String result) async {
     timer?.cancel();
-    Get.find<AuthController>().driverLogout("1", () {});
-    final language = await sp.getStringValue(sp.LANGUAGE);
-    sp.clearData();
-    secure.deleteAllData();
-    sp.setBoolValue(sp.ON_BOARDING_KEY, true);
-    if (language != null) {
-      sp.setStringValue(sp.LANGUAGE, language);
-    }
+    await Get.find<AuthController>().driverLogout("1", () {});
     await Future.delayed(Duration.zero, () {
       Get.find<HomeController>().streamSubscription.cancel();
     });

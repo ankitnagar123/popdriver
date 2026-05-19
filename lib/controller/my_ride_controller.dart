@@ -44,6 +44,29 @@ class MyRidesController extends GetxController {
   FetchDriverBookingDetailsModel? get bookingDetailsModel =>
       _bookingDetailsModel;
 
+  /// Shown in Ride History header — matches filtered [historyList] when loaded.
+  String get displayTotalRides {
+    if (historyList.isNotEmpty) {
+      return historyList.length.toString();
+    }
+    return totalBooking.value.isEmpty ? '0' : totalBooking.value;
+  }
+
+  /// Sum of [totalPrice] for completed rows in current [historyList].
+  String get displayTotalEarnings {
+    if (historyList.isNotEmpty) {
+      var sum = 0.0;
+      for (final ride in historyList) {
+        if (ride.status.toLowerCase().contains('complete')) {
+          sum += double.tryParse(ride.totalPrice.trim()) ?? 0;
+        }
+      }
+      return sum.toStringAsFixed(
+          sum.truncateToDouble() == sum ? 0 : 1);
+    }
+    return totalEarning.value.isEmpty ? '0' : totalEarning.value;
+  }
+
   void driverTotalBooking() async {
     rideLoader.value = true;
     Map<String, dynamic> book = {
@@ -71,7 +94,7 @@ class MyRidesController extends GetxController {
       "driver_id": await secure.readData(secure.user_id),
       "start_date": startDate,
       "end_date": endDate,
-      "type ": type
+      "type": type,
     };
 
     historyList.clear();

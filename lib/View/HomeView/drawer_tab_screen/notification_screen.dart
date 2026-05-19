@@ -1,227 +1,13 @@
-// import '../../../controller/notification_controller.dart';
-// import '../../../utils/colors.dart';
-// import '../../../utils/custom_button.dart';
-//
-// import 'package:flutter/material.dart';
-// import 'package:get/get.dart';
-//
-// class NotificationScreen extends StatefulWidget {
-//   const NotificationScreen({Key? key}) : super(key: key);
-//
-//   @override
-//   State<NotificationScreen> createState() => _NotificationScreenState();
-// }
-//
-// class _NotificationScreenState extends State<NotificationScreen> {
-//   NotificationController controller = Get.put(NotificationController());
-//
-//   @override
-//   void initState() {
-//     WidgetsFlutterBinding.ensureInitialized();
-//     controller.notification("");
-//     super.initState();
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         iconTheme: IconThemeData(color: MyColors.white),
-//         backgroundColor: MyColors.primary,
-//         title: Text(
-//           "Notification".tr,
-//           style: TextStyle(
-//             fontSize: 20,
-//             color: MyColors.white,
-//             fontFamily: "Poppins",
-//           ),
-//         ),
-//         centerTitle: true,
-//       ),
-//       body: Obx(() {
-//         if (controller.notificationLoader.value) {
-//           return Center(
-//             child: myIndicator(),
-//           );
-//         } else if (controller.notificationList.length == 0)
-//           return Center(
-//             child: Text("No Notification".tr),
-//           );
-//         else {
-//           return Padding(
-//             padding: const EdgeInsets.all(8.0),
-//             child: ListView.builder(
-//               itemCount: controller.notificationList.length,
-//               itemBuilder: (context, index) {
-//                 var reverseList = controller.notificationList.reversed.toList();
-//                 var list = reverseList[index];
-//                 return Card(
-//                     elevation: 3,
-//                     child: Padding(
-//                       padding: const EdgeInsets.all(5.0),
-//                       child: Column(
-//                         children: [
-//                           Align(
-//                               alignment: Alignment.topRight,
-//                               child: InkWell(
-//                                 onTap: () {
-//                                   delete(list.id);
-//                                 },
-//                                 child: Icon(
-//                                   Icons.delete_outline,
-//                                   color: MyColors.black,
-//                                 ),
-//                               )),
-//                           Row(
-//                             mainAxisAlignment: MainAxisAlignment.start,
-//                             children: [
-//                               list.title == "New booking request".tr
-//                                   ? Icon(
-//                                       Icons.check_circle,
-//                                       size: 35,
-//                                       color: MyColors.primary,
-//                                     )
-//                                   : list.title == "Booking Cancellation".tr
-//                                       ? Icon(
-//                                           Icons.close,
-//                                           size: 35,
-//                                           color: Colors.red,
-//                                         )
-//                                       : list.title == "Booking Accepted".tr
-//                                           ? Icon(
-//                                               Icons.check_circle,
-//                                               size: 35,
-//                                               color: MyColors.buttonColor,
-//                                             )
-//                                           : list.title ==
-//                                                   "Driver is start ride".tr
-//                                               ? Icon(
-//                                                   Icons.check_circle,
-//                                                   size: 35,
-//                                                   color: MyColors.buttonColor,
-//                                                 )
-//                                               : list.title ==
-//                                                       "Regarding Booking".tr
-//                                                   ? Icon(Icons.check_circle,
-//                                                       size: 35,
-//                                                       color: Color(0xff0CBB70))
-//                                                   : SizedBox(),
-//                               Expanded(
-//                                   child: Padding(
-//                                 padding:
-//                                     const EdgeInsets.symmetric(horizontal: 5),
-//                                 child: Column(
-//                                   crossAxisAlignment: CrossAxisAlignment.start,
-//                                   children: [
-//                                     Text(
-//                                       list.title,
-//                                       maxLines: 1,
-//                                       softWrap: true,
-//                                       style: TextStyle(
-//                                           fontFamily: "Poppins",
-//                                           fontSize: 14,
-//                                           fontWeight: FontWeight.w500),
-//                                     ),
-//                                     SizedBox(
-//                                       height: 5,
-//                                     ),
-//                                     Text(
-//                                       list.message,
-//                                       maxLines: 1,
-//                                       softWrap: true,
-//                                       style: TextStyle(
-//                                           fontFamily: "Poppins",
-//                                           fontSize: 12,
-//                                           color: Colors.black45),
-//                                     ),
-//                                   ],
-//                                 ),
-//                               )),
-//                             ],
-//                           ),
-//                           SizedBox(
-//                             height: 10,
-//                           ),
-//                           Align(
-//                               alignment: Alignment.bottomRight,
-//                               child: Text(
-//                                 list.date,
-//                                 style: TextStyle(
-//                                     fontSize: 10, color: Colors.black45),
-//                               )),
-//                         ],
-//                       ),
-//                     ));
-//               },
-//             ),
-//           );
-//         }
-//       }),
-//     );
-//   }
-//
-//   void delete(String id) {
-//     showDialog(
-//       context: context,
-//       builder: (BuildContext context) {
-//         return AlertDialog(
-//           shape: RoundedRectangleBorder(
-//             borderRadius: BorderRadius.circular(15),
-//           ),
-//           title: Row(
-//             children: [
-//               Icon(Icons.warning, color: Colors.red),
-//               SizedBox(width: 10),
-//               Text('Delete Confirmation',style: TextStyle(
-//                 fontSize: 14,
-//                 color: MyColors.black,
-//                 fontFamily: "Poppins",
-//               ),),
-//             ],
-//           ),
-//           content: Text('Are you sure you want to delete?',style: TextStyle(
-//             fontSize: 12,
-//             color: MyColors.black,
-//             fontFamily: "Poppins",
-//           ),),
-//           actions: <Widget>[
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.of(context).pop();
-//               },
-//               child: Text('Cancel', style: TextStyle(
-//                 fontSize: 14,
-//                 color: Colors.grey,
-//                 fontFamily: "Poppins",
-//               ),),
-//             ),
-//             Obx(() {
-//               if (controller.notificationDeleteLoader.value) {
-//                 return Center(
-//                   child: myIndicator(),
-//                 );
-//               } else {
-//                 return TextButton(
-//                     onPressed: () {
-//                       controller.deleteNotification(id);
-//                     },
-//                     child: Text('Delete', style: TextStyle(color: Colors.red)));
-//               }
-//             })
-//           ],
-//         );
-//       },
-//     );
-//   }
-// }
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:mtaanidriver/Model/notification_model.dart';
+
 import '../../../controller/notification_controller.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/custom_button.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({Key? key}) : super(key: key);
+  const NotificationScreen({super.key});
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -233,302 +19,609 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsFlutterBinding.ensureInitialized();
-    controller.notification("");
+    controller.notification('');
+  }
+
+  Future<void> _refresh() async {
+    controller.notification('');
+    var attempts = 0;
+    while (controller.notificationLoader.value && attempts < 60) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MyColors.background,
       appBar: AppBar(
+        elevation: 0,
         iconTheme: const IconThemeData(color: MyColors.white),
-        backgroundColor: MyColors.primary,
-        elevation: 4,
-        shadowColor: MyColors.primary.withOpacity(0.2),
-        title: Image.asset('assets/images/headLogo.png',height: 28,),/*Text(
-          "Notification".tr,
-          style: const TextStyle(
-            fontSize: 20,
-            color: MyColors.white,
-            fontFamily: "Poppins",
-            fontWeight: FontWeight.w600,
-          ),
-        ),*/
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(height: 5,),
-            Text(
-              "Notifications".tr,
-              style: TextStyle(
-                fontSize: 18,
-                color: MyColors.black,
-                fontFamily: "Poppins",
-              ),
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF02B3BE),
+                Color(0xFF019BA5),
+                Color(0xFF017A82),
+              ],
             ),
-
-            Obx(() {
-              if (controller.notificationLoader.value) {
-                return Center(
-                  child: myIndicator(),
-                );
-              } else if (controller.notificationList.isEmpty) {
-                return _buildEmptyState();
-              } else {
-                return _buildNotificationList();
-              }
-            }),
-          ],
+          ),
         ),
+        title: Text(
+          'Notifications'.tr,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+       
       ),
+      body: Obx(() {
+        if (controller.notificationLoader.value &&
+            controller.notificationList.isEmpty) {
+          return Center(child: myIndicator());
+        }
+
+        final count = controller.notificationList.length;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeaderBanner(count),
+            Expanded(
+              child: count == 0
+                  ? _buildEmptyState()
+                  : _buildNotificationList(),
+            ),
+          ],
+        );
+      }),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildHeaderBanner(int count) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            MyColors.primary.withValues(alpha: 0.12),
+            MyColors.primary.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MyColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
         children: [
-          Icon(
-            Icons.notifications_off_outlined,
-            size: 80,
-            color: MyColors.primary.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "No Notifications".tr,
-            style: TextStyle(
-              fontSize: 18,
-              color: MyColors.black.withOpacity(0.5),
-              fontFamily: "Poppins",
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: MyColors.primary.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_active_rounded,
+              color: MyColors.primary,
+              size: 20,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            "We'll notify you when something arrives".tr,
-            style: TextStyle(
-              fontSize: 14,
-              color: MyColors.black.withOpacity(0.4),
-              fontFamily: "Poppins",
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              count == 0
+                  ? 'No new alerts'.tr
+                  : '${'You have'.tr} $count ${'notifications'.tr}',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: MyColors.DarkBlue,
+              ),
             ),
           ),
+          if (count > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: MyColors.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.15),
+        Icon(
+          Icons.notifications_off_outlined,
+          size: 72,
+          color: Colors.grey.shade400,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'No Notifications'.tr,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Text(
+            "We'll notify you when something arrives".tr,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade500,
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildNotificationList() {
-    final reverseList = controller.notificationList.reversed.toList();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    final items = controller.notificationList.reversed.toList();
+
+    return RefreshIndicator(
+      color: MyColors.primary,
+      onRefresh: _refresh,
       child: ListView.separated(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: reverseList.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          final notification = reverseList[index];
-          return _buildNotificationCard(notification);
+          final n = items[index];
+          return Dismissible(
+            key: ValueKey('notif_${n.id}_$index'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: Colors.red.shade400,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.delete_outline, color: Colors.white),
+            ),
+            confirmDismiss: (_) async {
+              _confirmDelete(n.id);
+              return false;
+            },
+            child: _buildNotificationCard(n),
+          );
         },
       ),
     );
   }
 
-  Widget _buildNotificationCard(dynamic notification) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+  Widget _buildNotificationCard(NotificationModel notification) {
+    final style = _notificationStyle(notification.title);
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNotificationIcon(notification.title),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notification.title,
-                        style: const TextStyle(
-                          fontFamily: "Poppins",
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: MyColors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notification.message,
-                        style: TextStyle(
-                          fontFamily: "Poppins",
-                          fontSize: 14,
-                          color: MyColors.black.withOpacity(0.7),
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                _buildDeleteButton(notification.id),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  notification.date,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: MyColors.black.withOpacity(0.5),
-                    fontFamily: "Poppins",
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationIcon(String title) {
-    IconData icon;
-    Color color;
-
-    switch (title) {
-      case "New booking request":
-        icon = Icons.notifications_active_outlined;
-        color = MyColors.primary;
-        break;
-      case "Booking Cancellation":
-        icon = Icons.cancel_outlined;
-        color = Colors.red;
-        break;
-      case "Booking Accepted":
-        icon = Icons.check_circle_outline;
-        color = MyColors.buttonColor;
-        break;
-      case "Driver is start ride":
-        icon = Icons.directions_car_filled_outlined;
-        color = Color(0xff0CBB70);
-        break;
-      default:
-        icon = Icons.notifications_outlined;
-        color = MyColors.primary;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 28, color: color),
-    );
-  }
-
-  Widget _buildDeleteButton(String id) {
-    return InkWell(
-      onTap: () => delete(id),
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Icon(
-          Icons.delete_outline,
-          color: MyColors.black.withOpacity(0.6),
-          size: 24,
-        ),
-      ),
-    );
-  }
-
-  void delete(String id) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange[800]),
-              const SizedBox(width: 12),
-              Text(
-                'Delete Notification'.tr,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: MyColors.black,
-                  fontFamily: "Poppins",
-                  fontWeight: FontWeight.w600,
-                ),
+    return Material(
+      color: Colors.white,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => _showNotificationDetail(notification),
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          content: Text(
-            'Are you sure you want to delete this notification?'.tr,
-            style: const TextStyle(
-              fontSize: 14,
-              color: MyColors.black,
-              fontFamily: "Poppins",
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: style.color,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(14),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: style.color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(style.icon, size: 22, color: style.color),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                notification.title,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: MyColors.black,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                notification.message,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                  height: 1.35,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.schedule_outlined,
+                                    size: 13,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDateTime(
+                                        notification.date, notification.time),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                      fontFamily: 'Poppins',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                          onPressed: () => _confirmDelete(notification.id),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel'.tr,
-                style: TextStyle(
-                  color: MyColors.black.withOpacity(0.7),
-                  fontFamily: "Poppins",
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(String date, String time) {
+    final d = date.trim();
+    final t = time.trim();
+    if (d.isEmpty && t.isEmpty) return '';
+    if (d.isEmpty) return t;
+    if (t.isEmpty) return d;
+    return '$d • $t';
+  }
+
+  _NotificationStyle _notificationStyle(String title) {
+    final t = title.toLowerCase();
+    if (t.contains('new booking') || t.contains('booking request')) {
+      return _NotificationStyle(
+        Icons.local_taxi_rounded,
+        MyColors.primary,
+      );
+    }
+    if (t.contains('cancel')) {
+      return _NotificationStyle(Icons.cancel_rounded, Colors.red.shade600);
+    }
+    if (t.contains('accept')) {
+      return _NotificationStyle(
+        Icons.check_circle_rounded,
+        const Color(0xFF0CBB70),
+      );
+    }
+    if (t.contains('start ride') || t.contains('started')) {
+      return _NotificationStyle(
+        Icons.directions_car_rounded,
+        const Color(0xFF0CBB70),
+      );
+    }
+    if (t.contains('complete') || t.contains('regarding')) {
+      return _NotificationStyle(Icons.verified_rounded, Colors.blue.shade700);
+    }
+    return _NotificationStyle(Icons.notifications_rounded, MyColors.primary);
+  }
+
+  void _showNotificationDetail(NotificationModel notification) {
+    final style = _notificationStyle(notification.title);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ),
-            Obx(() {
-              if (controller.notificationDeleteLoader.value) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: style.color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              }
-              return ElevatedButton(
-                onPressed: () => controller.deleteNotification(id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  child: Icon(style.icon, color: style.color, size: 26),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    notification.title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                child: Text(
-                  'Delete'.tr,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: "Poppins",
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              notification.message,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                color: Colors.grey.shade800,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _formatDateTime(notification.date, notification.time),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _confirmDelete(notification.id);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade600,
+                      side: BorderSide(color: Colors.red.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text('Delete'.tr),
                   ),
                 ),
-              );
-            }),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text('Close'.tr),
+                  ),
+                ),
+              ],
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
+
+  void _confirmDelete(String id) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: !controller.notificationDeleteLoader.value,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 8,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red.shade100),
+                ),
+                child: Icon(
+                  Icons.delete_forever_rounded,
+                  color: Colors.red.shade600,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Delete Notification'.tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  color: MyColors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Are you sure you want to delete this notification?'.tr,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Obx(() {
+                final loading = controller.notificationDeleteLoader.value;
+                return Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                            loading ? null : () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: MyColors.DarkBlue,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel'.tr,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: loading
+                            ? null
+                            : () => controller.deleteNotification(id),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          disabledBackgroundColor: Colors.red.shade300,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Delete'.tr,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationStyle {
+  final IconData icon;
+  final Color color;
+  const _NotificationStyle(this.icon, this.color);
 }

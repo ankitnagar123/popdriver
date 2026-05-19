@@ -11,10 +11,10 @@ import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../Model/TaxiFetchCompanyModel.dart';
 import '../Model/membership_model.dart';
 import '../Network/urls.dart';
@@ -284,13 +284,14 @@ class AuthController extends GetxController {
         }
         print("user id -------${jsonString["driver_id"]}");
         updateDeviceId();
-        sp.setBoolValue(sp.LOGIN_KEY, true);
-        secure.writeData(secure.Token, jsonString['token']);
-        sp.setStringValue(sp.INVITE_CODE, inviteCode.toString());
-        sp.setStringValue(sp.LOGIN_DEVICE_KEY, login_device_key.toString());
-        sp.setStringValue(sp.ACCESS_TOKEN, access_token.toString());
-        secure.writeData(secure.user_name, driverName.toString());
-        secure.writeData(secure.user_id, driverId.toString());
+        await sp.setBoolValue(sp.LOGIN_KEY, true);
+        await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        await secure.writeData(secure.Token, jsonString['token']);
+        await sp.setStringValue(sp.INVITE_CODE, inviteCode.toString());
+        await sp.setStringValue(sp.LOGIN_DEVICE_KEY, login_device_key.toString());
+        await sp.setStringValue(sp.ACCESS_TOKEN, access_token.toString());
+        await secure.writeData(secure.user_name, driverName.toString());
+        await secure.writeData(secure.user_id, driverId.toString());
         loginLoader.value = false;
         Get.offNamed(RouteHelper.getHomeScreenScreenRoute(),
             arguments: {"ArriveDriver": ""});
@@ -383,8 +384,8 @@ class AuthController extends GetxController {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: () {
-                              driverLogout("1", () {
+                            onPressed: () async {
+                              await driverLogout("1", () {
                                 Navigator.pop(context);
                               });
                             },
@@ -482,47 +483,66 @@ class AuthController extends GetxController {
     }
   }
 
-  void driverLogout(String text, VoidCallback callback) async {
-    logoutLoader.value = true;
-    Map<String, dynamic> logout = {
-      "driver_id": await secure.readData(secure.user_id)
-    };
-    log("print id :------>:$logout");
-
-    try {
-      final response =
-          await apiService.postDatatoken(URLS.DRIVER_LOGOUT, logout);
-      var jsonString = jsonDecode(response.data);
-      log("logout response :--------$jsonString");
-      var result = jsonString['result'];
-      if (result == "success") {
-        if (text != "1") {
-          Get.find<BookingController>().cancel();
-        }
-
-        var language = await sp.getStringValue(sp.LANGUAGE);
-        sp.clearDataExceptLoginFields();
-        // sp.clearData();
-        secure.deleteAllData();
-        sp.setBoolValue(sp.ON_BOARDING_KEY, true);
-
-        if (language != null) {
-          sp.setStringValue(sp.LANGUAGE, language);
-        }
-        logoutLoader.value = false;
-        callback();
-        customSnackBar("Logout Successfully".tr);
-      } else {
-        logoutLoader.value = false;
-        // customSnackBar(result.toString());
+  /// Clears JWT, driver id, prefs (except saved login fields), booking timers, etc.
+  /// Runs after logout API attempt; local data is always wiped so no ghost session.
+  Future<void> _clearLocalDriverSession(String text) async {
+    if (text != "1") {
+      try {
+        Get.find<BookingController>().cancel();
+      } catch (e) {
+        log('BookingController.cancel on logout: $e');
       }
-    } catch (e) {
-      logoutLoader.value = false;
-      log("Exception :----", error: e.toString());
+    }
+
+    final language = await sp.getStringValue(sp.LANGUAGE);
+    await sp.clearDataExceptLoginFields();
+    await secure.deleteAllData();
+    await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+
+    if (language != null && language.isNotEmpty) {
+      await sp.setStringValue(sp.LANGUAGE, language);
     }
   }
 
+  Future<void> driverLogout(String text, VoidCallback callback) async {
+    logoutLoader.value = true;
+
+    final driverId = await secure.readData(secure.user_id);
+    final logout = {"driver_id": driverId};
+    log("logout id :------>:$logout");
+
+    var serverAck = false;
+    try {
+      final response =
+          await apiService.postDatatoken(URLS.DRIVER_LOGOUT, logout);
+      final jsonString = jsonDecode(response.data);
+      log("logout response :--------$jsonString");
+      final result = jsonString['result'];
+      serverAck = result != null &&
+          result.toString().trim().toLowerCase() == 'success';
+      if (!serverAck) {
+        log("logout API result not success: $result");
+      }
+    } catch (e) {
+      log("logout API exception", error: e.toString());
+    }
+
+    try {
+      await _clearLocalDriverSession(text);
+    } catch (e) {
+      log("local session clear failed", error: e.toString());
+    } finally {
+      logoutLoader.value = false;
+    }
+
+    callback();
+    customSnackBar(
+      serverAck ? "Logout Successfully".tr : "You have been logged out".tr,
+    );
+  }
+
   void updateDeviceId() async {
+    if (kIsWeb) return;
     String deviceStatus = "";
     String? device_id = "";
     if (Platform.isAndroid) {
@@ -539,7 +559,7 @@ class AuthController extends GetxController {
         device_id = value;
       });
       deviceStatus = "IOS";
-      log('device id------$device_id');
+      log('device id------$device_id'); 
     }
 
     Map<String, dynamic> deviceId = {
@@ -597,38 +617,20 @@ class AuthController extends GetxController {
       var result = jsonString['result'];
       log('response login--------->:$result');
       if (jsonString['result'] == "You Are Already Logged-in In Other Device") {
-        Get.find<AuthController>().driverLogout("", () {});
-        var language = await sp.getStringValue(sp.LANGUAGE);
-        SharedPreferences preferences = await SharedPreferences.getInstance();
-        await preferences.clear();
-        sp.clearData();
-        secure.deleteAllData();
-        sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        await driverLogout("", () {});
         Future.delayed(Duration.zero, () {
           Get.find<HomeController>().streamSubscription.cancel();
         });
-        if (language != null) {
-          sp.setStringValue(sp.LANGUAGE, language);
-        }
         /* customSnackBar(result.toString());*/
         Get.offAllNamed(RouteHelper.getLoginScreenRoute());
         reCheckLoader.value = false;
       } else if (jsonString['result'] == "Success") {
         reCheckLoader.value = false;
       } else if (jsonString['result'] == "Token has expired") {
-        Get.find<AuthController>().driverLogout("", () {});
-        var language = await sp.getStringValue(sp.LANGUAGE);
-        SharedPreferences preferences = await SharedPreferences.getInstance();
-        await preferences.clear();
-        sp.clearData();
-        secure.deleteAllData();
-        sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        await driverLogout("", () {});
         Future.delayed(Duration.zero, () {
           Get.find<HomeController>().streamSubscription.cancel();
         });
-        if (language != null) {
-          sp.setStringValue(sp.LANGUAGE, language);
-        }
         customSnackBar(result.toString());
         Get.offAllNamed(RouteHelper.getLoginScreenRoute());
         reCheckLoader.value = false;
@@ -650,10 +652,11 @@ class AuthController extends GetxController {
 
       var jsonString = jsonDecode(response.body);
 
-      if (jsonString['result'] == "success") {
+      if (jsonString['result'] != null &&
+          jsonString['result'].toString().trim().toLowerCase() == "success") {
         deleteLoader.value = false;
-        sp.clearData();
-        secure.deleteAllData();
+        await sp.clearData();
+        await secure.deleteAllData();
         Future.delayed(Duration.zero, () {
           Get.find<HomeController>().streamSubscription.cancel();
         });

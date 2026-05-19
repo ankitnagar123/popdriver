@@ -399,9 +399,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 30),
             child: AnimatedNextButton(
               currentIndex: currentIndex,
-              onPressed: () {
+              onPressed: () async {
                 if (currentIndex == items.length - 1) {
-                  sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+                  await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
                   Get.offNamed(RouteHelper.getLoginScreenRoute());
                 } else {
                   controller.nextPage(

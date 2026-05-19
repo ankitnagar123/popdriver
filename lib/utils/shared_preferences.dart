@@ -43,9 +43,9 @@ class SharedPreferencesCrDriver{
       }
     }
   }
-  void setBoolValue(String key,bool value)async{
-    SharedPreferences sp = await SharedPreferences.getInstance();
-    sp.setBool(key, value);
+  Future<void> setBoolValue(String key, bool value) async {
+    final SharedPreferences sp = await SharedPreferences.getInstance();
+    await sp.setBool(key, value);
   }
 
  Future<bool?> getBoolValue(String key)async{
@@ -53,9 +53,9 @@ class SharedPreferencesCrDriver{
     return sp.getBool(key);
 }
 
- void setStringValue(String key,String value)async{
-    SharedPreferences sp = await SharedPreferences.getInstance();
-    sp.setString(key, value);
+ Future<void> setStringValue(String key, String value) async {
+    final SharedPreferences sp = await SharedPreferences.getInstance();
+    await sp.setString(key, value);
 }
 
  Future<String?> getStringValue(String key)async{
@@ -63,8 +63,8 @@ class SharedPreferencesCrDriver{
     return sp.getString(key);
 }
 
-  void  clearData() async {
-    SharedPreferences sp = await SharedPreferences.getInstance();
+  Future<void> clearData() async {
+    final SharedPreferences sp = await SharedPreferences.getInstance();
     await sp.clear();
   }
 

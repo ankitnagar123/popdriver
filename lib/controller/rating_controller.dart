@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
@@ -24,7 +22,7 @@ class RatingController extends GetxController {
 
  SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
- void rating()async {
+ Future<void> rating() async {
    isLoading.value = true;
    Map<String,dynamic> map = {
      'driver_id'  : await secure.readData(secure.user_id)
@@ -45,15 +43,25 @@ class RatingController extends GetxController {
 
  }
 
-  Future<void> rateToUser(String bookingId ,rating,positive_point,negative_point,BuildContext context) async {
+  Future<void> refreshRatings() async => rating();
+
+  Future<void> rateToUser(
+    String bookingId,
+    dynamic rating,
+    String positivePoint,
+    String negativePoint,
+    String feedback,
+    BuildContext context,
+  ) async {
     addLoading.value = true;
 
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
-      "booking_id":bookingId,
-      "rating":rating,
-      "positive_point":positive_point,
-      "negative_point":negative_point,
+      "booking_id": bookingId,
+      "rating": rating.toString(),
+      "positive_point": positivePoint,
+      "negative_point": negativePoint,
+      "feedback": feedback,
     };
     log("Rate User  Check: $map");
 

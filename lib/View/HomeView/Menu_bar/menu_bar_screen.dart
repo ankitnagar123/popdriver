@@ -141,8 +141,8 @@ class _MtaaniSidebarState extends State<MtaaniSidebar> {
                                                     borderRadius: BorderRadius.circular(8),
                                                   ),
                                                 ),
-                                                onPressed: () {
-                                                  controller.driverLogout("", () {
+                                                onPressed: () async {
+                                                  await controller.driverLogout("", () {
                                                     Future.delayed(Duration.zero, () {
                                                       Get.find<HomeController>()
                                                           .streamSubscription

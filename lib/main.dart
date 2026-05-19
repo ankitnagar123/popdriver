@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -15,21 +16,35 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
-  print("Message data: ${message.data}");
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.handleBackgroundTray(message);
 }
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform);
-    await NotificationService.initialize();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // Web: no Web app in firebase_options yet; FCM + local notification paths are
+    // mobile-oriented. Skip Firebase here so Chrome runs for UI/debug.
+    // To enable Firebase on web: add a Web app in Firebase Console, then run:
+    //   dart pub global activate flutterfire_cli
+    //   flutterfire configure -p <projectId> --platforms=web
+    if (!kIsWeb) {
+      await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform);
+      await NotificationService.initialize();
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    } else {
+      debugPrint(
+          'Web: Firebase not initialized (configure Web in Firebase + flutterfire configure). '
+          'Push/token APIs are skipped.');
+    }
 
-    SystemChrome.setPreferredOrientations(
-        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+    if (!kIsWeb) {
+      await SystemChrome.setPreferredOrientations(
+          [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+    }
 
     runApp(GoyaDriver());
   } catch (e) {
