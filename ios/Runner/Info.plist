@@ -24,16 +24,18 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
 	<key>GMSApiKey</key>
 	<string>AIzaSyCcprS9RpevBbo6bTsbazyhtR1QT_Cd_ys</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>We use your location to show your live position on the map and assign nearby rides.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We use your location to track trips and provide accurate pickup and drop updates.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>We use your location to track trips and provide accurate pickup and drop updates.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to show your live position on the map and assign nearby rides.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -63,16 +65,10 @@
 	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>
