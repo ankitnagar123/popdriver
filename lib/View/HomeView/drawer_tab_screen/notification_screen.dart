@@ -62,7 +62,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ),
         ),
         centerTitle: true,
-       
       ),
       body: Obx(() {
         if (controller.notificationLoader.value &&
@@ -77,9 +76,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           children: [
             _buildHeaderBanner(count),
             Expanded(
-              child: count == 0
-                  ? _buildEmptyState()
-                  : _buildNotificationList(),
+              child: count == 0 ? _buildEmptyState() : _buildNotificationList(),
             ),
           ],
         );
@@ -489,7 +486,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Text('Close'.tr),
+                    child: Text(
+                      'Close'.tr,
+                      style: TextStyle(color: MyColors.white),
+                    ),
                   ),
                 ),
               ],
@@ -554,8 +554,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed:
-                            loading ? null : () => Navigator.pop(ctx),
+                        onPressed: loading ? null : () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: MyColors.DarkBlue,
                           side: BorderSide(color: Colors.grey.shade300),

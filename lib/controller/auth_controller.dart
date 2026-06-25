@@ -69,7 +69,7 @@ class AuthController extends GetxController {
   var companyList = <TaxiCompanyFetchModel>[].obs;
 
   var isOtpExpired = false.obs;
-  var remainingTime = 60.obs; // 30 seconds
+  var remainingTime = 300.obs;
   Timer? _timer;
   var deleteLoader = false.obs;
   var memberShipList = <MemberShipModel>[].obs;
@@ -79,7 +79,8 @@ class AuthController extends GetxController {
   var otps = "".obs;
 
   void startOtpTimer() {
-    remainingTime.value = 60;
+    _timer?.cancel();   // kill any existing timer before starting a new one
+    remainingTime.value = 300;
     isOtpExpired.value = false;
 
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -299,7 +300,7 @@ class AuthController extends GetxController {
       } else if (result == "You Are Already Logged-in In Other Device") {
         secure.writeData(secure.user_id, driverId.toString());
         loginLoader.value = false;
-        customSnackBar(result.toString());
+        customSnackBar(result.toString(), context: context);
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -414,10 +415,10 @@ class AuthController extends GetxController {
                 builder: (context) => MemberShipScreen(type: "signup")));
       } else {
         loginLoader.value = false;
-        customSnackBar(result.toString());
+        customSnackBar(result.toString(), context: context);
       }
     } catch (e) {
-      customSnackBar("something went wrong");
+      customSnackBar("something went wrong", context: context);
       loginLoader.value = false;
       log("Exception-----", error: e.toString());
     }

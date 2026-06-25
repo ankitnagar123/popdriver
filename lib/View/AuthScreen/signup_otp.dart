@@ -28,9 +28,15 @@ class _SignupOTPState extends State<SignupOTP> {
   }
 
 
+  String _formatTimer(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s remaining';
+  }
+
   @override
   void dispose() {
-    otpCtr.dispose(); // ✅ Dispose to avoid errors
+    otpCtr.dispose();
     super.dispose();
   }
 
@@ -73,12 +79,19 @@ class _SignupOTPState extends State<SignupOTP> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text("A code has been sent to "
-                        .tr,style: TextStyle(fontSize: 13,fontWeight: FontWeight.normal),),
-                Text(" ${"${controller.countryCode.value}${controller.contacts.value}"}"
-                    .tr,style: TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color: Colors.black54),),
+                Text("A code has been sent to ".tr,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.normal)),
+
               ],
             ),
+            Obx(() => Text(
+              controller.emailID.value,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54),
+              overflow: TextOverflow.ellipsis,
+            )),
             SizedBox(
               height: 30,
             ),
@@ -119,7 +132,7 @@ class _SignupOTPState extends State<SignupOTP> {
                   onCompleted: (value) {
                     otpCtr.text = value;
                     controller.verifyOtp( otpCtr.text, () {
-                          Get.back(result: "back");
+                          Navigator.of(context).pop("back");
                         });
                   }),
             ),
@@ -145,8 +158,7 @@ class _SignupOTPState extends State<SignupOTP> {
                       ),
                     ],
                   ))
-                  : Text(
-                  "${controller.remainingTime.value} remaining time");
+                  : Text(_formatTimer(controller.remainingTime.value));
             }),
             SizedBox(
               height: 50,
@@ -170,7 +182,7 @@ class _SignupOTPState extends State<SignupOTP> {
                             customSnackBar("Enter OTP".tr);
                           } else {
                             controller.verifyOtp(otpCtr.text, () {
-                              Get.back(result: "back");
+                              Navigator.of(context).pop("back");
                             });
                           }
                         },

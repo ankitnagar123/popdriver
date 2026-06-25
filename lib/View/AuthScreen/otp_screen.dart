@@ -23,6 +23,12 @@ class _OtpScreenState extends State<OtpScreen> {
   String otp = "";
   String id = "";
 
+  String _formatTimer(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s remaining';
+  }
+
   @override
   void initState() {
     id = Get.arguments["id"];
@@ -90,7 +96,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         myIndicator():
                         Text("I didn't receive code".tr, style: TextStyle(
                             color: MyColors.buttonColor),)):
-                        Text("${controller.remainingTime.value} remaining time");
+                        Text(_formatTimer(controller.remainingTime.value));
                   }),
                   InkWell(
                     onTap: () {

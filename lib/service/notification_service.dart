@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../controller/booking_controller.dart';
 import '../controller/home_screen_controller.dart';
+import '../utils/booking_cancellation_dialog.dart';
 import '../utils/polyline_handler.dart';
 
 /// Android `res/raw/booking_ring.mp3` → use name without extension.
@@ -175,6 +176,9 @@ class NotificationService {
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         log('Opened from tray: ${message.notification?.title}');
+        if (isBookingCancellation(message)) {
+          _handleBookingCancellationNotification(message);
+        }
       });
     }
   }
@@ -307,9 +311,7 @@ class NotificationService {
       suppressBookingTraySound: true,
     );
 
-    if (isBookingCancellation(message)) {
-      BookingCancelPlayer.playFiveSeconds();
-    } else if (isNewBookingRequest(message)) {
+    if (isNewBookingRequest(message)) {
       BookingRingPlayer.playFiveSeconds();
     }
 
@@ -317,18 +319,7 @@ class NotificationService {
 
     try {
       if (isBookingCancellation(message)) {
-        final HomeController controller = Get.find<HomeController>();
-        controller.markers.clear();
-        Get.find<BookingController>().completeText.value = '';
-        controller.polylineVariable.value = '';
-        controller.polylineVariable2.value = '';
-        controller.driverArriveValue.value = false;
-        controller.arriveDriver.value = '';
-        controller.painButton.value = false;
-        controller.onOff.value = true;
-        controller.hide.value = false;
-        polyline.clear();
-        log('clear -----');
+        _handleBookingCancellationNotification(message);
         return;
       }
 
@@ -336,6 +327,33 @@ class NotificationService {
     } catch (e, st) {
       log('post-notification GetX handlers failed',
           error: e, stackTrace: st);
+    }
+  }
+
+  static void _handleBookingCancellationNotification(RemoteMessage message) {
+    BookingCancelPlayer.playFiveSeconds();
+
+    final bookingId = BookingCancellationDialog.extractBookingId(message);
+    try {
+      final homeController = Get.find<HomeController>();
+      homeController.markers.clear();
+      Get.find<BookingController>().completeText.value = '';
+      homeController.polylineVariable.value = '';
+      homeController.polylineVariable2.value = '';
+      homeController.driverArriveValue.value = false;
+      homeController.arriveDriver.value = '';
+      homeController.painButton.value = false;
+      homeController.onOff.value = true;
+      homeController.hide.value = false;
+      polyline.clear();
+      Get.find<BookingController>()
+          .handleUserSideCancellationShowDialog(bookingId);
+      log('booking cancellation handled — id: $bookingId');
+    } catch (e, st) {
+      log('booking cancellation handler failed', error: e, stackTrace: st);
+      if (bookingId.isNotEmpty) {
+        BookingCancellationDialog.show(bookingId);
+      }
     }
   }
 

@@ -7,6 +7,7 @@ import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 
 import '../Model/rating_model.dart';
+import '../controller/booking_controller.dart';
 import '../utils/shared_preferences.dart';
 import '../utils/snackBar.dart';
 
@@ -71,7 +72,10 @@ class RatingController extends GetxController {
       log("Rate  Response Check: ${jsonString['result']}");
 
       if (jsonString['result'] == "success") {
-        Navigator.pop(context);
+        await Get.find<BookingController>().refreshData();
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
         customSnackBar("✅ Rate successful!");
 
       } else {

@@ -92,12 +92,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void getData() async {
     if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
-      contoller.onOff.value = true;
-      controller.rideNowBooking();
-      /* startStreaming();*/
-      var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-      var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-      authController.loginCheck(loginKey.toString(), accessToken, context);
+      if (contoller.canGoOnline(showMessage: false)) {
+        contoller.onOff.value = true;
+        controller.rideNowBooking();
+        var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+        var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+        authController.loginCheck(loginKey.toString(), accessToken, context);
+      } else {
+        await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+        contoller.onOff.value = false;
+      }
     }
     setState(() {});
     ctr.fetchDriverDetail();
@@ -119,6 +123,29 @@ class _HomeScreenState extends State<HomeScreen> {
     // Center-docked FAB extends above the BottomAppBar and can clip the sheet.
     const fabOverhang = 26.0;
     return bottomAppBarHeight + gestureInset + fabOverhang;
+  }
+
+  Widget _buildHomeInfoButton() {
+    return IconButton(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      icon: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.grey.shade100,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.info_outline, size: 20, color: Colors.red),
+      ),
+      onPressed: showMoreInfo,
+    );
   }
 
   @override
@@ -151,16 +178,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: MyColors.black,
                               ),
                             ),
-                            SizedBox(),
-                            contoller.arriveDriver.value == "Arrived"
-                                ? Text(
-                                    "Start Ride".tr,
-                                    style: TextStyle(
-                                        fontFamily: "Poppins",
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold),
-                                  )
-                                : contoller.arriveDriver.value == "Start"
+                            Expanded(
+                              child: Center(
+                                child: contoller.arriveDriver.value == "Arrived"
                                     ? Text(
                                         "Start Ride".tr,
                                         style: TextStyle(
@@ -168,20 +188,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold),
                                       )
-                                    : controller.completeText.value ==
-                                            "Complete Ride"
-                                        ? Text("Complete Ride".tr,
-                                            style: TextStyle(
-                                                fontFamily: "Poppins",
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold))
-                                        : Text(
-                                            "Home".tr,
+                                    : contoller.arriveDriver.value == "Start"
+                                        ? Text(
+                                            "Start Ride".tr,
                                             style: TextStyle(
                                                 fontFamily: "Poppins",
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.bold),
-                                          ),
+                                          )
+                                        : controller.completeText.value ==
+                                                "Complete Ride"
+                                            ? Text("Complete Ride".tr,
+                                                style: TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold))
+                                            : Text(
+                                                "Home".tr,
+                                                style: TextStyle(
+                                                    fontFamily: "Poppins",
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold),
+                                              ),
+                              ),
+                            ),
+                            _buildHomeInfoButton(),
                             Row(
                               children: [
                                 Text(contoller.onOff.value == true
@@ -225,23 +256,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ? Colors.green
                                                 : Colors.grey,
                                         onChanged: (value) {
-                                          contoller.onOff.value = value;
-                                          if (contoller.onOff.value == true) {
+                                          if (value) {
+                                            if (!contoller.canGoOnline()) {
+                                              return;
+                                            }
+                                            contoller.onOff.value = true;
                                             sp.setBoolValue(
                                                 sp.DRIVER_ONLINE_STATUS, true);
                                             controller.rideNowBooking();
-                                            /* timer1 = Timer.periodic(
-                                            Duration(seconds: 5), (timer) {
-                                          controller.rideNowBooking();
-                                        });*/
-                                            /*startStreaming();*/
                                           } else {
+                                            contoller.clearPenaltyAutoRestore();
+                                            contoller.onOff.value = false;
                                             sp.setBoolValue(
                                                 sp.DRIVER_ONLINE_STATUS, false);
                                             contoller.updateDriverLatLong(
-                                                "0", "0", "0", "UnAvailable");
-                                            /* timer1!.cancel();
-                                        timer2!.cancel();*/
+                                                '0',
+                                                '0',
+                                                '0',
+                                                'UnAvailable',
+                                                context: context);
                                           }
                                         })
                                     : Switch(
@@ -311,8 +344,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     rotateGesturesEnabled: true,
                     tiltGesturesEnabled: true,
                     liteModeEnabled: false,
-                    minMaxZoomPreference:
-                        const MinMaxZoomPreference(3, 20),
+                    minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
                     markers: Set<Marker>.of(contoller.markers),
                     polylines: Set<Polyline>.of(polyline.values),
                     mapType: MapType.normal,
@@ -347,16 +379,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: MyColors.black,
                             ),
                           ),
-                          SizedBox(),
-                          contoller.arriveDriver.value == "Arrived"
-                              ? Text(
-                                  "Start Ride".tr,
-                                  style: TextStyle(
-                                      fontFamily: "Poppins",
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold),
-                                )
-                              : contoller.arriveDriver.value == "Start"
+                          Expanded(
+                            child: Center(
+                              child: contoller.arriveDriver.value == "Arrived"
                                   ? Text(
                                       "Start Ride".tr,
                                       style: TextStyle(
@@ -364,20 +389,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold),
                                     )
-                                  : controller.completeText.value ==
-                                          "Complete Ride"
-                                      ? Text("Complete Ride".tr,
-                                          style: TextStyle(
-                                              fontFamily: "Poppins",
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold))
-                                      : Text(
-                                          "Home".tr,
+                                  : contoller.arriveDriver.value == "Start"
+                                      ? Text(
+                                          "Start Ride".tr,
                                           style: TextStyle(
                                               fontFamily: "Poppins",
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold),
-                                        ),
+                                        )
+                                      : controller.completeText.value ==
+                                              "Complete Ride"
+                                          ? Text("Complete Ride".tr,
+                                              style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold))
+                                          : Text(
+                                              "Home".tr,
+                                              style: TextStyle(
+                                                  fontFamily: "Poppins",
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                            ),
+                          ),
+                          _buildHomeInfoButton(),
                           Row(
                             children: [
                               Text(contoller.onOff.value == true
@@ -386,19 +422,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               contoller.hide.value == false
                                   ? Switch(
                                       value: contoller.onOff.value,
-                                      activeColor:
-                                          contoller.onOff.value == true
-                                              ? Colors.green
-                                              : Colors.grey,
+                                      activeColor: contoller.onOff.value == true
+                                          ? Colors.green
+                                          : Colors.grey,
                                       onChanged: (value) {
                                         if (value == true) {
+                                          if (!contoller.canGoOnline()) {
+                                            return;
+                                          }
                                           Get.to(() => SelfieScreen());
                                         } else {
-                                          contoller.onOff.value = value;
+                                          contoller.clearPenaltyAutoRestore();
+                                          contoller.onOff.value = false;
                                           sp.setBoolValue(
                                               sp.DRIVER_ONLINE_STATUS, false);
-                                          contoller.updateDriverLatLong("0",
-                                              "0", "0", "UnAvailable");
+                                          contoller.updateDriverLatLong(
+                                              '0',
+                                              '0',
+                                              '0',
+                                              'UnAvailable',
+                                              context: context);
                                         }
                                       })
                                   : Switch(
@@ -468,96 +511,91 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Positioned.fill(
                             child: Padding(
                               padding: EdgeInsets.only(
-                                bottom:
-                                    _rideSheetBottomClearance(context),
+                                bottom: _rideSheetBottomClearance(context),
                               ),
                               child: SafeArea(
                                 top: false,
                                 bottom: false,
                                 child: DraggableScrollableSheet(
-                                initialChildSize: 0.32,
-                                minChildSize: 0.16,
-                                maxChildSize: 0.93,
-                                snap: true,
-                                snapSizes: const <double>[
-                                  0.16,
-                                  0.32,
-                                  0.55,
-                                  0.93,
-                                ],
-                                builder: (context, scrollController) {
-                                  return CustomRideStart(
-                                    sheetScrollController: scrollController,
-                                        bookingId: controller
-                                            .useracceptmodel.bookingId,
-                                        userID:
-                                            controller.useracceptmodel.userId,
-                                        distance:
-                                            controller.useracceptmodel.distance,
-                                        time:
-                                            controller.useracceptmodel.duration,
-                                        callCallback: () {},
-                                        msgCallBack: () {
-                                          Get.toNamed(
-                                              RouteHelper
-                                                  .getMessageScreenRout(),
-                                              arguments: {
-                                                "userId": controller
-                                                    .useracceptmodel.userId
-                                              });
-                                        },
-                                        cancelCallBack: () {
-                                          showCustomDialog(
-                                              context,
-                                              controller
-                                                  .useracceptmodel.bookingId);
+                                  initialChildSize: 0.32,
+                                  minChildSize: 0.16,
+                                  maxChildSize: 0.93,
+                                  snap: true,
+                                  snapSizes: const <double>[
+                                    0.16,
+                                    0.32,
+                                    0.55,
+                                    0.93,
+                                  ],
+                                  builder: (context, scrollController) {
+                                    return CustomRideStart(
+                                      sheetScrollController: scrollController,
+                                      bookingId:
+                                          controller.useracceptmodel.bookingId,
+                                      userID: controller.useracceptmodel.userId,
+                                      distance:
+                                          controller.useracceptmodel.distance,
+                                      time: controller.useracceptmodel.duration,
+                                      callCallback: () {},
+                                      msgCallBack: () {
+                                        Get.toNamed(
+                                            RouteHelper.getMessageScreenRout(),
+                                            arguments: {
+                                              "userId": controller
+                                                  .useracceptmodel.userId
+                                            });
+                                      },
+                                      cancelCallBack: () {
+                                        showCustomDialog(
+                                            context,
+                                            controller
+                                                .useracceptmodel.bookingId);
 
-                                          // Get.toNamed(
-                                          //     RouteHelper.getCancelBookingScreenRoute(),
-                                          //     arguments: {
-                                          //       "bookingId": controller.useracceptmodel.bookingId.toString(),
-                                          //       "type": "Ride Now".tr
-                                          //     });
-                                        },
-                                        image: controller.useracceptmodel.image,
-                                        userName:
-                                            controller.useracceptmodel.userName,
-                                        paymentType: controller
-                                            .useracceptmodel.paymentMode,
-                                        price:
-                                            "\$ ${controller.useracceptmodel.totalPrice}",
-                                        pickupLocation: controller
-                                            .useracceptmodel.sourceAdd,
-                                        dropLocation: controller
-                                            .useracceptmodel.destinationAdd,
-                                        mapCallback: () {
-                                          if (controller
-                                                  .useracceptmodel.status ==
-                                              "Confirmed".tr) {
-                                            MapUtils.openMap(
-                                              double.parse(controller
-                                                  .useracceptmodel.sourceLat),
-                                              double.parse(controller
-                                                  .useracceptmodel.sourceLong),
-                                            );
-                                          } else {
-                                            MapUtils.openMap(
-                                              double.parse(controller
-                                                  .useracceptmodel
-                                                  .destinationLat),
-                                              double.parse(controller
-                                                  .useracceptmodel
-                                                  .destinationLong),
-                                            );
-                                          }
-                                        },
-                                      );
-                                },
+                                        // Get.toNamed(
+                                        //     RouteHelper.getCancelBookingScreenRoute(),
+                                        //     arguments: {
+                                        //       "bookingId": controller.useracceptmodel.bookingId.toString(),
+                                        //       "type": "Ride Now".tr
+                                        //     });
+                                      },
+                                      image: controller.useracceptmodel.image,
+                                      userName:
+                                          controller.useracceptmodel.userName,
+                                      paymentType: controller
+                                          .useracceptmodel.paymentMode,
+                                      price:
+                                          "\$ ${controller.useracceptmodel.totalPrice}",
+                                      pickupLocation:
+                                          controller.useracceptmodel.sourceAdd,
+                                      dropLocation: controller
+                                          .useracceptmodel.destinationAdd,
+                                      mapCallback: () {
+                                        if (controller.useracceptmodel.status ==
+                                            "Confirmed".tr) {
+                                          MapUtils.openMap(
+                                            double.parse(controller
+                                                .useracceptmodel.sourceLat),
+                                            double.parse(controller
+                                                .useracceptmodel.sourceLong),
+                                          );
+                                        } else {
+                                          MapUtils.openMap(
+                                            double.parse(controller
+                                                .useracceptmodel
+                                                .destinationLat),
+                                            double.parse(controller
+                                                .useracceptmodel
+                                                .destinationLong),
+                                          );
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                   contoller.driverArriveValue.value == true
                       ? SizedBox.shrink()
                       : contoller.onOff.value == true
@@ -675,27 +713,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                    Wrap(children: [
-                      _buildInfoBadge(
-                        icon: Icons.directions_car,
-                        value: "${list.distance}",
-                        color: MyColors.primary,
+                      Wrap(
+                        children: [
+                          _buildInfoBadge(
+                            icon: Icons.directions_car,
+                            value: "${list.distance}",
+                            color: MyColors.primary,
+                          ),
+                          SizedBox(
+                            width: 10,
+                          ),
+                          _buildInfoBadge(
+                            icon: Icons.access_time,
+                            value: list.duration,
+                            color: Colors.blue,
+                          ),
+                        ],
                       ),
-                      SizedBox(
-                        width: 10,
-                      ),
-                      _buildInfoBadge(
-                        icon: Icons.access_time,
-                        value: list.duration,
-                        color: Colors.blue,
-                      ),
-                    ],),
                       GestureDetector(
                         onTap: () {
                           showMoreInfo();
                         },
                         child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
@@ -703,8 +744,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon( Icons.info, size: 25, color: Colors.red.shade400),
-
+                              Icon(Icons.info,
+                                  size: 25, color: Colors.red.shade400),
                             ],
                           ),
                         ),
@@ -795,11 +836,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             isLoading: isLoadingPass,
                             isSecondary: true,
                             onPressed: () {
-                              contoller.cancelIndex = index;
-                              controller.cancelBooking(
+                              _showPassConfirmationDialog(
+                                context,
                                 list.bookingId,
-                                "",
-                                () => controller.rideNowBooking(),
+                                index,
                               );
                             },
                           ),
@@ -918,6 +958,91 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w600,
               ),
             ),
+    );
+  }
+
+  void _showPassConfirmationDialog(
+    BuildContext context,
+    String bookingId,
+    int index,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 40,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Sure to PASS ?".tr,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: "Poppins",
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Colors.grey),
+                      ),
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: Text(
+                        "No".tr,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyColors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                        contoller.cancelIndex = index;
+                        controller.cancelBooking(
+                          bookingId,
+                          "",
+                          () => controller.rideNowBooking(),
+                        );
+                      },
+                      child: Text(
+                        "Yes".tr,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1083,31 +1208,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-          
+
                 SizedBox(height: 16),
-          
+
                 // Pricing info in rows
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildInfoCard("💳", "Card Payment", "4% surcharge", context),
+                    _buildInfoCard(
+                        "💳", "Card Payment", "4% surcharge", context),
                     _buildInfoCard(
                         "⏳", "Waiting Time", "\$1 per minute", context),
                   ],
                 ),
-          
+
                 SizedBox(height: 16),
-          
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildInfoCard("🛣️", "Extra Travel", "\$3 per km", context),
-
-                    _buildInfoCard("💸️", "Prepaid Service", "", context),
+                    _buildInfoCard(
+                        "🛣️", "Extra Travel", "\$3 per km", context),
+                    _buildInfoCard("💸️", "Prepaid Service",
+                        "Taxi cards on Meter", context),
                   ],
                 ),
                 SizedBox(height: 8),
-          
+
                 Container(
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -1129,7 +1256,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 7,
                       ),
                       Text(
-                        "— price compare as approx guide only may NOT 100% accurate.",
+                        "— Price compare as guide only and may NOT be 100% accurate",
                         style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 13,
@@ -1140,9 +1267,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-          
+
                 SizedBox(height: 24),
-          
+
                 // Vehicle capacities section
                 Text(
                   "Vehicle Capacities",
@@ -1152,9 +1279,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.grey[800],
                       fontFamily: "Poppins"),
                 ),
-          
+
                 SizedBox(height: 12),
-          
+
                 Column(
                   children: [
                     _buildVehicleCapacity(
@@ -1169,9 +1296,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         "🚐", "VAN", "Up to 10 passengers + extra space"),
                   ],
                 ),
-          
+
                 SizedBox(height: 16),
-          
+
                 // Action button
                 Center(
                   child: ElevatedButton(
@@ -1181,7 +1308,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       elevation: 2,
                     ),
                     child: Text(
