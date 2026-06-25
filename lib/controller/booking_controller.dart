@@ -5,6 +5,7 @@ import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/booking_cancellation_dialog.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
@@ -36,15 +37,22 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   final completeText = "".obs;
   final deleteId = "".obs;
   Timer? timer;
+  Timer? _rideListRefreshTimer;
+  static const Duration _rideListRefreshInterval = Duration(seconds: 15);
 
-  UserAcceptBookingModel _userAcceptBookingModel = UserAcceptBookingModel.empty();
+  UserAcceptBookingModel _userAcceptBookingModel =
+      UserAcceptBookingModel.empty();
   UserAcceptBookingModel get useracceptmodel => _userAcceptBookingModel;
+
+  String _activeAcceptedBookingId = '';
+  bool _suppressUserCancellationDialog = false;
 
   @override
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     userAcceptBooking(() {});
+    startRideListAutoRefresh();
   }
 
   @override
@@ -61,11 +69,25 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void refreshData() {
-    rideNowBooking();
-    // rideLaterBooking();
-    userAcceptBooking(() {});
+  Future<void> refreshData() async {
+    await rideNowBooking();
+    await userAcceptBooking(() {});
     Get.find<MyRidesController>().rideLaterScreenBooking("", '');
+  }
+
+  /// Poll ride-now list while driver is online and not on an active trip.
+  void startRideListAutoRefresh() {
+    _rideListRefreshTimer?.cancel();
+    _rideListRefreshTimer = Timer.periodic(_rideListRefreshInterval, (_) {
+      if (!controller.onOff.value) return;
+      if (controller.hide.value || controller.driverArriveValue.value) return;
+      rideNowBooking();
+    });
+  }
+
+  void stopRideListAutoRefresh() {
+    _rideListRefreshTimer?.cancel();
+    _rideListRefreshTimer = null;
   }
 
   void adminApprove() {
@@ -75,20 +97,42 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   void cancel() {
     timer?.cancel();
+    stopRideListAutoRefresh();
   }
 
   Future<void> rideNowBooking() async {
     final rideNowBooking = {'driver_id': await secure.readData(secure.user_id)};
     try {
-      final response = await apiService.postData(URLS.FETCH_RIDE_NOW_BOOKING, rideNowBooking);
-      log("ride now booking response----->:${response.body}");
-      rideNowList.value = rideNowBookingModelFromJson(response.body);
+      final response = await apiService.postData(
+          URLS.FETCH_RIDE_NOW_BOOKING, rideNowBooking);
+      if (response.statusCode == 429) {
+        log("rideNowBooking: rate limited (429)");
+        return;
+      }
+      final body = response.body.trim();
+      log("ride now booking response----->:$body");
+      if (body.isEmpty || body.startsWith('<')) {
+        rideNowList.value = [];
+        datas.value = "";
+        return;
+      }
+      final decoded = jsonDecode(body);
+      if (decoded is List) {
+        rideNowList.value = decoded
+            .map((item) =>
+                RideNowBookingModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      } else {
+        log("rideNowBooking: unexpected JSON shape");
+        rideNowList.value = [];
+      }
       datas.value = rideNowList.isEmpty ? "" : "hello";
     } catch (e) {
       log("ride now booking Exception-----", error: e.toString());
+      rideNowList.value = [];
+      datas.value = "";
     }
   }
-
 
 /*
   void rideLaterBooking() async {
@@ -111,7 +155,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       "booking_id": bookingId,
     };
     try {
-      final response = await apiService.postData(URLS.DRIVER_ACCEPT_BOOKING, accept);
+      final response =
+          await apiService.postData(URLS.DRIVER_ACCEPT_BOOKING, accept);
       final body = response.body.trim();
       if (body.isEmpty || body.startsWith("<")) {
         acceptBookLoader.value = false;
@@ -125,8 +170,11 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         return;
       }
       if (data['result'] == "success") {
-        userAcceptBooking(() {});
+        rideNowList.removeWhere((item) => item.bookingId == bookingId);
+        await userAcceptBooking(() {});
+        await rideNowBooking();
         acceptBookLoader.value = false;
+        _activeAcceptedBookingId = bookingId;
         callback();
         Get.find<MyRidesController>().rideLaterScreenBooking("", '');
         customSnackBar("Booking Accepted successfully");
@@ -140,7 +188,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void cancelBooking(String bookingId, String reason, VoidCallback callback) async {
+  void cancelBooking(
+      String bookingId, String reason, VoidCallback callback) async {
     cancelBookLoader.value = true;
     final accept = {
       'driver_id': await secure.readData(secure.user_id),
@@ -149,7 +198,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     };
     log("parameter----------->$accept");
     try {
-      final response = await apiService.postData(URLS.DRIVER_CANCEL_BOOKING, accept);
+      final response =
+          await apiService.postData(URLS.DRIVER_CANCEL_BOOKING, accept);
       final body = response.body.trim();
       if (body.isEmpty || body.startsWith("<")) {
         cancelBookLoader.value = false;
@@ -163,9 +213,11 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         return;
       }
       if (data['result'] == "success") {
+        rideNowList.removeWhere((item) => item.bookingId == bookingId);
         completeText.value = "";
         cancelBookLoader.value = false;
-        userAcceptBooking(() {});
+        await userAcceptBooking(() {});
+        await rideNowBooking();
         callback();
         customSnackBar("Booking Canceled");
       } else {
@@ -178,7 +230,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void driverBookingCancel(String bookingId, String reason, VoidCallback callback) async {
+  void driverBookingCancel(
+      String bookingId, String reason, VoidCallback callback) async {
     cancelStartBookLoader.value = true;
     final accept = {
       'driver_id': await secure.readData(secure.user_id),
@@ -206,6 +259,9 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         controller.onOff.value = true;
         controller.hide.value = false;
         cancelStartBookLoader.value = false;
+        _suppressUserCancellationDialog = true;
+        _activeAcceptedBookingId = '';
+        BookingCancellationDialog.clearLastShown();
         callback();
         customSnackBar("Booking Canceled".tr);
       } else {
@@ -223,7 +279,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   Future<void> userAcceptBooking([VoidCallback? callback]) async {
     final user = {"driver_id": await secure.readData(secure.user_id)};
     try {
-      final response = await apiService.postData(URLS.USER_ACCEPT_BOOKING, user);
+      final response =
+          await apiService.postData(URLS.USER_ACCEPT_BOOKING, user);
       if (response.statusCode == 429) {
         log("userAcceptBooking: rate limited (429)");
         callback?.call();
@@ -243,10 +300,20 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       }
       final bookingIdRaw = data['booking_id'];
       final bookingIdStr = bookingIdRaw == null ? "" : bookingIdRaw.toString();
+      final previousActiveId = _activeAcceptedBookingId;
       deleteId.value = bookingIdStr;
       if (bookingIdStr.isEmpty) {
+        final hadActiveBooking = previousActiveId.isNotEmpty;
         resetControllerState();
+        _activeAcceptedBookingId = '';
+        await rideNowBooking();
+        if (hadActiveBooking && !_suppressUserCancellationDialog) {
+          BookingCancellationDialog.show(previousActiveId);
+        }
+        _suppressUserCancellationDialog = false;
       } else {
+        _activeAcceptedBookingId = bookingIdStr;
+        _suppressUserCancellationDialog = false;
         updateBookingState(data);
       }
       log("response user data accept$data");
@@ -264,7 +331,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     final sourceLat = double.parse(_userAcceptBookingModel.sourceLat);
     final sourceLong = double.parse(_userAcceptBookingModel.sourceLong);
     final destinationLat = double.parse(_userAcceptBookingModel.destinationLat);
-    final destinationLong = double.parse(_userAcceptBookingModel.destinationLong);
+    final destinationLong =
+        double.parse(_userAcceptBookingModel.destinationLong);
 
     switch (status) {
       case "Confirmed":
@@ -351,9 +419,27 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     // controller.onOff.value = true;
     controller.hide.value = false;
     completeText.value = "";
+    _userAcceptBookingModel = UserAcceptBookingModel.empty();
   }
 
-  void statusChange(String status, String bookingId, String endDate, String endTime, VoidCallback callback) async {
+  /// Passenger cancelled — reset trip UI and show global popup (FCM / polling).
+  void handleUserSideCancellationShowDialog(String bookingId) {
+    final id = bookingId.trim().isNotEmpty
+        ? bookingId.trim()
+        : (_activeAcceptedBookingId.isNotEmpty
+            ? _activeAcceptedBookingId
+            : deleteId.value);
+    _suppressUserCancellationDialog = true;
+    _activeAcceptedBookingId = '';
+    resetControllerState();
+    if (id.isNotEmpty) {
+      BookingCancellationDialog.show(id);
+    }
+    rideNowBooking();
+  }
+
+  void statusChange(String status, String bookingId, String endDate,
+      String endTime, VoidCallback callback) async {
     statusChangeLoader.value = true;
     final statusData = {
       "driver_id": await secure.readData(secure.user_id),
@@ -362,7 +448,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     };
     log("status change----------->:$statusData");
     try {
-      final response = await apiService.postData(URLS.STATUS_CHANGE, statusData);
+      final response =
+          await apiService.postData(URLS.STATUS_CHANGE, statusData);
       final data = _decodeJsonSafely(response.body);
       if (data == null) {
         statusChangeLoader.value = false;
@@ -374,6 +461,9 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       if (_isStatusChangeSuccessful(result)) {
         _applyImmediateStateForStatus(status);
         await userAcceptBooking();
+        if (status == 'end_ride') {
+          await rideNowBooking();
+        }
         callback();
       } else {
         customSnackBar(result.isEmpty ? "Something went wrong".tr : result);
@@ -394,7 +484,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     };
     log('latlong---------->$map');
     try {
-      final response = await apiService.postData(URLS.DRIVER_UPDATE_LAT_LONG, map);
+      final response =
+          await apiService.postData(URLS.DRIVER_UPDATE_LAT_LONG, map);
       final jsonString = _decodeJsonSafely(response.body);
       if (jsonString == null) return;
       log('latlng response----------${response.body}');
@@ -409,7 +500,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     final logout = {"driver_id": await secure.readData(secure.user_id)};
     log("logout id :------>:$logout");
     try {
-      final response = await apiService.postData(URLS.check_driver_admin_status, logout);
+      final response =
+          await apiService.postData(URLS.check_driver_admin_status, logout);
       final jsonString = _decodeJsonSafely(response.body);
       if (jsonString == null) {
         // Avoid crashing polling loop when API occasionally returns empty body.
@@ -460,6 +552,9 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         controller.painButton.value = true;
         break;
       case "end_ride":
+        _activeAcceptedBookingId = '';
+        _suppressUserCancellationDialog = true;
+        BookingCancellationDialog.clearLastShown();
         resetControllerState();
         controller.onOff.value = true;
         break;

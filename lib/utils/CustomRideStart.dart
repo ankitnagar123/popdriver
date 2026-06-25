@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -236,9 +235,9 @@ class _CustomRideStartState extends State<CustomRideStart> {
                             SizedBox(height: 5),
                             InkWell(
                               onTap: () {
-                                final message =
-                                    controller.useracceptmodel.locationUrl
-                                        .trim();
+                                final message = controller
+                                    .useracceptmodel.locationUrl
+                                    .trim();
                                 if (message.isEmpty) return;
                                 Share.share(message);
                               },
@@ -260,8 +259,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                     padding: const EdgeInsets.only(left: 23),
                     child: Text(
                       "pickup point".tr,
-                      style:
-                          TextStyle(fontSize: 13, fontFamily: "Poppins"),
+                      style: TextStyle(fontSize: 13, fontFamily: "Poppins"),
                     ),
                   ),
                   Row(
@@ -323,8 +321,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
@@ -332,9 +330,6 @@ class _CustomRideStartState extends State<CustomRideStart> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.attach_money,
-                                  size: 16, color: Colors.green),
-                              SizedBox(width: 4),
                               Text(
                                 widget.price,
                                 style: TextStyle(
@@ -443,8 +438,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                   Get.toNamed(
                                       RouteHelper.getStartRideOtpScreenRoute(),
                                       arguments: {
-                                        'id': controller
-                                            .useracceptmodel.bookingId
+                                        'id':
+                                            controller.useracceptmodel.bookingId
                                       });
                                 } else if (controller.useracceptmodel.status ==
                                     "Start Ride") {
@@ -506,9 +501,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierLabel: MaterialLocalizations
-          .of(context)
-          .modalBarrierDismissLabel,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       pageBuilder: (context, anim1, anim2) {
         return Obx(() {
@@ -522,14 +515,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
               child: Padding(
                 padding: const EdgeInsets.all(5.0),
                 child: SizedBox(
-                  height: MediaQuery
-                      .of(context)
-                      .size
-                      .height / 1.8,
-                  width: MediaQuery
-                      .of(context)
-                      .size
-                      .width,
+                  height: MediaQuery.of(context).size.height / 1.8,
+                  width: MediaQuery.of(context).size.width,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10.0, vertical: 10),
@@ -551,7 +538,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                             color: Color(0xff0FB970),
                                             width: 4.0),
                                         borderRadius:
-                                        BorderRadius.circular(60)),
+                                            BorderRadius.circular(60)),
                                     child: Center(
                                       child: Icon(
                                         Icons.check,
@@ -626,24 +613,23 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                     ),
                                     Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
+                                      crossAxisAlignment:
                                           CrossAxisAlignment.start,
-                                          children: [
-                                            SizedBox(
-                                              width: Get.width / 1.5,
-                                              child: Text(
-                                                list.destinationAdd,
-                                                maxLines: 2,
-                                                softWrap: false,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight
-                                                        .bold),
-                                              ),
-                                            ),
-                                          ],
-                                        ))
+                                      children: [
+                                        SizedBox(
+                                          width: Get.width / 1.5,
+                                          child: Text(
+                                            list.destinationAdd,
+                                            maxLines: 2,
+                                            softWrap: false,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ))
                                   ],
                                 ),
                                 SizedBox(
@@ -651,11 +637,11 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                 ),
                                 Row(
                                   mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
-                                      /*  Container(
+                                        /*  Container(
                                           height: 30,
                                           width: 30,
                                           decoration: BoxDecoration(
@@ -704,7 +690,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                           polyline.clear();
                                           contoller.hide.value = false;
                                           contoller.driverArriveValue.value =
-                                          false;
+                                              false;
                                           contoller.arriveDriver.value = "";
                                           contoller.painButton.value = false;
                                           controller.completeText.value = "";
@@ -729,7 +715,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
     );
   }
 
-  Widget _buildInfoBadge({required IconData icon, required String value, required Color color}) {
+  Widget _buildInfoBadge(
+      {required IconData icon, required String value, required Color color}) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
       decoration: BoxDecoration(
@@ -763,7 +750,6 @@ class _CustomRideStartState extends State<CustomRideStart> {
       openAppSettings();
     }*/
   }
-
 
   Future showMoreInfo() {
     return showDialog(
@@ -812,7 +798,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildInfoCard("💳", "Card Payment", "4% surcharge", context),
+                    _buildInfoCard(
+                        "💳", "Card Payment", "4% surcharge", context),
                     _buildInfoCard(
                         "⏳", "Waiting Time", "\$1 per minute", context),
                   ],
@@ -823,7 +810,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildInfoCard("🛣️", "Extra Travel", "\$3 per km", context),
+                    _buildInfoCard(
+                        "🛣️", "Extra Travel", "\$3 per km", context),
                     _buildInfoCard("💸️", "Prepaid Service", "", context),
                   ],
                 ),
@@ -902,7 +890,8 @@ class _CustomRideStartState extends State<CustomRideStart> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       elevation: 2,
                     ),
                     child: Text(

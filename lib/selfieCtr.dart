@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:camera/camera.dart';
-import 'package:dio/dio.dart'as DIO;
+import 'package:dio/dio.dart' as DIO;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mtaanidriver/controller/home_screen_controller.dart';
@@ -25,7 +25,7 @@ class SelfieController extends GetxController {
 
     final cameras = await availableCameras();
     final frontCamera = cameras.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.front,
+      (camera) => camera.lensDirection == CameraLensDirection.front,
     );
 
     cameraController = CameraController(frontCamera, ResolutionPreset.high);
@@ -36,10 +36,8 @@ class SelfieController extends GetxController {
   final SecureStorageService secure = SecureStorageService();
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
-
   var sendSelfieLoader = true.obs;
   var sendSelfieLoader1 = false.obs;
-
 
   DIO.Dio dioClient = DIO.Dio();
 
@@ -51,7 +49,6 @@ class SelfieController extends GetxController {
       capturedImage.value = File(file.path);
     });
   }
-
 
   void selfieUpload(VoidCallback callback) async {
     sendSelfieLoader1.value = true;
@@ -83,9 +80,13 @@ class SelfieController extends GetxController {
       log("Driver selfie-Upload Response --------- $jsonString");
 
       if (jsonString['result'].toString() == "successfully update") {
+        final homeController = Get.find<HomeController>();
+        if (!homeController.canGoOnline()) {
+          sendSelfieLoader1.value = false;
+          return;
+        }
         sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);
 
-        final homeController = Get.find<HomeController>();
         homeController.onOff.value = true;
         log("contoller.onOff.value---- Online Time${homeController.onOff.value}");
 
@@ -105,7 +106,6 @@ class SelfieController extends GetxController {
       log("Exception------", error: e.toString());
     }
   }
-
 
   @override
   void onClose() {

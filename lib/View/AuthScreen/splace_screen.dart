@@ -7,7 +7,6 @@ import '../../route_helper/route_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import '../../controller/auth_controller.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,8 +29,6 @@ class _SplashScreenState extends State<SplashScreen> {
   PermissionController? controller;
   AuthController? controllers;
   SplashController splashController = Get.put(SplashController());
-  static const platform = MethodChannel('com.taxi.columbia/developer_mode');
-  bool _isDeveloperModeOn = false;
 
   @override
   void initState() {
@@ -46,15 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
       controllers = Get.find<AuthController>();
       print("Controllers found successfully");
 
-      if (Platform.isAndroid) {
-        if (kReleaseMode) {
-          _checkDeveloperMode();
-        } else {
-          requestLocationPermission();
-        }
-      } else {
-        requestLocationPermission();
-      }
+      _startSplashFlow();
     } catch (e) {
       print("Error initializing controllers: $e");
       print("Stack trace: ${StackTrace.current}");
@@ -64,28 +53,25 @@ class _SplashScreenState extends State<SplashScreen> {
         controllers = Get.put(AuthController());
         print("Controllers created successfully as fallback");
 
-        if (Platform.isAndroid) {
-          if (kReleaseMode) {
-            _checkDeveloperMode();
-          } else {
-            requestLocationPermission();
-          }
-        } else {
-          requestLocationPermission();
-        }
+        _startSplashFlow();
       } catch (fallbackError) {
         print("Error in fallback controller creation: $fallbackError");
-        // If even fallback fails, just proceed without controllers
-        if (Platform.isAndroid) {
-          if (kReleaseMode) {
-            _checkDeveloperMode();
-          } else {
-            requestLocationPermission();
-          }
-        } else {
-          requestLocationPermission();
-        }
+        _startSplashFlow();
       }
+    }
+  }
+
+  /// No longer calls the unimplemented `developer_mode` platform channel (would throw
+  /// [MissingPluginException] in release and block the splash). Optional root check on Android release only.
+  void _startSplashFlow() {
+    if (!Platform.isAndroid) {
+      requestLocationPermission();
+      return;
+    }
+    if (kReleaseMode) {
+      _checkRootThenProceed();
+    } else {
+      requestLocationPermission();
     }
   }
 
@@ -107,66 +93,21 @@ class _SplashScreenState extends State<SplashScreen> {
         ));
   }
 
-  Future<void> _checkDeveloperMode() async {
-    if (Platform.isAndroid) {
-      var deviceInfo = DeviceInfoPlugin();
-      var androidInfo = await deviceInfo.androidInfo;
-      bool isDeveloperModeEnabled = false;
-
-      try {
-        final bool result =
-            await platform.invokeMethod('isDeveloperModeEnabled');
-        isDeveloperModeEnabled = result;
-      } on PlatformException catch (e) {
-        print("Failed to check developer mode: '${e.message}'.");
-      }
-
-      setState(() {
-        _isDeveloperModeOn =
-            androidInfo.isPhysicalDevice && isDeveloperModeEnabled;
-      });
-
-      bool? isRooted = await RootCheckerPlus.isRootChecker();
-      bool hasRootDirectories = await checkRootDirectories();
-
-      if (_isDeveloperModeOn) {
-        _showDeveloperModeAlert();
-      } else if (isRooted! || hasRootDirectories) {
+  Future<void> _checkRootThenProceed() async {
+    try {
+      final bool? isRooted = await RootCheckerPlus.isRootChecker();
+      final bool hasRootDirectories = await checkRootDirectories();
+      if (!mounted) return;
+      if (isRooted == true || hasRootDirectories) {
         handleRootDetection();
       } else {
         requestLocationPermission();
       }
+    } catch (e, st) {
+      log('Root check failed (proceeding to app): $e', stackTrace: st);
+      if (!mounted) return;
+      requestLocationPermission();
     }
-  }
-
-  Future<void> _openDeveloperOptions() async {
-    try {
-      await platform.invokeMethod('openDeveloperOptions');
-    } on PlatformException catch (e) {
-      print("Failed to open developer options: '${e.message}'.");
-    }
-  }
-
-  void _showDeveloperModeAlert() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Turn of USB debugging"),
-          content: Text(
-              "USB debugging mode seems to be active on your phone. This makes your device vulnerable to data theft"),
-          actions: <Widget>[
-            TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                SystemNavigator.pop();
-                _openDeveloperOptions(); // Developer options settings page kholta hai
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void handleRootDetection() {

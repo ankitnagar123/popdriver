@@ -1,0 +1,116 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import 'colors.dart';
+
+/// Global popup when passenger cancels an accepted/active booking.
+class BookingCancellationDialog {
+  static String? _lastShownBookingId;
+
+  static String extractBookingId(RemoteMessage message) {
+    final dataId = message.data['booking_id']?.toString() ??
+        message.data['bookingId']?.toString() ??
+        '';
+    if (dataId.trim().isNotEmpty) return dataId.trim();
+
+    final body = message.notification?.body ??
+        message.data['body']?.toString() ??
+        message.data['message']?.toString() ??
+        '';
+    final hashMatch = RegExp(r'#(\d+)').firstMatch(body);
+    if (hashMatch != null) return hashMatch.group(1)!;
+
+    final idMatch = RegExp(r'booking\s*#?\s*(\d+)', caseSensitive: false)
+        .firstMatch(body);
+    if (idMatch != null) return idMatch.group(1)!;
+
+    return '';
+  }
+
+  static void show(String bookingId) {
+    final id = bookingId.trim();
+    if (id.isEmpty) return;
+
+    // Avoid duplicate popup for the same cancellation burst.
+    if (_lastShownBookingId == id) return;
+    _lastShownBookingId = id;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final dialogContext = Get.overlayContext ?? Get.context;
+      if (dialogContext == null || !dialogContext.mounted) return;
+
+      showDialog<void>(
+        context: dialogContext,
+        barrierDismissible: false,
+        builder: (dialogCtx) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.cancel_outlined,
+                  color: Colors.red.shade600,
+                  size: 52,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Booking Cancelled'.tr,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Booking #@id cancelled'.trParams({'id': id}),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.45,
+                    color: MyColors.DarkBlue.withOpacity(0.9),
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'OK'.tr,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  static void clearLastShown() {
+    _lastShownBookingId = null;
+  }
+}

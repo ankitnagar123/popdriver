@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:get/get.dart';
+import 'package:mtaanidriver/controller/booking_controller.dart';
 import 'package:mtaanidriver/controller/rating_controller.dart';
 import 'package:mtaanidriver/utils/colors.dart';
 import 'package:mtaanidriver/utils/snackBar.dart';
@@ -78,7 +79,10 @@ class _RatingScreenState extends State<RatingScreen>
         title: Row(
           children: [
             IconButton(
-              onPressed: () => Get.back(),
+              onPressed: () {
+                Get.find<BookingController>().rideNowBooking();
+                Get.back();
+              },
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             ),
             Expanded(

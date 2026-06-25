@@ -310,8 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             deviseName.toString(),
                             accessToken.toString(),
                             _checked!,
-                            context
-                        );
+                            context);
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -362,10 +361,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   bool valid() {
-     if (phoneCtr.text.isEmpty) {
-    customSnackBar("Please Enter Mobile Number".tr);
+    if (phoneCtr.text.isEmpty) {
+      customSnackBar("Please Enter Mobile Number".tr, context: context);
     } else if (passwordCtr.text.isEmpty) {
-      customSnackBar("Please Enter Your Password".tr);
+      customSnackBar("Please Enter Your Password".tr, context: context);
     } else {
       return true;
     }
