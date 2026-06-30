@@ -131,6 +131,7 @@
 import '../../../utils/colors.dart';
 import '../../../utils/shared_preferences.dart';
 import '../../../utils/snackBar.dart';
+import '../../../utils/web_auth_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -156,56 +157,83 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: wide ? const Color(0xFFF8FAFA) : Colors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        automaticallyImplyLeading: !wide,
+        leading: wide
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
         backgroundColor: MyColors.primary,
-        elevation: 4,
-        title:   Row(
-          children: [
-            Image.asset(
-              'assets/images/headLogo.png',
-              height: 28,
-            ),  Image.asset(
-              color: Colors.white,
-              'assets/images/stearing.png',
-              height: 37,
-            ),
-
-          ],
-        ),
+        elevation: wide ? 0 : 4,
+        title: wide
+            ? Text(
+                'Invite Friends'.tr,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/headLogo.png', height: 28),
+                  Image.asset(
+                    color: Colors.white,
+                    'assets/images/stearing.png',
+                    height: 37,
+                  ),
+                ],
+              ),
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text("Invite Friends".tr,
-
-                style: TextStyle(fontSize: 18,color: Colors.black, )),
-            SizedBox(height: 10,),
-            _buildHeroSection(),
-            SizedBox(height: 40),
-            _buildInviteMessage(),
-            SizedBox(height: 32),
-            _buildReferralLink(),
-            SizedBox(height: 40),
-            // _buildIncentiveCard(),
-            // SizedBox(height: 32),
-            _buildInviteButton(),
-          ],
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 24 : 16,
+            vertical: wide ? 28 : 16,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: wide ? 520 : double.infinity),
+            child: WebAuthLayout.formCard(
+              context: context,
+              padding: EdgeInsets.all(wide ? 28 : 20),
+              child: Column(
+                children: [
+                  if (!wide)
+                    Text(
+                      'Invite Friends'.tr,
+                      style: const TextStyle(fontSize: 18, color: Colors.black),
+                    ),
+                  if (!wide) const SizedBox(height: 10),
+                  _buildHeroSection(wide),
+                  SizedBox(height: wide ? 28 : 40),
+                  _buildInviteMessage(wide),
+                  SizedBox(height: wide ? 28 : 32),
+                  _buildReferralLink(wide),
+                  SizedBox(height: wide ? 28 : 40),
+                  _buildInviteButton(),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeroSection() {
+  Widget _buildHeroSection(bool wide) {
+    final size = wide ? 130.0 : 160.0;
     return Container(
-      width: 160,
-      height: 160,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: MyColors.primary.withOpacity(0.1),
         shape: BoxShape.circle,
@@ -219,25 +247,32 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
     );
   }
 
-  Widget _buildInviteMessage() {
+  Widget _buildInviteMessage(bool wide) {
     return Column(
       children: [
-        Text("Share the Love ❤️",
-            style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800])),
-        SizedBox(height: 12),
-        Text("Invite your friends to join POP Taxi and earn rewards together!",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600])),
+        Text(
+          'Share the Love ❤️',
+          style: TextStyle(
+            fontSize: wide ? 22 : 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Invite your friends to join POP Taxi and earn rewards together!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: wide ? 14 : 16,
+            color: Colors.grey[600],
+            height: 1.45,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildReferralLink() {
+  Widget _buildReferralLink(bool wide) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

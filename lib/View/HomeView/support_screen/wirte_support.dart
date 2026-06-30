@@ -1,4 +1,5 @@
 import 'package:email_validator/email_validator.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -7,6 +8,7 @@ import '../../../Model/fetchQueryModel.dart';
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/snackBar.dart';
+import '../../../utils/web_auth_layout.dart';
 
 class WriteSupport extends StatefulWidget {
   const WriteSupport({super.key});
@@ -44,65 +46,108 @@ class _WriteSupportState extends State<WriteSupport> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return GestureDetector(
       onTap: _dismissKeyboard,
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-      backgroundColor: MyColors.background,
-      appBar: AppBar(
-        elevation: 0,
-        iconTheme: const IconThemeData(color: MyColors.white),
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF02B3BE),
-                Color(0xFF019BA5),
-                Color(0xFF017A82),
-              ],
+        backgroundColor:
+            wide ? const Color(0xFFF8FAFA) : MyColors.background,
+        appBar: AppBar(
+          elevation: 0,
+          iconTheme: const IconThemeData(color: MyColors.white),
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF02B3BE),
+                  Color(0xFF019BA5),
+                  Color(0xFF017A82),
+                ],
+              ),
             ),
           ),
-        ),
-        title: Text(
-          'Write Support'.tr,
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w600,
-            fontSize: 17,
-            color: Colors.white,
+          title: Text(
+            'Write Support'.tr,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              fontSize: wide ? 18 : 17,
+              color: Colors.white,
+            ),
           ),
+          centerTitle: true,
         ),
-        centerTitle: true,
+        body: _buildBody(context),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildComposeCard(),
-            const SizedBox(height: 20),
-            _buildTicketsSection(),
-          ],
-        ),
-      ),
-    ),
     );
   }
 
-  Widget _buildComposeCard() {
+  Widget _buildBody(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final twoColumn = wide && width >= 960;
+
+    final compose = _buildComposeCard(wide: wide);
+    final tickets = _buildTicketsSection(wide: wide);
+
+    final content = twoColumn
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: compose),
+              const SizedBox(width: 24),
+              Expanded(child: tickets),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              compose,
+              SizedBox(height: wide ? 24 : 20),
+              tickets,
+            ],
+          );
+
+    if (!wide) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: content,
+      );
+    }
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: width >= 1200 ? 40 : 24,
+          vertical: kIsWeb ? 24 : 28,
+        ),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: twoColumn ? 1080 : 560),
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComposeCard({required bool wide}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(wide ? 24 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(wide ? 20 : 16),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: wide ? 0.06 : 0.04),
+            blurRadius: wide ? 16 : 8,
             offset: const Offset(0, 2),
           ),
         ],
@@ -113,67 +158,80 @@ class _WriteSupportState extends State<WriteSupport> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(wide ? 10 : 8),
                 decoration: BoxDecoration(
                   color: MyColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.mail_outline_rounded,
                   color: MyColors.primary,
-                  size: 22,
+                  size: wide ? 24 : 22,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Send us a message'.tr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 15,
+                    fontSize: wide ? 17 : 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: wide ? 20 : 16),
           _labeledField(
             label: 'Email Address'.tr,
+            wide: wide,
             child: TextFormField(
               controller: emailCtr,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-              decoration: _inputDecoration('your@email.com'),
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: wide ? 14 : 13,
+              ),
+              decoration: _inputDecoration('your@email.com', wide: wide),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: wide ? 16 : 12),
           _labeledField(
             label: 'Subject Line*'.tr,
+            wide: wide,
             child: TextFormField(
               controller: subCtr,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-              decoration: _inputDecoration('Brief subject'),
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: wide ? 14 : 13,
+              ),
+              decoration: _inputDecoration('Brief subject', wide: wide),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: wide ? 16 : 12),
           _labeledField(
             label: 'Message*'.tr,
+            wide: wide,
             child: TextFormField(
               controller: messageCtr,
               keyboardType: TextInputType.multiline,
-              maxLines: 5,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              maxLines: wide ? 7 : 5,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: wide ? 14 : 13,
+              ),
               decoration: _inputDecoration(
                 'Write your message, feedback or enquiry'.tr,
+                wide: wide,
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: wide ? 22 : 18),
           Obx(() {
             final loading = controller.writeSupportLoader.value;
             return SizedBox(
-              height: 44,
+              height: wide ? 48 : 44,
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: loading ? null : _submit,
@@ -195,10 +253,10 @@ class _WriteSupportState extends State<WriteSupport> {
                       )
                     : Text(
                         'Submit'.tr,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontSize: wide ? 15 : 14,
                           color: Colors.white,
                         ),
                       ),
@@ -210,7 +268,7 @@ class _WriteSupportState extends State<WriteSupport> {
     );
   }
 
-  Widget _buildTicketsSection() {
+  Widget _buildTicketsSection({required bool wide}) {
     return Obx(() {
       final loading = controller.fetchQueryLoader.value;
       final tickets = controller.fetchQueryList;
@@ -222,9 +280,9 @@ class _WriteSupportState extends State<WriteSupport> {
             children: [
               Text(
                 'My support tickets'.tr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 14,
+                  fontSize: wide ? 16 : 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -250,11 +308,21 @@ class _WriteSupportState extends State<WriteSupport> {
           const SizedBox(height: 8),
           if (!loading && tickets.isEmpty)
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              padding: EdgeInsets.all(wide ? 28 : 20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(wide ? 16 : 14),
                 border: Border.all(color: Colors.grey.shade200),
+                boxShadow: wide
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Text(
                 'No tickets yet. Submit a message above.'.tr,
@@ -267,22 +335,31 @@ class _WriteSupportState extends State<WriteSupport> {
               ),
             )
           else
-            ...tickets.reversed.map(_ticketCard),
+            ...tickets.reversed.map((t) => _ticketCard(t, wide: wide)),
         ],
       );
     });
   }
 
-  Widget _ticketCard(FetchQueryModel data) {
+  Widget _ticketCard(FetchQueryModel data, {required bool wide}) {
     final isOpen = data.status.toLowerCase() == 'opened';
     final statusColor = isOpen ? Colors.green.shade700 : Colors.red.shade600;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: wide ? 12 : 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(wide ? 16 : 14),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: wide
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -294,9 +371,9 @@ class _WriteSupportState extends State<WriteSupport> {
               'number': data.complainNumber,
             },
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(wide ? 16 : 14),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(wide ? 16 : 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -377,7 +454,11 @@ class _WriteSupportState extends State<WriteSupport> {
     );
   }
 
-  Widget _labeledField({required String label, required Widget child}) {
+  Widget _labeledField({
+    required String label,
+    required Widget child,
+    bool wide = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -385,7 +466,7 @@ class _WriteSupportState extends State<WriteSupport> {
           label,
           style: TextStyle(
             fontFamily: 'Poppins',
-            fontSize: 12,
+            fontSize: wide ? 13 : 12,
             fontWeight: FontWeight.w500,
             color: Colors.grey.shade700,
           ),
@@ -396,13 +477,16 @@ class _WriteSupportState extends State<WriteSupport> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
+  InputDecoration _inputDecoration(String hint, {bool wide = false}) {
     return InputDecoration(
       filled: true,
       fillColor: MyColors.background,
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      hintStyle: TextStyle(fontSize: wide ? 13 : 12, color: Colors.grey.shade500),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: wide ? 14 : 12,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade300),

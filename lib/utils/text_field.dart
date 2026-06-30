@@ -54,8 +54,8 @@ class custom_textfield extends StatelessWidget {
 
           Container(
             height: 50,
-            width: context.width,
-            padding: const EdgeInsets.only(left: 10,top: 0),
+            width: double.infinity,
+            padding: const EdgeInsets.only(left: 10, top: 0),
             margin: const EdgeInsets.only(top: 5),
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(

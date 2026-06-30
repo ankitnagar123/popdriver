@@ -11,6 +11,8 @@ import 'package:mtaanidriver/utils/snackBar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'Network/urls.dart';
+
 class SelfieController extends GetxController {
   late CameraController cameraController;
   Rx<File?> capturedImage = Rx<File?>(null);
@@ -72,7 +74,7 @@ class SelfieController extends GetxController {
 
     try {
       final response = await dioClient.post(
-        "https://cisswork.com/Android/PopRide/API/update_driver_salfie.php",
+        URLS.api(URLS.UPDATE_DRIVER_SELFIE),
         data: formdata,
       );
 

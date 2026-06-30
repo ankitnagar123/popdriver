@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:mtaanidriver/utils/colors.dart';
+import 'package:mtaanidriver/utils/web_auth_layout.dart';
+import 'package:mtaanidriver/widgets/web_driver_sidebar.dart';
 
 import '../../../controller/route_controller.dart';
+import '../../AuthScreen/ChangePassword.dart';
 import '../Menu_bar/menu_bar_screen.dart';
-import '../drawer_tab_screen/my_ride_screen.dart';
+import '../drawer_tab_screen/invite_friend_screen.dart';
+import '../drawer_tab_screen/notification_screen.dart';
+import '../drawer_tab_screen/rating_screen.dart';
 import '../drawer_tab_screen/ride_history/ride_history.dart';
 import '../home_screen.dart';
 import '../profile_screens/profile.dart';
-import '../wallet_screen/EarningList.dart';
+import '../support_screen/support_sceen.dart';
 import '../wallet_screen/wallet_screen.dart';
 
 
@@ -25,63 +31,83 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
 
 
   RouteController routeController = Get.put(RouteController());
-  final List<Widget> _pages = [
+
+  final List<Widget> _mobilePages = [
     const HomeScreen(),
     const RideHistory(),
-    const RideHistory(),
-     // Earninglist(),
-    // const WalletScreen(),
-    // const ProfileScreen(),
+    const WalletScreen(),
     MtaaniSidebar(),
+  ];
+
+  final List<Widget> _webPages = [
+    const HomeScreen(),
+    const RideHistory(),
+    const WalletScreen(),
+    const NotificationScreen(),
+    const RatingScreen(),
+    const Support(),
+    const ProfileScreen(),
+    const InviteFriendScreen(),
+    const ChangePassword(),
   ];
 
   Future<bool> _onWillPop() async {
     final shouldExit = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: MyColors.black.withOpacity(0.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: Colors.grey.shade800),
-        ),
-        title: Row(
-          children: const [
-            Icon(Icons.exit_to_app_sharp, color: Colors.white, size: 30),
-            SizedBox(width: 10),
-            Text("Exit App", style: TextStyle(fontFamily: "Poppins", color: Colors.white,fontSize: 20)),
-          ],
-        ),
-        content: const Text(
-          "Do you want to exit the app?",
-          style: TextStyle(fontFamily: "Poppins", fontSize: 15,color: MyColors.white),
-        ),
-        actions: [
-          ElevatedButton(
-
-            onPressed: () => Navigator.of(context).pop(false),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white10,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text(
-              "No",
-              style: TextStyle(color: Colors.white, fontFamily: "Poppins", fontWeight: FontWeight.w500),
-            ),
+      builder: (context) => WebAuthLayout.dialog(
+        context: context,
+        maxWidth: 400,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.exit_to_app_sharp, color: MyColors.primary, size: 28),
+                  SizedBox(width: 10),
+                  Text(
+                    'Exit App',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Do you want to exit the app?',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 15),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('No'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyColors.primary,
+                      ),
+                      child: const Text(
+                        'Yes',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(true); // Return true to proceed with exit
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: MyColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text(
-              "Yes",
-              style: TextStyle(color: Colors.white, fontFamily: "Poppins", fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
+        ),
       ),
     );
 
@@ -93,6 +119,47 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   }
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return _buildWebShell(context);
+    }
+    return _buildMobileShell(context);
+  }
+
+  Widget _buildWebShell(BuildContext context) {
+    return Obx(() {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (routeController.pageIndex.value != 0) {
+            routeController.pageIndex.value = 0;
+          } else {
+            await _onWillPop();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF4F7F7),
+          body: Row(
+            children: [
+              WebDriverSidebar(
+                selectedIndex: routeController.pageIndex.value,
+                onSelected: (i) => routeController.pageIndex.value = i,
+              ),
+              Expanded(
+                child: ClipRect(
+                  child: _webPages[routeController.pageIndex.value.clamp(
+                    0,
+                    _webPages.length - 1,
+                  )],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildMobileShell(BuildContext context) {
     return Obx(() {
       return PopScope(
         canPop: false,
@@ -248,7 +315,10 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
               ),
             );
           }),
-          body: _pages[routeController.pageIndex.value],
+          body: _mobilePages[routeController.pageIndex.value.clamp(
+            0,
+            _mobilePages.length - 1,
+          )],
         ),
       );
     });

@@ -11,7 +11,6 @@ import '../Model/driver_ride_later_model.dart';
 import '../Model/fetch_driver_booking_details.dart';
 import 'booking_controller.dart';
 
-
 class MyRidesController extends GetxController {
   ApiService apiService = ApiService();
   SecureStorageService secure = SecureStorageService();
@@ -61,8 +60,7 @@ class MyRidesController extends GetxController {
           sum += double.tryParse(ride.totalPrice.trim()) ?? 0;
         }
       }
-      return sum.toStringAsFixed(
-          sum.truncateToDouble() == sum ? 0 : 1);
+      return sum.toStringAsFixed(sum.truncateToDouble() == sum ? 0 : 1);
     }
     return totalEarning.value.isEmpty ? '0' : totalEarning.value;
   }
@@ -88,7 +86,7 @@ class MyRidesController extends GetxController {
     }
   }
 
-  void rideHistory(String startDate, String endDate,type ) async {
+  void rideHistory(String startDate, String endDate, type) async {
     historyLoader.value = true;
     Map<String, dynamic> map = {
       "driver_id": await secure.readData(secure.user_id),
@@ -115,7 +113,8 @@ class MyRidesController extends GetxController {
     }
   }
 
-  void fetchDriverBookingDetails(String bookingId, VoidCallback callback) async {
+  void fetchDriverBookingDetails(
+      String bookingId, VoidCallback callback) async {
     fetchBookLoader.value = true;
     Map<String, dynamic> map = {
       'driver_id': await secure.readData(secure.user_id),
@@ -125,11 +124,13 @@ class MyRidesController extends GetxController {
 
     try {
       _bookingDetailsModel = null;
-      final response = await apiService.postData(URLS.DRIVER_BOOKING_DETAILS, map);
+      final response =
+          await apiService.postData(URLS.DRIVER_BOOKING_DETAILS, map);
 
       log("booking details response------->:${jsonDecode(response.body)}");
 
-      _bookingDetailsModel = FetchDriverBookingDetailsModel.fromJson(jsonDecode(response.body));
+      _bookingDetailsModel =
+          FetchDriverBookingDetailsModel.fromJson(jsonDecode(response.body));
       log('${_bookingDetailsModel}');
       callback();
       fetchBookLoader.value = false;
@@ -139,67 +140,63 @@ class MyRidesController extends GetxController {
     }
   }
 
-  void rideLaterScreenBooking(String start_date,String end_date  )async{
-    rideLaterScreenLoader.value  = true;
+  void rideLaterScreenBooking(String start_date, String end_date) async {
+    rideLaterScreenLoader.value = true;
     Map<String, dynamic> booking = {
       "driver_id": await secure.readData(secure.user_id),
-      "start_date":start_date,
-      "end_date":end_date,
+      "start_date": start_date,
+      "end_date": end_date,
     };
 
     log("$booking");
 
-    try{
-
-      final response = await apiService.postData(URLS.RIDE_LATER_SCREEN_DRIVER_BOOKING, booking);
+    try {
+      final response = await apiService.postData(
+          URLS.RIDE_LATER_SCREEN_DRIVER_BOOKING, booking);
 
       log("ride later booking screen response-----${response.body}");
 
-      rideLaterScreenList.value = rideLaterScreenBookingModelFromJson(response.body);
+      rideLaterScreenList.value =
+          rideLaterScreenBookingModelFromJson(response.body);
 
       startDate.value = "";
       endDate.value = "";
       rideLaterScreenLoader.value = false;
-
-    }catch(e){
+    } catch (e) {
       rideLaterScreenLoader.value = false;
-      log("Exception------>",error: e.toString());
+      log("Exception------>", error: e.toString());
     }
-
   }
 
-  void driverStartRide(String bookingId,VoidCallback callback)async{
+  void driverStartRide(String bookingId, VoidCallback callback) async {
     driverStartBookingLoader.value = true;
-    Map<String, dynamic> start  = {
-
-    "driver_id" : await secure.readData(secure.user_id),
-    "booking_id" : bookingId,
+    Map<String, dynamic> start = {
+      "driver_id": await secure.readData(secure.user_id),
+      "booking_id": bookingId,
     };
-    
+
     log('parameter------>:$start');
-    
-    try{
-      
-      final response = await apiService.postData(URLS.RIDE_LATER_SCREEN_DRIVER_BOOKING_START, start);
+
+    try {
+      final response = await apiService.postData(
+          URLS.RIDE_LATER_SCREEN_DRIVER_BOOKING_START, start);
 
       var jsonString = jsonDecode(response.body);
 
       log('response === >:$jsonString');
 
-      if(jsonString['result'] == "arrived successfully"){
+      if (jsonString['result'] == "arrived successfully") {
         driverStartBookingLoader.value = false;
-        Get.find<BookingController>().userAcceptBooking(() { });
+        Get.find<BookingController>().userAcceptBooking(() {});
         Get.back();
         Get.back();
-      }else{
-       callback();
-       driverStartBookingLoader.value = false;
+      } else {
+        callback();
+        driverStartBookingLoader.value = false;
       }
-    }catch(e){
+    } catch (e) {
       driverStartBookingLoader.value = false;
-      log("Exception------->:",error: e.toString());
+      log("Exception------->:", error: e.toString());
     }
-
   }
-  
 }

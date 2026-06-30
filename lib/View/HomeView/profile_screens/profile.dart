@@ -8,6 +8,7 @@ import '../../../utils/colors.dart';
 import '../../../utils/custom_button.dart';
 import '../../../utils/snackBar.dart';
 import '../../../utils/text_field.dart';
+import '../../../utils/web_auth_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,163 +36,148 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return Obx(() {
       return Scaffold(
-          appBar:AppBar(
-            iconTheme: IconThemeData(
-                color: MyColors.white
+        backgroundColor: wide ? const Color(0xFFF8FAFA) : Colors.white,
+        appBar: AppBar(
+          automaticallyImplyLeading: !wide,
+          iconTheme: const IconThemeData(color: MyColors.white),
+          backgroundColor: MyColors.primary,
+          title: Text(
+            'Profile'.tr,
+            style: TextStyle(
+              fontSize: wide ? 18 : 20,
+              color: MyColors.white,
+              fontFamily: 'Poppins',
             ),
-            backgroundColor: MyColors.primary,
-            title: Text("Profile".tr,
-              style: TextStyle(fontSize: 20, color: MyColors.white,fontFamily: "Poppins"),),
-            centerTitle: true,
-
           ),
-
-          body: controller.fetchDetailLoader.value
-              ? Center(
-                  child: myIndicator(),
-                )
-              : Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            height: 50,
-                          ),
-                          Stack(
-                            children: [
-                              Align(
-                                alignment: Alignment.center,
-                                child: Container(
-                                  height: Get.height / 6.5,
-                                  width: Get.width / 2.9,
-                                  child: InkWell(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(100),
-                                      child: controller.updateImageLoader.value
-                                          ? Center(
-                                              child: SizedBox(
-                                                height: 25,
-                                                width: 25,
-                                                child: myIndicator(),
-                                              ),
-                                            )
-                                          : FadeInImage.assetNetwork(
-                                              placeholder:
-                                              'assets/images/loader.gif',
-                                              width: 120,
-                                              height: 120,
-                                              fit: BoxFit.cover,
-                                              image: controller.Image.value,
-                                              imageErrorBuilder: (c, o, s) =>
-                                                  Image.asset(
-                                                "assets/images/logo.png",
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                    ),
-                                      onTap:(){
-                                        Navigator.push(context, MaterialPageRoute(builder: (_) {
-                                          return DetailScreen();
-                                        }));
-                                      }
-
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          Center(
-                            child: Text(
-                              controller.Name.value +
-                                  " " +
-                                  controller.lastName.value,
-                              style: TextStyle(
-                                  color: MyColors.primary, fontSize: 18),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 60, vertical: 10),
-                            child: custom_buttons(
-                                voidCallback: () {
-                                  Get.toNamed(
-                                      RouteHelper.getEditProfileScreenRoute());
-                                },
-                                text: "Edit Profile".tr),
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          _buildProfileInfoCard()
-                          /*Row(
-                            children: [
-                              Container(
-                                height: 35,
-                                width: 35,
-                                decoration: BoxDecoration(
-                                  color: MyColors.primary,
-                                  borderRadius: BorderRadius.circular(60),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.email,
-                                    color: MyColors.white,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                controller.Email.value,
-                                style: TextStyle(fontSize: 15),
-                              )
-                            ],
-                          ),*/
-                        ],
-                      ),
+          centerTitle: true,
+        ),
+        body: controller.fetchDetailLoader.value
+            ? Center(child: myIndicator())
+            : Align(
+                alignment: Alignment.topCenter,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: wide ? 24 : 10,
+                    vertical: wide ? 28 : 16,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: wide ? 520 : double.infinity,
                     ),
-                    Positioned(
-                      top: Get.height / 5.5,
-                      left: Get.width / 1.8,
-                      child: Container(
-                        height: 35,
-                        width: 35,
-                        decoration: BoxDecoration(
-                          color: MyColors.buttonColor,
-                          borderRadius: BorderRadius.circular(60),
+                    child: Column(
+                      children: [
+                        _buildAvatarSection(wide),
+                        const SizedBox(height: 14),
+                        Text(
+                          '${controller.Name.value} ${controller.lastName.value}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: MyColors.primary,
+                            fontSize: wide ? 20 : 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                        child: Center(
-                          child: InkWell(
-                            onTap: () {
-                              takePhoto(ImageSource.gallery);
-                              /*showModalBottomSheet(
-                          context: context,
-                          builder: ((builder) => bottomSheet()),
-                        );*/
+                        SizedBox(height: wide ? 20 : 10),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: wide ? 0 : 60,
+                            vertical: 10,
+                          ),
+                          child: custom_buttons(
+                            voidCallback: () {
+                              Get.toNamed(
+                                RouteHelper.getEditProfileScreenRoute(),
+                              );
                             },
-                            child: Icon(
-                              Icons.camera_alt_outlined,
-                              color: MyColors.white,
-                            ),
+                            text: 'Edit Profile'.tr,
                           ),
                         ),
-                      ),
+                        SizedBox(height: wide ? 20 : 20),
+                        _buildProfileInfoCard(wide),
+                      ],
                     ),
-                  ],
-                ));
+                  ),
+                ),
+              ),
+      );
     });
+  }
+
+  Widget _buildAvatarSection(bool wide) {
+    const avatarSize = 120.0;
+
+    return Center(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: avatarSize,
+            width: avatarSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: MyColors.primary.withOpacity(0.2),
+                width: 3,
+              ),
+            ),
+            child: ClipOval(
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => DetailScreen()),
+                  );
+                },
+                child: controller.updateImageLoader.value
+                    ? Center(
+                        child: SizedBox(
+                          height: 25,
+                          width: 25,
+                          child: myIndicator(),
+                        ),
+                      )
+                    : FadeInImage.assetNetwork(
+                        placeholder: 'assets/images/loader.gif',
+                        width: avatarSize,
+                        height: avatarSize,
+                        fit: BoxFit.cover,
+                        image: controller.Image.value,
+                        imageErrorBuilder: (c, o, s) => Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Material(
+              color: MyColors.buttonColor,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => takePhoto(ImageSource.gallery),
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    color: MyColors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void takePhoto(ImageSource source) async {
@@ -206,12 +192,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('No image selected.');
     }
   }
-  Widget _buildProfileInfoCard() {
+  Widget _buildProfileInfoCard(bool wide) {
     return Card(
-      elevation: 2,
+      elevation: wide ? 1 : 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(wide ? 20 : 16),
         child: Column(
           children: [
             _buildInfoRow(Icons.person, "Full Name",

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:mtaanidriver/utils/polyline_handler.dart';
 import 'package:mtaanidriver/utils/snackBar.dart';
+import 'package:mtaanidriver/utils/web_driver_layout.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:slidable_button/slidable_button.dart';
@@ -386,7 +387,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                         : HorizontalSlidableButton(
                             height: 45.0,
                             borderRadius: BorderRadius.circular(5.0),
-                            width: MediaQuery.sizeOf(context).width - 32,
+                            width: WebDriverLayout.slideButtonWidth(context),
                             buttonWidth: 45.0,
                             color: MyColors.TextField,
                             buttonColor: MyColors.primary,

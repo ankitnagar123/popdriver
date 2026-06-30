@@ -1,18 +1,22 @@
 import 'dart:async';
 import 'dart:developer';
-import 'dart:io';
+
 import '../../controller/permision_controller.dart';
 import '../../controller/splace_controller.dart';
 import '../../route_helper/route_helper.dart';
+import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import '../../controller/auth_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
+
+// Root directory checks use `File` — mobile only (never called on web).
+import 'root_check_io.dart' if (dart.library.html) 'root_check_stub.dart'
+    as root_check;
 
 class SplashScreen extends StatefulWidget {
   SplashScreen({
@@ -64,7 +68,11 @@ class _SplashScreenState extends State<SplashScreen> {
   /// No longer calls the unimplemented `developer_mode` platform channel (would throw
   /// [MissingPluginException] in release and block the splash). Optional root check on Android release only.
   void _startSplashFlow() {
-    if (!Platform.isAndroid) {
+    if (isWeb) {
+      _startWebSplashFlow();
+      return;
+    }
+    if (!isAndroid) {
       requestLocationPermission();
       return;
     }
@@ -73,6 +81,11 @@ class _SplashScreenState extends State<SplashScreen> {
     } else {
       requestLocationPermission();
     }
+  }
+
+  void _startWebSplashFlow() {
+    // Web: skip native root/permission_handler; try browser location then continue.
+    requestLocationPermission();
   }
 
   @override
@@ -96,7 +109,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkRootThenProceed() async {
     try {
       final bool? isRooted = await RootCheckerPlus.isRootChecker();
-      final bool hasRootDirectories = await checkRootDirectories();
+      final bool hasRootDirectories = await root_check.checkRootPathsExist();
       if (!mounted) return;
       if (isRooted == true || hasRootDirectories) {
         handleRootDetection();
@@ -134,6 +147,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> requestLocationPermission() async {
+    if (isWeb) {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+      getData();
+      return;
+    }
+
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       await showDialog(
@@ -173,8 +195,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (permission == LocationPermission.whileInUse ||
         permission == LocationPermission.always) {
       getData();
-      controller?.getCurrentPosition();
-      controller?.permissionHandle();
+      if (!isWeb) {
+        controller?.getCurrentPosition();
+        controller?.permissionHandle();
+      }
       return;
     }
 
@@ -224,8 +248,10 @@ class _SplashScreenState extends State<SplashScreen> {
                     latest == LocationPermission.always) {
                   Navigator.of(context).pop();
                   getData();
-                  controller?.getCurrentPosition();
-                  controller?.permissionHandle();
+                  if (!isWeb) {
+                    controller?.getCurrentPosition();
+                    controller?.permissionHandle();
+                  }
                 } else {
                   customSnackBar('Location permission is still not granted.');
                 }
@@ -286,25 +312,5 @@ class _SplashScreenState extends State<SplashScreen> {
         Get.offNamed(RouteHelper.getLoginScreenRoute());
       });
     }
-  }
-
-  Future<bool> checkRootDirectories() async {
-    final List<String> rootPaths = [
-      '/system/xbin/su',
-      '/system/bin/su',
-      '/system/sd/xbin/su',
-      '/system/bin/failsafe/su',
-      '/data/local/su',
-      '/sbin/su',
-      '/system/app/Superuser.apk',
-      '/system/xbin/daemonsu',
-    ];
-
-    for (String path in rootPaths) {
-      if (await File(path).exists()) {
-        return true;
-      }
-    }
-    return false;
   }
 }
