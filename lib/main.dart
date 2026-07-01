@@ -8,8 +8,7 @@ import 'package:get/get.dart';
 import 'package:mtaanidriver/route_helper/route_helper.dart';
 import 'package:mtaanidriver/service/notification_service.dart';
 import 'package:mtaanidriver/utils/my_binding.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_web/webview_flutter_web.dart';
+import 'package:mtaanidriver/utils/webview_platform_init.dart';
 import 'firebase_options.dart';
 import 'language/language.dart';
 
@@ -27,9 +26,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    if (kIsWeb) {
-      WebViewPlatform.instance = WebWebViewPlatform();
-    }
+    ensureWebViewPlatform();
     // Web: no Web app in firebase_options yet; FCM + local notification paths are
     // mobile-oriented. Skip Firebase here so Chrome runs for UI/debug.
     // To enable Firebase on web: add a Web app in Firebase Console, then run:

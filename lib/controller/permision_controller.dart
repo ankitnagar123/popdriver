@@ -72,6 +72,13 @@ class PermissionController extends GetxController{
       mapInitialLocation.value = latLng;
       final home = Get.find<HomeController>();
       home.applyLivePosition(position, recenterMap: true);
+      if (home.onOff.value) {
+        home.syncLocationFromLatLng(
+          position.latitude,
+          position.longitude,
+          heading: position.heading,
+        );
+      }
       log("currentLat------>:${mapInitialLocation.value} accuracy:${position.accuracy}m");
     } catch (e) {
       log('getCurrentPosition failed: $e');

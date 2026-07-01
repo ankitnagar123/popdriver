@@ -55,6 +55,7 @@ class HomeController extends GetxController {
   DateTime? _lastBookingFetchAfterLatLong;
   DateTime? _penaltyUntil;
   Timer? _penaltyExpiryTimer;
+  Timer? _webLocationSyncTimer;
   bool _wasOnlineBeforePenalty = false;
   LatLng? _lastCameraTarget;
   bool _isListening = false;
@@ -135,6 +136,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _penaltyExpiryTimer?.cancel();
+    _stopWebLocationSyncTimer();
     try {
       stopListening();
     } catch (e) {
@@ -146,6 +148,7 @@ class HomeController extends GetxController {
   @override
   void dispose() {
     _penaltyExpiryTimer?.cancel();
+    _stopWebLocationSyncTimer();
     try {
       stopListening();
     } catch (e) {
@@ -212,6 +215,12 @@ class HomeController extends GetxController {
         timeLimit: const Duration(seconds: 25),
       );
       applyLivePosition(position, recenterMap: onOff.value);
+      if (onOff.value) {
+        _syncDriverAvailability(
+          position,
+          Get.overlayContext ?? Get.context,
+        );
+      }
     } catch (e) {
       log('[LOCATION] initial fix failed: $e');
       if (kIsWeb) debugPrint('[LOCATION] initial fix failed: $e');
@@ -237,6 +246,10 @@ class HomeController extends GetxController {
         timeLimit: const Duration(seconds: 25),
       );
       applyLivePosition(position, recenterMap: true);
+      _syncDriverAvailability(
+        position,
+        Get.overlayContext ?? Get.context,
+      );
       return true;
     } catch (e) {
       log('[LOCATION] user-gesture GPS failed: $e');
@@ -268,7 +281,8 @@ class HomeController extends GetxController {
     ).listen(
       (Position position) {
         applyLivePosition(position);
-        final ctx = Get.context;
+        final ctx = Get.overlayContext ?? Get.context;
+        _syncDriverAvailability(position, ctx);
         if (ctx != null) {
           Data(position, ctx);
         }
@@ -277,6 +291,47 @@ class HomeController extends GetxController {
         log('[LOCATION] stream error: $e');
         if (kIsWeb) debugPrint('[LOCATION] stream error: $e');
       },
+    );
+    if (kIsWeb) {
+      _startWebLocationSyncTimer();
+    }
+  }
+
+  void _startWebLocationSyncTimer() {
+    if (!kIsWeb) return;
+    _webLocationSyncTimer?.cancel();
+    _webLocationSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!onOff.value || !hasValidLocation.value) return;
+      final loc = startLocation.value;
+      if (loc.latitude == 0 && loc.longitude == 0) return;
+      syncLocationFromLatLng(loc.latitude, loc.longitude);
+    });
+  }
+
+  void _stopWebLocationSyncTimer() {
+    _webLocationSyncTimer?.cancel();
+    _webLocationSyncTimer = null;
+  }
+
+  void syncLocationFromLatLng(
+    double latitude,
+    double longitude, {
+    double heading = 0,
+  }) {
+    _syncDriverAvailability(
+      Position(
+        latitude: latitude,
+        longitude: longitude,
+        timestamp: DateTime.now(),
+        accuracy: 1,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: heading,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ),
+      Get.overlayContext ?? Get.context,
     );
   }
 
@@ -320,9 +375,16 @@ class HomeController extends GetxController {
     startLocation.value = LatLng(position.latitude, position.longitude);
     updateMarker(position);
     updateCameraPosition(startLocation.value);
+    if (onOff.value) {
+      _syncDriverAvailability(
+        position,
+        Get.overlayContext ?? Get.context,
+      );
+    }
   }
 
   void stopListening() {
+    _stopWebLocationSyncTimer();
     try {
       _isListening = false;
       streamSubscription.cancel().then((_) {
@@ -714,7 +776,7 @@ class HomeController extends GetxController {
     return true;
   }
 
-  void _syncDriverAvailability(Position position, BuildContext context) {
+  void _syncDriverAvailability(Position position, BuildContext? context) {
     final now = DateTime.now();
     final shouldSync = _lastDriverLatLongSyncAt == null ||
         now.difference(_lastDriverLatLongSyncAt!).inSeconds >= 3;
@@ -768,8 +830,6 @@ class HomeController extends GetxController {
         Get.find<BookingController>().rideNowBooking();
         Get.find<BookingController>().userAcceptBooking();
       }
-
-      _syncDriverAvailability(position, context);
 
       var bookingController = Get.find<BookingController>();
       applyLivePosition(position);

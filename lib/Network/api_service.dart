@@ -32,7 +32,8 @@ class ApiService extends GetxService {
     Object? lastError;
     final encodedBody = _encodeFormBody(body);
 
-    if (kIsWeb && url.contains('latlong')) {
+    if (kIsWeb &&
+        (url.contains('latlong') || url.contains('update_driver_latlong'))) {
       debugPrint('[LOCATION] POST $url payload=$encodedBody');
     }
 
