@@ -7,6 +7,7 @@ import '../../route_helper/route_helper.dart';
 import '../../utils/colors.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/text_field.dart';
+import '../../utils/web_auth_layout.dart';
 import '../../controller/auth_controller.dart';
 import '../../utils/colors.dart';
 import '../../utils/custom_button.dart';
@@ -69,37 +70,50 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
+    final wide = WebAuthLayout.isWide(context);
+
+    return WebAuthLayout.page(
+      context: context,
       appBar: AppBar(
         elevation: 0,
         leading: InkWell(
-            onTap: () {
-              Get.back();
-            },
-            child: Icon(
+            onTap: () => Get.back(),
+            child: const Icon(
               Icons.arrow_back,
               color: MyColors.black,
             )),
-        backgroundColor: MyColors.white,
+        backgroundColor: wide ? const Color(0xFFF8FAFA) : MyColors.white,
         title: Text(
           "Driver Account".tr,
-          style: TextStyle(color: MyColors.black,fontSize: 18),
+          style: const TextStyle(color: MyColors.black, fontSize: 18),
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Add Account Details".tr,
-              style: TextStyle(fontSize: 16),
-            ),
-            SizedBox(
-              height: 10,
-            ),
+      child: WebAuthLayout.constrainForm(
+        context,
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: wide ? 0 : 18),
+          child: wide
+              ? WebAuthLayout.formCard(
+                  context: context,
+                  padding: const EdgeInsets.all(24),
+                  child: _buildSignUpForm(context),
+                )
+              : _buildSignUpForm(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignUpForm(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Add Account Details".tr,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
@@ -154,10 +168,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ],
                     )),
                 Container(
-
                   height: 50,
-                  width: context.width,
-                  margin: EdgeInsets.only(top: 5),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 5),
                   padding: EdgeInsets.only(left: 10),
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
@@ -329,12 +342,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ))
               ],
             ),
-            SizedBox(
-              height: 20,
-            )
-          ],
-        ),
-      ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 

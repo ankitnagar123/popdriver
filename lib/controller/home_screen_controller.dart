@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -13,6 +14,7 @@ import 'package:mtaanidriver/controller/permision_controller.dart';
 import '../Network/api_service.dart';
 import '../Network/urls.dart';
 import '../utils/colors.dart';
+import '../utils/driver_location_settings.dart';
 import '../utils/shared_preferences.dart';
 
 import 'auth_controller.dart';
@@ -32,7 +34,8 @@ class HomeController extends GetxController {
   var cancelIndex = -1.obs;
   RxBool onOff = false.obs;
   RxBool painButton = false.obs;
-  var startLocation = LatLng(22.6832, 75.8576).obs;
+  var startLocation = const LatLng(0, 0).obs;
+  final RxBool hasValidLocation = false.obs;
   var endLocation = LatLng(22.636383, 75.810692).obs;
   late StreamSubscription<Position> streamSubscription;
   PolylinePoints polylinePoints = PolylinePoints();
@@ -49,8 +52,10 @@ class HomeController extends GetxController {
   DateTime? _lastDriverLatLongSyncAt;
   DateTime? _lastRideRefreshAt;
   DateTime? _lastPenaltyDialogAt;
+  DateTime? _lastBookingFetchAfterLatLong;
   DateTime? _penaltyUntil;
   Timer? _penaltyExpiryTimer;
+  Timer? _webLocationSyncTimer;
   bool _wasOnlineBeforePenalty = false;
   LatLng? _lastCameraTarget;
   bool _isListening = false;
@@ -64,9 +69,10 @@ class HomeController extends GetxController {
   }
 
   void updateCameraPosition(LatLng location) {
+    if (location.latitude == 0 && location.longitude == 0) return;
+
     final controller = googleMapController.value;
     if (controller != null) {
-      // Avoid over-animating camera on each GPS tick; it causes jitter on iOS.
       if (_lastCameraTarget != null) {
         final distance = Geolocator.distanceBetween(
           _lastCameraTarget!.latitude,
@@ -88,6 +94,8 @@ class HomeController extends GetxController {
         );
       } on PlatformException catch (e) {
         log('animateCamera skipped: ${e.message}');
+      } catch (e) {
+        log('animateCamera skipped: $e');
       }
     }
   }
@@ -128,6 +136,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _penaltyExpiryTimer?.cancel();
+    _stopWebLocationSyncTimer();
     try {
       stopListening();
     } catch (e) {
@@ -139,6 +148,7 @@ class HomeController extends GetxController {
   @override
   void dispose() {
     _penaltyExpiryTimer?.cancel();
+    _stopWebLocationSyncTimer();
     try {
       stopListening();
     } catch (e) {
@@ -153,43 +163,228 @@ class HomeController extends GetxController {
     _penaltyExpiryTimer?.cancel();
   }
 
-  // User location
-  getLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-    if (!serviceEnabled) {
-      await Geolocator.openLocationSettings();
-      return Future.error('Location services are disabled.');
-    }
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
+  // User location — on web, call [ensureLocationFromUserGesture] from Online toggle.
+  Future<void> getLocation() async {
+    if (!kIsWeb) {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        log('[LOCATION] device location services disabled');
+        return;
       }
     }
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-          'Location permissions are permanently denied, we cannot request permissions.');
-    }
+
+    final permission = await _requestLocationPermission();
+    if (permission == null) return;
+
     startListening();
+    await _fetchInitialPosition();
+  }
+
+  Future<LocationPermission?> _requestLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (kIsWeb) {
+      debugPrint('[LOCATION] permission check: $permission');
+    }
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (kIsWeb) {
+        debugPrint('[LOCATION] permission after request: $permission');
+      }
+    }
+    if (permission == LocationPermission.denied) {
+      log('[LOCATION] permission denied');
+      if (kIsWeb) {
+        debugPrint(
+          '[LOCATION] Allow location: Chrome lock icon → Site settings → Location → Allow',
+        );
+      }
+      return null;
+    }
+    if (permission == LocationPermission.deniedForever) {
+      log('[LOCATION] permission denied forever');
+      return null;
+    }
+    return permission;
+  }
+
+  Future<void> _fetchInitialPosition() async {
+    if (hasValidLocation.value) return;
+    try {
+      final position = await getDriverPosition(
+        timeLimit: const Duration(seconds: 25),
+      );
+      applyLivePosition(position, recenterMap: onOff.value);
+      if (onOff.value) {
+        _syncDriverAvailability(
+          position,
+          Get.overlayContext ?? Get.context,
+        );
+      }
+    } catch (e) {
+      log('[LOCATION] initial fix failed: $e');
+      if (kIsWeb) debugPrint('[LOCATION] initial fix failed: $e');
+    }
+  }
+
+  /// Must be called from a user tap (Online toggle) — browsers block GPS otherwise.
+  Future<bool> ensureLocationFromUserGesture() async {
+    if (hasValidLocation.value) return true;
+
+    if (kIsWeb) {
+      debugPrint('[LOCATION] requesting GPS from user gesture...');
+    }
+    final permission = await _requestLocationPermission();
+    if (permission == null) return false;
+
+    if (!_isListening) {
+      startListening();
+    }
+
+    try {
+      final position = await getDriverPosition(
+        timeLimit: const Duration(seconds: 25),
+      );
+      applyLivePosition(position, recenterMap: true);
+      _syncDriverAvailability(
+        position,
+        Get.overlayContext ?? Get.context,
+      );
+      return true;
+    } catch (e) {
+      log('[LOCATION] user-gesture GPS failed: $e');
+      if (kIsWeb) debugPrint('[LOCATION] user-gesture GPS failed: $e');
+      return hasValidLocation.value;
+    }
+  }
+
+  Future<bool> waitForValidLocation({
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    if (hasValidLocation.value) return true;
+    await _fetchInitialPosition();
+    if (hasValidLocation.value) return true;
+
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (hasValidLocation.value) return true;
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    return hasValidLocation.value;
   }
 
   void startListening() {
     if (_isListening) return;
     _isListening = true;
-    streamSubscription =
-        Geolocator.getPositionStream().listen((Position position) {
-      print("listening -----");
-      startLocation.value = LatLng(position.latitude, position.longitude);
-      updateMarker(position);
-      Data(position, Get.context!);
+    streamSubscription = Geolocator.getPositionStream(
+      locationSettings: driverLocationSettings(),
+    ).listen(
+      (Position position) {
+        applyLivePosition(position);
+        final ctx = Get.overlayContext ?? Get.context;
+        _syncDriverAvailability(position, ctx);
+        if (ctx != null) {
+          Data(position, ctx);
+        }
+      },
+      onError: (Object e) {
+        log('[LOCATION] stream error: $e');
+        if (kIsWeb) debugPrint('[LOCATION] stream error: $e');
+      },
+    );
+    if (kIsWeb) {
+      _startWebLocationSyncTimer();
+    }
+  }
+
+  void _startWebLocationSyncTimer() {
+    if (!kIsWeb) return;
+    _webLocationSyncTimer?.cancel();
+    _webLocationSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!onOff.value || !hasValidLocation.value) return;
+      final loc = startLocation.value;
+      if (loc.latitude == 0 && loc.longitude == 0) return;
+      syncLocationFromLatLng(loc.latitude, loc.longitude);
     });
   }
 
+  void _stopWebLocationSyncTimer() {
+    _webLocationSyncTimer?.cancel();
+    _webLocationSyncTimer = null;
+  }
+
+  void syncLocationFromLatLng(
+    double latitude,
+    double longitude, {
+    double heading = 0,
+  }) {
+    _syncDriverAvailability(
+      Position(
+        latitude: latitude,
+        longitude: longitude,
+        timestamp: DateTime.now(),
+        accuracy: 1,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: heading,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
+      ),
+      Get.overlayContext ?? Get.context,
+    );
+  }
+
+  /// Push GPS to server as Available, then refresh booking list (web needs this).
+  Future<void> goOnlineAndSyncLocation(BuildContext context) async {
+    try {
+      if (!hasValidLocation.value) {
+        final located = await ensureLocationFromUserGesture();
+        if (!located && kIsWeb) {
+          debugPrint('[LOCATION] online without GPS — allow browser location');
+        }
+      }
+      if (!_isListening) {
+        await getLocation();
+      }
+
+      if (hasValidLocation.value) {
+        _lastCameraTarget = null;
+        updateCameraPosition(startLocation.value);
+        updateDriverLatLong(
+          startLocation.value.latitude.toString(),
+          startLocation.value.longitude.toString(),
+          '0',
+          'Available',
+          context: context,
+        );
+      }
+    } catch (e) {
+      log('goOnlineAndSyncLocation failed: $e');
+    }
+    await Get.find<BookingController>().refreshAfterGoingOnline();
+  }
+
+  void applyLivePosition(Position position, {bool recenterMap = false}) {
+    if (position.latitude == 0 && position.longitude == 0) return;
+    if (recenterMap) _lastCameraTarget = null;
+    hasValidLocation.value = true;
+    if (kIsWeb && position.accuracy > 1000) {
+      log('Web location ~${position.accuracy.round()}m accurate — turn on precise location in browser & Windows');
+    }
+    startLocation.value = LatLng(position.latitude, position.longitude);
+    updateMarker(position);
+    updateCameraPosition(startLocation.value);
+    if (onOff.value) {
+      _syncDriverAvailability(
+        position,
+        Get.overlayContext ?? Get.context,
+      );
+    }
+  }
+
   void stopListening() {
+    _stopWebLocationSyncTimer();
     try {
       _isListening = false;
       streamSubscription.cancel().then((_) {
@@ -226,7 +421,14 @@ class HomeController extends GetxController {
 */
 
   Future<void> updateMarker(Position position) async {
-    _driverMarkerBytes ??= await getMarkers();
+    BitmapDescriptor icon;
+    try {
+      _driverMarkerBytes ??= await getMarkers();
+      icon = BitmapDescriptor.bytes(_driverMarkerBytes!);
+    } catch (e) {
+      icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
+    }
+
     final marker =
         markers.firstWhereOrNull((m) => m.markerId == const MarkerId("1"));
 
@@ -238,12 +440,13 @@ class HomeController extends GetxController {
       markerId: const MarkerId("1"),
       position: LatLng(position.latitude, position.longitude),
       rotation: position.heading,
-      draggable: true,
-      zIndex: 2,
+      draggable: false,
+      zIndexInt: 2,
       flat: true,
       anchor: const Offset(0.5, 0.5),
-      icon: BitmapDescriptor.fromBytes(_driverMarkerBytes!),
+      icon: icon,
     ));
+    markers.refresh();
   }
 
   Future<Uint8List> getMarkers() async {
@@ -274,6 +477,19 @@ class HomeController extends GetxController {
   }
 
   // Update Driver latLong.....
+  Future<String?> _resolveDriverId() async {
+    var id = await secure.readData(secure.user_id);
+    if (id != null && id.isNotEmpty) return id;
+    if (!kIsWeb) return null;
+
+    for (var i = 0; i < 12; i++) {
+      await Future.delayed(const Duration(milliseconds: 250));
+      id = await secure.readData(secure.user_id);
+      if (id != null && id.isNotEmpty) return id;
+    }
+    return null;
+  }
+
   void updateDriverLatLong(
     String lat,
     String long,
@@ -281,19 +497,37 @@ class HomeController extends GetxController {
     String status, {
     BuildContext? context,
   }) async {
-    Map<String, dynamic> latlong = {
-      "driver_id": await secure.readData(secure.user_id),
+    final driverId = await _resolveDriverId();
+    if (driverId == null || driverId.isEmpty) {
+      log('[LOCATION] skipped — driver_id missing (lat=$lat long=$long)');
+      if (kIsWeb) {
+        debugPrint(
+          '[LOCATION] skipped update_driver_latlong — driver_id not ready',
+        );
+      }
+      return;
+    }
+
+    final latlong = <String, dynamic>{
+      "driver_id": driverId,
       'lat': lat,
       "long": long,
       'rotation': rotation,
       'available_status': status,
     };
 
+    log('[LOCATION] server sync: lat=$lat long=$long status=$status');
     log("update driver lat long ---->:$latlong");
 
     try {
       final response =
           await apiService.postData(URLS.DRIVER_LATLONG_UPDATE, latlong);
+      if (kIsWeb) {
+        debugPrint(
+          '[LOCATION] update_driver_latlong status=${response.statusCode} '
+          'body=${response.body.trim().isEmpty ? "(empty)" : response.body.trim()}',
+        );
+      }
       if (response.statusCode == 429) return;
       final body = response.body.trim();
       if (body.isEmpty || body.startsWith("<")) return;
@@ -303,6 +537,15 @@ class HomeController extends GetxController {
       log("update driver latlong response ---->:$data");
       log("result------->:${data['result']}");
       _handleLatLongResponse(data, context: context);
+
+      if (onOff.value && status == 'Available') {
+        final now = DateTime.now();
+        if (_lastBookingFetchAfterLatLong == null ||
+            now.difference(_lastBookingFetchAfterLatLong!).inSeconds >= 8) {
+          _lastBookingFetchAfterLatLong = now;
+          Get.find<BookingController>().rideNowBooking();
+        }
+      }
     } catch (e) {
       log('Exception-----', error: e.toString());
     }
@@ -533,7 +776,7 @@ class HomeController extends GetxController {
     return true;
   }
 
-  void _syncDriverAvailability(Position position, BuildContext context) {
+  void _syncDriverAvailability(Position position, BuildContext? context) {
     final now = DateTime.now();
     final shouldSync = _lastDriverLatLongSyncAt == null ||
         now.difference(_lastDriverLatLongSyncAt!).inSeconds >= 3;
@@ -588,10 +831,8 @@ class HomeController extends GetxController {
         Get.find<BookingController>().userAcceptBooking();
       }
 
-      _syncDriverAvailability(position, context);
-
       var bookingController = Get.find<BookingController>();
-      startLocation.value = LatLng(position.latitude, position.longitude);
+      applyLivePosition(position);
 
       if (hide.value == false) {
         // Do nothing if hide is false

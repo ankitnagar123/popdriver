@@ -1,8 +1,8 @@
 import 'dart:developer';
-import 'dart:io';
 import '../../controller/auth_controller.dart';
 import '../../route_helper/route_helper.dart';
 import '../../utils/colors.dart';
+import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -13,6 +13,7 @@ import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../utils/text_field.dart';
+import '../../utils/web_auth_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -50,82 +51,71 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      bottomSheet:    Container(color: MyColors.background,
-        child: TextButton(
-          onPressed: () {
-            Get.toNamed(RouteHelper.getSignUpScreenRoute());
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Don’t have an account?".tr,
-                style: TextStyle(color:Colors.grey,fontSize: 13),
-              ), Text(
-                " SignUp".tr,
-                style: TextStyle(color: MyColors.buttonColor,fontSize: 15,fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child:
-        Column(
+  Widget _buildSignUpFooter() {
+    return Container(
+      color: MyColors.background,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: TextButton(
+        onPressed: () => Get.toNamed(RouteHelper.getSignUpScreenRoute()),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: 30),
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: MyColors.primary.withOpacity(0.2),
-                    blurRadius: 10,
-                    spreadRadius: 5,
-                  )
-                ],
-              ),
-              child: Image.asset(
-                "assets/images/logo.png",
-                height: 200,
-                // width: 180,
+            Text(
+              "Don't have an account?".tr,
+              style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            Text(
+              " SignUp".tr,
+              style: TextStyle(
+                color: MyColors.buttonColor,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                      color: MyColors.background,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          blurRadius: 15,
-                          spreadRadius: 5,
-                          offset: Offset(0, 10),
-                        )
-                      ],
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          MyColors.background.withOpacity(0.9),
-                          MyColors.background,
-                        ],
-                      )),
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Center(
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
+    return WebAuthLayout.page(
+      context: context,
+      bottomBar: wide ? null : _buildSignUpFooter(),
+      child: Column(
+        children: [
+          SizedBox(height: wide ? 8 : 30),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: MyColors.primary.withOpacity(0.2),
+                  blurRadius: 10,
+                  spreadRadius: 5,
+                )
+              ],
+            ),
+            child: Image.asset(
+              "assets/images/logo.png",
+              height: WebAuthLayout.logoHeight(context),
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: wide ? 0 : 20.0),
+            child: WebAuthLayout.formCard(
+              context: context,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
                     child: Text(
-                    "Get Moving With POP Driver 👨‍✈️".tr,
-                      style: TextStyle(
+                      "Get Moving With POP Driver 👨‍✈️".tr,
+                      style: const TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.w600,
                         color: MyColors.primary,
@@ -133,36 +123,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 25),
-
-                  // Phone Number Field
+                  const SizedBox(height: 25),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: EdgeInsets.only(top: 10),
+                        padding: const EdgeInsets.only(top: 10),
                         child: Column(
                           children: [
                             Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: Row(
-                                  children: [
-                                    Text('Enter Mobile No.'.tr),
-                                    SizedBox(width: 5,),
-                                    Text("*",
-                                      style: TextStyle(
-                                          color: Colors.red
-                                      ),),
-                                  ],
-                                )),
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Row(
+                                children: [
+                                  Text('Enter Mobile No.'.tr),
+                                  const SizedBox(width: 5),
+                                  const Text(
+                                    "*",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
                             Container(
                               height: 50,
-                              width: context.width,
-                              margin: EdgeInsets.only(top: 5),
-                              padding: EdgeInsets.only(left: 10),
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(top: 5),
+                              padding: const EdgeInsets.only(left: 10),
                               decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: MyColors.TextField),
+                                borderRadius: BorderRadius.circular(8),
+                                color: MyColors.TextField,
+                              ),
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.only(top: 5),
@@ -173,37 +163,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                     autovalidateMode: AutovalidateMode.disabled,
                                     disableLengthCheck: false,
                                     initialCountryCode: countryFlag,
-
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly
                                     ],
-                                    decoration:  InputDecoration(
-                                        counterText: "",
-                                        hintStyle:
-                                        TextStyle(color: MyColors.DarkBlue, fontSize: 12),
-                                        hintText: 'Mobile Number'.tr,
-                                        focusedBorder: InputBorder.none,
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none),
+                                    decoration: InputDecoration(
+                                      counterText: "",
+                                      hintStyle: TextStyle(
+                                          color: MyColors.DarkBlue,
+                                          fontSize: 12),
+                                      hintText: 'Mobile Number'.tr,
+                                      focusedBorder: InputBorder.none,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                    ),
                                     onChanged: (phone) {
-                                      setState(
-                                            () {
-                                          countryCode = phone.countryCode;
-                                          print(countryCode);
-                                          countryFlag = phone.countryISOCode;
-                                          log("${countryFlag}");
-                                        },
-                                      );
+                                      setState(() {
+                                        countryCode = phone.countryCode;
+                                        countryFlag = phone.countryISOCode;
+                                        log(countryFlag);
+                                      });
                                     },
                                     onCountryChanged: (country) {
-                                      setState(
-                                            () {
-                                          countryCode = '${country.dialCode}';
-                                          print(countryCode);
-                                          countryFlag = country.code;
-                                          print(countryFlag);
-                                        },
-                                      );
+                                      setState(() {
+                                        countryCode = country.dialCode;
+                                        countryFlag = country.code;
+                                      });
                                     },
                                   ),
                                 ),
@@ -212,9 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
-                      SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       custom_textfield(
                         allowSpecialCharacters: false,
                         labletext: "Enter Password".tr,
@@ -222,42 +204,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         textInputType: TextInputType.text,
                         ishide: isHide,
                         icon: InkWell(
-                          onTap: () {
-                            setState(() {
-                              isHide = !isHide;
-                            });
-                          },
-                          child: isHide
-                              ? Icon(
+                          onTap: () => setState(() => isHide = !isHide),
+                          child: Icon(
                             size: 18,
-                            Icons.visibility_off,
-                            color: MyColors.DarkBlue,
-                          )
-                              : Icon(
-                            size: 18,
-                            Icons.visibility,
+                            isHide ? Icons.visibility_off : Icons.visibility,
                             color: MyColors.DarkBlue,
                           ),
                         ),
                       ),
-
                     ],
                   ),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _checked,
-                              onChanged: (value) =>
-                                  setState(() => _checked = value),
-                              activeColor: MyColors.primary,
-                            ),
-                            Text(
-                              "Remember me".tr,
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ],
-                        ),
-                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _checked,
+                        onChanged: (value) =>
+                            setState(() => _checked = value),
+                        activeColor: MyColors.primary,
+                      ),
+                      Text(
+                        "Remember me".tr,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -265,7 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: EdgeInsets.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      onPressed: () => Get.toNamed(RouteHelper.getForgotPasswordScreenRoute()),
+                      onPressed: () =>
+                          Get.toNamed(RouteHelper.getForgotPasswordScreenRoute()),
                       child: Text(
                         "Forgot Password?".tr,
                         style: TextStyle(
@@ -276,89 +248,91 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
-                  SizedBox(height: 25),
+                  const SizedBox(height: 25),
                   Obx(() => AnimatedContainer(
-                      duration: Duration(milliseconds: 300),
-                      decoration: BoxDecoration(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [
                               MyColors.primary,
                               MyColors.DarkBlue,
                             ],
                           ),
                           boxShadow: [
-                          if (!controller.loginLoader.value)
-                      BoxShadow(
-                  color: MyColors.primary.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: Offset(0, 5),
-                      )
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () {
-
-
-                      if (valid()) {
-                        controller.driverLogin(
-                            countryCode.toString(),
-                            countryFlag.toString(),
-                            phoneCtr.text,
-                            passwordCtr.text.toString(),
-                            deviseName.toString(),
-                            accessToken.toString(),
-                            _checked!,
-                            context);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      minimumSize: Size(double.infinity, 0),
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: controller.loginLoader.value
-                        ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                        : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Login'.tr,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                            if (!controller.loginLoader.value)
+                              BoxShadow(
+                                color: MyColors.primary.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              )
+                          ],
                         ),
-                        SizedBox(width: 10),
-                        Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white)
-                      ],
-                    ),
-                  ),
-                )),
-
-          ],
-        ),
-      ),
-    ),
-    ),
-            SizedBox(height: 50,),
-    ],
-    ),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (valid()) {
+                              controller.driverLogin(
+                                countryCode.toString(),
+                                countryFlag.toString(),
+                                phoneCtr.text,
+                                passwordCtr.text.toString(),
+                                deviseName.toString(),
+                                accessToken.toString(),
+                                _checked!,
+                                context,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size(double.infinity, 0),
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: controller.loginLoader.value
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Login'.tr,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Icon(Icons.arrow_forward_rounded,
+                                        size: 20, color: Colors.white)
+                                  ],
+                                ),
+                        ),
+                      )),
+                ],
+              ),
+            ),
+          ),
+          if (wide) ...[
+            const SizedBox(height: 12),
+            _buildSignUpFooter(),
+          ] else
+            const SizedBox(height: 50),
+        ],
       ),
     );
   }
+
 
   bool valid() {
     if (phoneCtr.text.isEmpty) {
@@ -372,11 +346,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void info() async {
-    if (Platform.isAndroid) {
+    if (isWeb) {
+      deviseName = 'Web';
+      return;
+    }
+    if (isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
       deviseName = androidInfo.model;
       print('Android devise info $deviseName');
-    } else if (Platform.isIOS) {
+    } else if (isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       deviseName = iosInfo.utsname.machine;
       print('IOS devise info $deviseName');

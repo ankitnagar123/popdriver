@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
+import '../../../utils/web_auth_layout.dart';
 
 class Support extends StatefulWidget {
   const Support({super.key});
@@ -62,10 +63,14 @@ class _SupportState extends State<Support> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return Scaffold(
-      backgroundColor: MyColors.background,
+      backgroundColor:
+          wide ? const Color(0xFFF8FAFA) : MyColors.background,
       appBar: AppBar(
         elevation: 0,
+        automaticallyImplyLeading: !wide,
         iconTheme: const IconThemeData(color: MyColors.white),
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
@@ -83,37 +88,38 @@ class _SupportState extends State<Support> {
         ),
         title: Text(
           'Support'.tr,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w600,
-            fontSize: 17,
+            fontSize: wide ? 18 : 17,
             color: Colors.white,
           ),
         ),
         centerTitle: true,
       ),
-      body: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      body: WebAuthLayout.contentColumn(
+        context: context,
+        maxWidth: 560,
         children: [
-          _buildHeaderBanner(),
-          const SizedBox(height: 16),
+          _buildHeaderBanner(wide: wide),
+          SizedBox(height: wide ? 20 : 16),
           ..._items.map(
             (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildMenuTile(item),
+              padding: EdgeInsets.only(bottom: wide ? 12 : 10),
+              child: _buildMenuTile(item, wide: wide),
             ),
           ),
+          SizedBox(height: wide ? 12 : 8),
+          _buildHelpFooter(wide: wide),
           const SizedBox(height: 8),
-          _buildHelpFooter(),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderBanner() {
+  Widget _buildHeaderBanner({required bool wide}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(wide ? 20 : 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -124,7 +130,7 @@ class _SupportState extends State<Support> {
             Color(0xFF02B3BE),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(wide ? 18 : 16),
         boxShadow: [
           BoxShadow(
             color: MyColors.primary.withValues(alpha: 0.2),
@@ -179,16 +185,16 @@ class _SupportState extends State<Support> {
     );
   }
 
-  Widget _buildMenuTile(_SupportMenuItem item) {
+  Widget _buildMenuTile(_SupportMenuItem item, {required bool wide}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _onItemTap(item.route),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(wide ? 16 : 14),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(wide ? 16 : 14),
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
@@ -215,7 +221,12 @@ class _SupportState extends State<Support> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+                padding: EdgeInsets.fromLTRB(
+                  wide ? 20 : 18,
+                  wide ? 16 : 14,
+                  wide ? 16 : 14,
+                  wide ? 16 : 14,
+                ),
                 child: Row(
                   children: [
                     Container(
@@ -269,12 +280,15 @@ class _SupportState extends State<Support> {
     );
   }
 
-  Widget _buildHelpFooter() {
+  Widget _buildHelpFooter({required bool wide}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: wide ? 18 : 16,
+        vertical: wide ? 16 : 14,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(wide ? 16 : 14),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(

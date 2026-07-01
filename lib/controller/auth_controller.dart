@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:dio/dio.dart' as DIO;
 import 'package:mtaanidriver/controller/profile_controller.dart';
 
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
+import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -79,7 +79,7 @@ class AuthController extends GetxController {
   var otps = "".obs;
 
   void startOtpTimer() {
-    _timer?.cancel();   // kill any existing timer before starting a new one
+    _timer?.cancel(); // kill any existing timer before starting a new one
     remainingTime.value = 300;
     isOtpExpired.value = false;
 
@@ -92,7 +92,6 @@ class AuthController extends GetxController {
       }
     });
   }
-
 
   void saveLoginDetails(
       String contact, String code, String flag, String password) {
@@ -262,7 +261,7 @@ class AuthController extends GetxController {
 
     try {
       final response =
-          await http.post(Uri.parse(URLS.DRIVER_LOGIN), body: loginParameter);
+          await http.post(Uri.parse(URLS.api(URLS.DRIVER_LOGIN)), body: loginParameter);
 
       var jsonString = jsonDecode(response.body);
 
@@ -289,7 +288,8 @@ class AuthController extends GetxController {
         await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
         await secure.writeData(secure.Token, jsonString['token']);
         await sp.setStringValue(sp.INVITE_CODE, inviteCode.toString());
-        await sp.setStringValue(sp.LOGIN_DEVICE_KEY, login_device_key.toString());
+        await sp.setStringValue(
+            sp.LOGIN_DEVICE_KEY, login_device_key.toString());
         await sp.setStringValue(sp.ACCESS_TOKEN, access_token.toString());
         await secure.writeData(secure.user_name, driverName.toString());
         await secure.writeData(secure.user_id, driverId.toString());
@@ -428,7 +428,6 @@ class AuthController extends GetxController {
     forgetPasswordLoader.value = true;
     Map<String, dynamic> forgetParameter = {
       "email": email,
-
     };
 
     log("forget password parameter ------>:$forgetParameter");
@@ -519,8 +518,8 @@ class AuthController extends GetxController {
       final jsonString = jsonDecode(response.data);
       log("logout response :--------$jsonString");
       final result = jsonString['result'];
-      serverAck = result != null &&
-          result.toString().trim().toLowerCase() == 'success';
+      serverAck =
+          result != null && result.toString().trim().toLowerCase() == 'success';
       if (!serverAck) {
         log("logout API result not success: $result");
       }
@@ -546,12 +545,12 @@ class AuthController extends GetxController {
     if (kIsWeb) return;
     String deviceStatus = "";
     String? device_id = "";
-    if (Platform.isAndroid) {
+    if (isAndroid) {
       deviceStatus = "Android";
       await FirebaseMessaging.instance.getToken().then((value) {
         device_id = value;
       });
-    } else if (Platform.isIOS) {
+    } else if (isIOS) {
       await FirebaseMessaging.instance
           .getToken(
               vapidKey:
@@ -560,7 +559,7 @@ class AuthController extends GetxController {
         device_id = value;
       });
       deviceStatus = "IOS";
-      log('device id------$device_id'); 
+      log('device id------$device_id');
     }
 
     Map<String, dynamic> deviceId = {
@@ -593,7 +592,6 @@ class AuthController extends GetxController {
   void loginCheck(String loginDeviceKey, accessToken, context) async {
     reCheckLoader.value = true;
     String Tokan = await secure.readData(secure.Token) ?? "";
-    print("token ----->:$Tokan");
     Map<String, dynamic> check = {
       "driver_id": await secure.readData(secure.user_id),
       "login_device_key": loginDeviceKey,
@@ -604,8 +602,7 @@ class AuthController extends GetxController {
 
     try {
       final response = await http.post(
-          Uri.parse(
-              "https://cisswork.com/Android/PopRide/API/driver_login_recheck.php"),
+          Uri.parse(URLS.api(URLS.DRIVER_LOGIN_CHECK)),
           headers: {
             'Authorization': 'Bearer $Tokan',
             // Pass the JWT token in the headers
@@ -677,7 +674,7 @@ class AuthController extends GetxController {
     memberShipLoader.value = true;
 
     try {
-      final response = await dioClient.get(URLS.fetch_membership_list);
+      final response = await dioClient.get(URLS.api(URLS.fetch_membership_list));
 
       log("response ----", error: response.data);
 
@@ -837,7 +834,6 @@ class AuthController extends GetxController {
       timer?.cancel(); // Cancel if dialog closed early
     });
   }
-
 
   void signupOtp(String type, VoidCallback callback) async {
     otpLoader.value = true;

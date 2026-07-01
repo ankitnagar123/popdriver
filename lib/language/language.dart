@@ -263,6 +263,7 @@ class Locales extends Translations {
           "New Requests": "New Requests",
           "Notifications": "Notifications",
           "Wallet": "Wallet",
+          "Total Earning": "Total Earning",
           "Language": "Language",
           "Delete Account": "Delete Account",
           "Are you sure want to delete account":
@@ -655,6 +656,7 @@ class Locales extends Translations {
           "New Requests": "Nuevas solicitudes",
           "Notifications": "Notificaciones",
           "Wallet": "Billetera",
+          "Total Earning": "Ganancia total",
           "Language": "Idioma",
           "Delete Account": "Borrar cuenta",
           "Are you sure want to delete account":

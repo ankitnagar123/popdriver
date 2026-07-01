@@ -231,6 +231,7 @@
 //     );
 //   }
 // }
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -290,6 +291,29 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
     super.dispose();
   }
 
+  Widget _buildOnboardingImage(BuildContext context, String imagePath) {
+    final size = MediaQuery.sizeOf(context);
+    final isWide = kIsWeb || size.width > 600;
+
+    final imageHeight =
+        isWide ? (size.height * 0.42).clamp(220.0, 420.0) : size.height / 2.9;
+    final imageWidth = isWide
+        ? (size.width * 0.55).clamp(280.0, 480.0)
+        : size.width;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Image.asset(
+          imagePath,
+          height: imageHeight,
+          width: imageWidth,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -311,6 +335,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                 return AnimatedBuilder(
                   animation: controller,
                   builder: (context, child) {
+                    if (kIsWeb) return child!;
                     double pageOffset = 0;
                     if (controller.position.haveDimensions) {
                       pageOffset = (controller.page! - index);
@@ -328,13 +353,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(height: 50,),
+                      const SizedBox(height: 50),
                       SlideTransition(
                         position: _titleAnimation,
                         child: Column(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 40,vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 10),
                               child: Text(
                                 items[index].title.toString(),
                                 textAlign: TextAlign.center,
@@ -346,7 +372,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 40),
                               child: Text(
                                 items[index].subTitle.toString(),
                                 textAlign: TextAlign.center,
@@ -360,8 +387,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                           ],
                         ),
                       ),
-                      SizedBox(height: 50,),
-
+                      const SizedBox(height: 32),
                       AnimatedBuilder(
                         animation: _imageAnimation,
                         builder: (context, child) {
@@ -370,23 +396,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>with SingleTickerPro
                             child: child,
                           );
                         },
-                        child: Image.asset(
+                        child: _buildOnboardingImage(
+                          context,
                           items[index].middleImage.toString(),
-                          height: Get.height/2.9,
-                          width: Get.width,
-                          fit: BoxFit.cover,
                         ),
                       ),
-                    /*  Expanded(
-                        child: Stack(
-                          children: [
-
-
-                            // ... skip button ...
-                          ],
-                        ),
-                      ),*/
-
                       const SizedBox(height: 40),
                     ],
                   ),

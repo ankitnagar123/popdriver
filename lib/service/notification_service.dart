@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
+import 'dart:io' show File;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -14,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import '../controller/booking_controller.dart';
 import '../controller/home_screen_controller.dart';
 import '../utils/booking_cancellation_dialog.dart';
+import '../utils/platform_helper.dart';
 import '../utils/polyline_handler.dart';
 
 /// Android `res/raw/booking_ring.mp3` → use name without extension.
@@ -184,7 +186,7 @@ class NotificationService {
   }
 
   static Future<void> _ensureAndroidBookingCancelChannel() async {
-    if (!Platform.isAndroid) return;
+    if (!isAndroid) return;
     try {
       final android = _flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -206,7 +208,7 @@ class NotificationService {
   }
 
   static Future<void> _ensureAndroidForegroundSilentBookingChannel() async {
-    if (!Platform.isAndroid) return;
+    if (!isAndroid) return;
     try {
       final android = _flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -227,7 +229,7 @@ class NotificationService {
   }
 
   static Future<void> _ensureAndroidBookingChannel() async {
-    if (!Platform.isAndroid) return;
+    if (!isAndroid) return;
     try {
       final android = _flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
@@ -262,7 +264,7 @@ class NotificationService {
         ),
       );
 
-      if (Platform.isAndroid) {
+      if (isAndroid) {
         final androidPlugin = plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
         await androidPlugin?.createNotificationChannel(

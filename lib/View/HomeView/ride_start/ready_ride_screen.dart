@@ -1,13 +1,13 @@
 import 'dart:async';
 
-
 import '../../../controller/auth_controller.dart';
 import '../../../controller/booking_controller.dart';
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/custom_button.dart';
 import '../../../utils/snackBar.dart';
-import '../../../utils/text_field.dart';import 'package:flutter/material.dart';
+import '../../../utils/text_field.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../controller/home_screen_controller.dart';
@@ -32,18 +32,14 @@ class _ReadyForRideState extends State<ReadyForRide> {
     super.initState();
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Image.asset(
-        'assets/images/readforride.png',
-        height: Get.height,
-        width: Get.width,
-        fit: BoxFit.fill,
-      ));
-
+        body: Image.asset(
+      'assets/images/readforride.png',
+      height: Get.height,
+      width: Get.width,
+      fit: BoxFit.fill,
+    ));
   }
 }

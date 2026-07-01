@@ -6,18 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:intl/intl.dart';
-import 'package:mtaanidriver/View/HomeView/wallet_screen/sendwalletAmount.dart';
-
 
 import '../../../controller/wallet_controller/wallet_controller.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/custom_button.dart';
-import '../../../utils/snackBar.dart';
 
 import '../drawer_tab_screen/my_ride_screen.dart';
-import 'EarningList.dart';
-import 'addTopUp.dart';
-import 'ammount_withdrawal_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({Key? key}) : super(key: key);
@@ -145,7 +139,7 @@ class _WalletScreenState extends State<WalletScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Your Account Balance',
+                                Text('Total Earning'.tr,
                                     style: TextStyle(
                                         color: Colors.white70, fontSize: 16)),
                                 SizedBox(height: 10),
@@ -158,13 +152,10 @@ class _WalletScreenState extends State<WalletScreen> {
                                       color: MyColors.white,
                                     ),
                                     Text(
-                                      controller.walletBalance.value == ""
-                                          ? "\$ 0"
-                                          : "\$ ${controller.walletBalance.value}",
+                                      "\$ ${_totalEarning()}",
                                       style: TextStyle(
                                           fontFamily: "Poppins",
-                                          decoration: controller
-                                                  .walletBalance.value
+                                          decoration: _totalEarning()
                                                   .contains("-")
                                               ? TextDecoration.underline
                                               : null,
@@ -183,80 +174,6 @@ class _WalletScreenState extends State<WalletScreen> {
                       ],
                     ),
                   ),
-                  Divider(
-                    color: Colors.grey.shade300,
-                    height: 15,
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                            style: ButtonStyle(
-                                backgroundColor: MaterialStatePropertyAll(
-                                     MyColors.primary
-                                       )),
-                            onPressed: () {
-
-                            //  Get.to(()=>Earninglist());
-                            },
-                            child: Text(
-                              "Top Up".tr,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold
-                                  ,
-                                fontSize: 13,
-                                color: MyColors.white,
-                                fontFamily: "Poppins",
-                              ),
-                            )),
-                        ElevatedButton(
-                            style: ButtonStyle(
-                                backgroundColor: MaterialStatePropertyAll(
-                                   MyColors.primary
-                                      )),
-                            onPressed: () {
-                              Get.to(()=>SendWalletAmount());
-                            },
-                            child: Text(
-                              "Send".tr,
-                              style: TextStyle(
-                                fontWeight:
-                                    FontWeight.bold
-                                       ,
-                                fontSize: 13,
-                                color: MyColors.white,
-                                fontFamily: "Poppins",
-                              ),
-                            )),
-                        ElevatedButton(
-                            style: ButtonStyle(
-                                backgroundColor: MaterialStatePropertyAll(
-                                    MyColors.primary
-                                        )),
-                            onPressed: () {
-                              Get.to(()=>AmountWithdrawalScreen());
-                            },
-                            child: Text(
-                              "Withdrawal".tr,
-                              style: TextStyle(
-                                fontWeight:
-                                     FontWeight.bold
-                                ,
-                                fontSize: 13,
-                                color: MyColors.white,
-                                fontFamily: "Poppins",
-                              ),
-                            )),
-                      ],
-                    ),
-                  ),
-
-
                   controller.walletFetchHistoryLoader.value
                       ? SizedBox(
                           height: Get.height / 2,
@@ -806,6 +723,21 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
+
+  String _totalEarning() {
+    if (controller.transactionList.isEmpty) {
+      final balance = controller.walletBalance.value;
+      return balance.isEmpty ? "0" : balance;
+    }
+    double sum = 0;
+    for (final transaction in controller.transactionList) {
+      sum += double.tryParse(transaction.driverEarning) ?? 0;
+    }
+    if (sum == sum.roundToDouble()) {
+      return sum.toInt().toString();
+    }
+    return sum.toStringAsFixed(1);
+  }
 
   datePicker() async {
     DateTime? pickedDate = await showDatePicker(

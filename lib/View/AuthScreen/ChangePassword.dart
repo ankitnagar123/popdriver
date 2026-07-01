@@ -5,6 +5,7 @@ import 'package:mtaanidriver/controller/profile_controller.dart';
 
 import '../../utils/colors.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/web_auth_layout.dart';
 
 class ChangePassword extends StatefulWidget {
   const ChangePassword({super.key});
@@ -110,91 +111,61 @@ class _ChangePasswordState extends State<ChangePassword> {
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return Scaffold(
-      backgroundColor: MyColors.white,
+      backgroundColor: wide ? const Color(0xFFF8FAFA) : MyColors.white,
       appBar: AppBar(
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: MyColors.primary),
-          onPressed: () => Get.back(),
-        ),
+        automaticallyImplyLeading: !wide,
+        leading: wide
+            ? null
+            : IconButton(
+                icon: Icon(Icons.arrow_back_rounded, color: MyColors.primary),
+                onPressed: () => Get.back(),
+              ),
         backgroundColor: Colors.transparent,
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  height: 88,
-                  width: 88,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        MyColors.primary.withOpacity(0.15),
-                        MyColors.primary.withOpacity(0.05),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MyColors.primary.withOpacity(0.18),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.lock_reset_rounded,
-                    size: 42,
-                    color: MyColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Change Password'.tr,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: MyColors.primary,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Update your password to keep your account secure'.tr,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: MyColors.DarkBlue.withOpacity(0.85),
-                  height: 1.5,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-              const SizedBox(height: 28),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: MyColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                  border: Border.all(color: MyColors.TextField),
-                ),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 24 : 20,
+            vertical: wide ? 28 : 0,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: wide ? 520 : double.infinity),
+            child: WebAuthLayout.formCard(
+              context: context,
+              padding: EdgeInsets.all(wide ? 28 : 20),
+              child: Form(
+                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(child: _buildHeaderIcon(wide)),
+                    SizedBox(height: wide ? 28 : 24),
+                    Text(
+                      'Change Password'.tr,
+                      style: TextStyle(
+                        fontSize: wide ? 26 : 28,
+                        fontWeight: FontWeight.w700,
+                        color: MyColors.primary,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Update your password to keep your account secure'.tr,
+                      style: TextStyle(
+                        fontSize: wide ? 14 : 15,
+                        color: MyColors.DarkBlue.withOpacity(0.85),
+                        height: 1.5,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    SizedBox(height: wide ? 24 : 28),
                     CustomPasswordField(
                       controller: currentPassCtr,
                       labelText: 'Current Password'.tr,
@@ -215,7 +186,8 @@ class _ChangePasswordState extends State<ChangePassword> {
                       obscureText: _obscureNew,
                       onToggleVisibility: () =>
                           setState(() => _obscureNew = !_obscureNew),
-                      onChanged: (_) => setState(() => hasNewPassError = false),
+                      onChanged: (_) =>
+                          setState(() => hasNewPassError = false),
                     ),
                     const SizedBox(height: 16),
                     CustomPasswordField(
@@ -229,17 +201,46 @@ class _ChangePasswordState extends State<ChangePassword> {
                       onChanged: (_) =>
                           setState(() => hasConfirmPassError = false),
                     ),
+                    const SizedBox(height: 18),
+                    _buildSecurityTips(),
+                    SizedBox(height: wide ? 24 : 28),
+                    _buildSubmitButton(),
                   ],
                 ),
               ),
-              const SizedBox(height: 18),
-              _buildSecurityTips(),
-              const SizedBox(height: 28),
-              _buildSubmitButton(),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderIcon(bool wide) {
+    return Container(
+      height: wide ? 80 : 88,
+      width: wide ? 80 : 88,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            MyColors.primary.withOpacity(0.15),
+            MyColors.primary.withOpacity(0.05),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MyColors.primary.withOpacity(0.18),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.lock_reset_rounded,
+        size: wide ? 38 : 42,
+        color: MyColors.primary,
       ),
     );
   }

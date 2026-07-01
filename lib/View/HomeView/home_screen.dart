@@ -17,8 +17,11 @@ import '../../utils/polyline_handler.dart';
 import '../../utils/redirect_map.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/web_driver_layout.dart';
+import '../../widgets/driver_home_map.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../controller/painic_controller.dart';
@@ -94,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
       if (contoller.canGoOnline(showMessage: false)) {
         contoller.onOff.value = true;
-        controller.rideNowBooking();
+        await contoller.goOnlineAndSyncLocation(context);
         var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
         var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
         authController.loginCheck(loginKey.toString(), accessToken, context);
@@ -109,20 +112,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _webRideSheetController.dispose();
     controller.cancel();
     super.dispose();
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  final ScrollController _webRideSheetController = ScrollController();
 
-  /// Keep trip sheet above [BottomNavScreen]'s BottomAppBar (`height: 60`) and
-  /// system gesture/nav bar. Scaffold uses `extendBody: true`.
   double _rideSheetBottomClearance(BuildContext context) {
+    if (kIsWeb) return 16;
     const bottomAppBarHeight = 60.0;
     final gestureInset = MediaQuery.viewPaddingOf(context).bottom;
-    // Center-docked FAB extends above the BottomAppBar and can clip the sheet.
     const fabOverhang = 26.0;
     return bottomAppBarHeight + gestureInset + fabOverhang;
+  }
+
+  LatLng _resolveMapTarget() {
+    if (contoller.hasValidLocation.value) {
+      return contoller.startLocation.value;
+    }
+    final initial = contrl.mapInitialLocation.value;
+    if (initial.latitude != 0 || initial.longitude != 0) return initial;
+    return contoller.startLocation.value;
   }
 
   Widget _buildHomeInfoButton() {
@@ -155,6 +167,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Obx(() {
       // Rebuild when route polyline finishes decoding (global `polyline` is not observable).
       contoller.mapPolylineEpoch.value;
+      contoller.startLocation.value;
+      contoller.hasValidLocation.value;
+      contoller.markers.length;
       return Scaffold(
         key: _scaffoldKey,
         body: contoller.onOff.value == false
@@ -168,16 +183,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            InkWell(
-                              onTap: () {
-                                Get.to(() => MtaaniSidebar(),
-                                    arguments: "Home");
-                              },
-                              child: Icon(
-                                Icons.menu,
-                                color: MyColors.black,
+                            if (!kIsWeb)
+                              InkWell(
+                                onTap: () {
+                                  Get.to(() => MtaaniSidebar(),
+                                      arguments: "Home");
+                                },
+                                child: Icon(
+                                  Icons.menu,
+                                  color: MyColors.black,
+                                ),
                               ),
-                            ),
                             Expanded(
                               child: Center(
                                 child: contoller.arriveDriver.value == "Arrived"
@@ -255,15 +271,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                             contoller.onOff.value == true
                                                 ? Colors.green
                                                 : Colors.grey,
-                                        onChanged: (value) {
+                                        onChanged: (value) async {
                                           if (value) {
                                             if (!contoller.canGoOnline()) {
                                               return;
                                             }
                                             contoller.onOff.value = true;
-                                            sp.setBoolValue(
+                                            await sp.setBoolValue(
                                                 sp.DRIVER_ONLINE_STATUS, true);
-                                            controller.rideNowBooking();
+                                            await contoller
+                                                .goOnlineAndSyncLocation(
+                                                    context);
                                           } else {
                                             contoller.clearPenaltyAutoRestore();
                                             contoller.onOff.value = false;
@@ -326,40 +344,18 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : Stack(
                 children: [
-                  GoogleMap(
-                    key: const ValueKey("driver_home_map"),
-                    myLocationButtonEnabled: false,
-                    myLocationEnabled: true,
-                    zoomControlsEnabled: false,
-                    zoomGesturesEnabled: true,
-                    scrollGesturesEnabled: true,
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.paddingOf(context).top + 56,
-                    ),
-                    buildingsEnabled: true,
-                    cameraTargetBounds: CameraTargetBounds.unbounded,
-                    compassEnabled: true,
-                    indoorViewEnabled: false,
-                    mapToolbarEnabled: false,
-                    rotateGesturesEnabled: true,
-                    tiltGesturesEnabled: true,
-                    liteModeEnabled: false,
-                    minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
+                  DriverHomeMap(
                     markers: Set<Marker>.of(contoller.markers),
                     polylines: Set<Polyline>.of(polyline.values),
-                    mapType: MapType.normal,
+                    topPadding: MediaQuery.paddingOf(context).top + 56,
+                    initialTarget: _resolveMapTarget(),
+                    initialZoom: 16,
                     onMapCreated: (GoogleMapController mapCtl) {
                       contoller.setGoogleMapController(mapCtl);
-                      contoller.updateCameraPosition(
-                          contrl.mapInitialLocation.value);
+                      if (contoller.hasValidLocation.value) {
+                        contoller.updateCameraPosition(_resolveMapTarget());
+                      }
                     },
-                    initialCameraPosition: CameraPosition(
-                      target: contrl.mapInitialLocation.value.latitude == 0
-                          ? contoller.startLocation.value
-                          : LatLng(contrl.mapInitialLocation.value.latitude,
-                              contrl.mapInitialLocation.value.longitude),
-                      zoom: 16,
-                    ),
                   ),
                   Positioned(
                     top: 30,
@@ -370,15 +366,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          InkWell(
-                            onTap: () {
-                              Get.to(() => MtaaniSidebar(), arguments: "Home");
-                            },
-                            child: Icon(
-                              Icons.menu,
-                              color: MyColors.black,
+                          if (!kIsWeb)
+                            InkWell(
+                              onTap: () {
+                                Get.to(() => MtaaniSidebar(), arguments: "Home");
+                              },
+                              child: Icon(
+                                Icons.menu,
+                                color: MyColors.black,
+                              ),
                             ),
-                          ),
                           Expanded(
                             child: Center(
                               child: contoller.arriveDriver.value == "Arrived"
@@ -508,107 +505,76 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? SizedBox.shrink()
                       : Visibility(
                           visible: contoller.driverArriveValue.value,
-                          child: Positioned.fill(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                bottom: _rideSheetBottomClearance(context),
-                              ),
-                              child: SafeArea(
-                                top: false,
-                                bottom: false,
-                                child: DraggableScrollableSheet(
-                                  initialChildSize: 0.32,
-                                  minChildSize: 0.16,
-                                  maxChildSize: 0.93,
-                                  snap: true,
-                                  snapSizes: const <double>[
-                                    0.16,
-                                    0.32,
-                                    0.55,
-                                    0.93,
-                                  ],
-                                  builder: (context, scrollController) {
-                                    return CustomRideStart(
-                                      sheetScrollController: scrollController,
-                                      bookingId:
-                                          controller.useracceptmodel.bookingId,
-                                      userID: controller.useracceptmodel.userId,
-                                      distance:
-                                          controller.useracceptmodel.distance,
-                                      time: controller.useracceptmodel.duration,
-                                      callCallback: () {},
-                                      msgCallBack: () {
-                                        Get.toNamed(
-                                            RouteHelper.getMessageScreenRout(),
-                                            arguments: {
-                                              "userId": controller
-                                                  .useracceptmodel.userId
-                                            });
-                                      },
-                                      cancelCallBack: () {
-                                        showCustomDialog(
+                          child: kIsWeb
+                              ? Positioned(
+                                  top: 64,
+                                  right: 20,
+                                  bottom: 20,
+                                  width: WebDriverLayout.panelWidth,
+                                  child: Material(
+                                    elevation: 10,
+                                    shadowColor: Colors.black26,
+                                    borderRadius: BorderRadius.circular(16),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: _buildActiveRideCard(
+                                      context,
+                                      _webRideSheetController,
+                                    ),
+                                  ),
+                                )
+                              : Positioned.fill(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom:
+                                          _rideSheetBottomClearance(context),
+                                    ),
+                                    child: SafeArea(
+                                      top: false,
+                                      bottom: false,
+                                      child: DraggableScrollableSheet(
+                                        initialChildSize: 0.32,
+                                        minChildSize: 0.16,
+                                        maxChildSize: 0.93,
+                                        snap: true,
+                                        snapSizes: const <double>[
+                                          0.16,
+                                          0.32,
+                                          0.55,
+                                          0.93,
+                                        ],
+                                        builder: (context, scrollController) {
+                                          return _buildActiveRideCard(
                                             context,
-                                            controller
-                                                .useracceptmodel.bookingId);
-
-                                        // Get.toNamed(
-                                        //     RouteHelper.getCancelBookingScreenRoute(),
-                                        //     arguments: {
-                                        //       "bookingId": controller.useracceptmodel.bookingId.toString(),
-                                        //       "type": "Ride Now".tr
-                                        //     });
-                                      },
-                                      image: controller.useracceptmodel.image,
-                                      userName:
-                                          controller.useracceptmodel.userName,
-                                      paymentType: controller
-                                          .useracceptmodel.paymentMode,
-                                      price:
-                                          "\$ ${controller.useracceptmodel.totalPrice}",
-                                      pickupLocation:
-                                          controller.useracceptmodel.sourceAdd,
-                                      dropLocation: controller
-                                          .useracceptmodel.destinationAdd,
-                                      mapCallback: () {
-                                        if (controller.useracceptmodel.status ==
-                                            "Confirmed".tr) {
-                                          MapUtils.openMap(
-                                            double.parse(controller
-                                                .useracceptmodel.sourceLat),
-                                            double.parse(controller
-                                                .useracceptmodel.sourceLong),
+                                            scrollController,
                                           );
-                                        } else {
-                                          MapUtils.openMap(
-                                            double.parse(controller
-                                                .useracceptmodel
-                                                .destinationLat),
-                                            double.parse(controller
-                                                .useracceptmodel
-                                                .destinationLong),
-                                          );
-                                        }
-                                      },
-                                    );
-                                  },
+                                        },
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
                         ),
                   contoller.driverArriveValue.value == true
                       ? SizedBox.shrink()
                       : contoller.onOff.value == true
                           ? Positioned(
                               top: 80,
-                              left: 5,
-                              right: 15,
+                              left: kIsWeb ? null : 5,
+                              right: kIsWeb ? 20 : 15,
+                              bottom: kIsWeb ? 20 : null,
+                              width: kIsWeb
+                                  ? WebDriverLayout.panelWidth
+                                  : null,
                               child: IgnorePointer(
                                 ignoring: controller.rideNowList.isEmpty,
-                                child: SizedBox(
-                                  height: Get.height * 0.85,
-                                  child: rideNow(),
-                                ),
+                                child: kIsWeb
+                                    ? Material(
+                                        color: Colors.transparent,
+                                        child: rideNow(),
+                                      )
+                                    : SizedBox(
+                                        height: Get.height * 0.85,
+                                        child: rideNow(),
+                                      ),
                               ),
                             )
                           : SizedBox.shrink(),
@@ -618,21 +584,68 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Widget _buildActiveRideCard(
+    BuildContext context,
+    ScrollController scrollController,
+  ) {
+    return CustomRideStart(
+      sheetScrollController: scrollController,
+      bookingId: controller.useracceptmodel.bookingId,
+      userID: controller.useracceptmodel.userId,
+      distance: controller.useracceptmodel.distance,
+      time: controller.useracceptmodel.duration,
+      callCallback: () {},
+      msgCallBack: () {
+        Get.toNamed(RouteHelper.getMessageScreenRout(), arguments: {
+          "userId": controller.useracceptmodel.userId
+        });
+      },
+      cancelCallBack: () {
+        showCustomDialog(context, controller.useracceptmodel.bookingId);
+      },
+      image: controller.useracceptmodel.image,
+      userName: controller.useracceptmodel.userName,
+      paymentType: controller.useracceptmodel.paymentMode,
+      price: "\$ ${controller.useracceptmodel.totalPrice}",
+      pickupLocation: controller.useracceptmodel.sourceAdd,
+      dropLocation: controller.useracceptmodel.destinationAdd,
+      mapCallback: () {
+        if (controller.useracceptmodel.status == "Confirmed".tr) {
+          MapUtils.openMap(
+            double.parse(controller.useracceptmodel.sourceLat),
+            double.parse(controller.useracceptmodel.sourceLong),
+          );
+        } else {
+          MapUtils.openMap(
+            double.parse(controller.useracceptmodel.destinationLat),
+            double.parse(controller.useracceptmodel.destinationLong),
+          );
+        }
+      },
+    );
+  }
+
   Widget rideNow() {
     return Obx(() {
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        shrinkWrap: !kIsWeb,
+        padding: EdgeInsets.symmetric(
+          horizontal: kIsWeb ? 4 : 10,
+          vertical: 8,
+        ),
         itemCount: controller.rideNowList.length,
         itemBuilder: (context, index) {
           var reverseList = controller.rideNowList.reversed.toList();
           var list = reverseList[index];
 
-          return Card(
-            elevation: 3,
+          return Padding(
+            padding: EdgeInsets.only(bottom: kIsWeb ? 12 : 0),
+            child: Card(
+            elevation: kIsWeb ? 6 : 3,
+            shadowColor: Colors.black26,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(kIsWeb ? 16 : 15),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -850,6 +863,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+          ),
           );
         },
       );

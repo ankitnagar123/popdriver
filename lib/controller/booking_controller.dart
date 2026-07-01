@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
@@ -38,7 +39,15 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   final deleteId = "".obs;
   Timer? timer;
   Timer? _rideListRefreshTimer;
-  static const Duration _rideListRefreshInterval = Duration(seconds: 15);
+  Timer? _webRideListRefreshTimer;
+
+  /// Web has no FCM — poll faster to match app notification refresh.
+  static Duration get _rideListRefreshInterval => const Duration(seconds: 15);
+  static const Duration _webExtraRefreshInterval = Duration(seconds: 8);
+
+  bool _rideNowFetchInFlight = false;
+
+  void _logBooking(String msg) => debugPrint('[BOOKING_API] $msg');
 
   UserAcceptBookingModel _userAcceptBookingModel =
       UserAcceptBookingModel.empty();
@@ -78,16 +87,44 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   /// Poll ride-now list while driver is online and not on an active trip.
   void startRideListAutoRefresh() {
     _rideListRefreshTimer?.cancel();
+    _webRideListRefreshTimer?.cancel();
+
     _rideListRefreshTimer = Timer.periodic(_rideListRefreshInterval, (_) {
       if (!controller.onOff.value) return;
       if (controller.hide.value || controller.driverArriveValue.value) return;
       rideNowBooking();
     });
+
+    if (kIsWeb) {
+      _webRideListRefreshTimer = Timer.periodic(_webExtraRefreshInterval, (_) {
+        if (!controller.onOff.value) return;
+        if (controller.hide.value || controller.driverArriveValue.value) return;
+        rideNowBooking();
+      });
+    }
   }
 
   void stopRideListAutoRefresh() {
     _rideListRefreshTimer?.cancel();
     _rideListRefreshTimer = null;
+    _webRideListRefreshTimer?.cancel();
+    _webRideListRefreshTimer = null;
+  }
+
+  /// Call when driver goes online — wait for GPS on web, then fetch bookings.
+  Future<void> refreshAfterGoingOnline() async {
+    if (kIsWeb && !controller.hasValidLocation.value) {
+      _logBooking('waiting for GPS before booking fetch...');
+      final ready = await controller.waitForValidLocation(
+        timeout: const Duration(seconds: 8),
+      );
+      if (!ready) {
+        _logBooking('booking fetch deferred — GPS not ready yet');
+      }
+    }
+    await rideNowBooking();
+    await Future.delayed(const Duration(seconds: 2));
+    await rideNowBooking();
   }
 
   void adminApprove() {
@@ -101,36 +138,67 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> rideNowBooking() async {
-    final rideNowBooking = {'driver_id': await secure.readData(secure.user_id)};
+    if (_rideNowFetchInFlight) return;
+    _rideNowFetchInFlight = true;
     try {
-      final response = await apiService.postData(
-          URLS.FETCH_RIDE_NOW_BOOKING, rideNowBooking);
-      if (response.statusCode == 429) {
-        log("rideNowBooking: rate limited (429)");
+      final driverId = await secure.readData(secure.user_id);
+      if (driverId == null || driverId.isEmpty) {
+        _logBooking('skipped — driver_id missing');
         return;
       }
+
+      if (kIsWeb && !controller.hasValidLocation.value) {
+        _logBooking('skipped — GPS not ready yet');
+        return;
+      }
+
+      final payload = {'driver_id': driverId};
+      final home = Get.find<HomeController>();
+      final loc = home.startLocation.value;
+      _logBooking(
+        'POST fetch_driver_ride_now_list driver_id=$driverId '
+        'lat=${loc.latitude} lng=${loc.longitude} '
+        'valid=${home.hasValidLocation.value}',
+      );
+
+      final response =
+          await apiService.postData(URLS.FETCH_RIDE_NOW_BOOKING, payload);
+
+      if (response.statusCode == 429) {
+        _logBooking('rate limited (429)');
+        return;
+      }
+      if (response.statusCode >= 500) {
+        _logBooking('server/network error (${response.statusCode})');
+        return;
+      }
+
       final body = response.body.trim();
-      log("ride now booking response----->:$body");
       if (body.isEmpty || body.startsWith('<')) {
+        _logBooking('empty response — no bookings');
         rideNowList.value = [];
         datas.value = "";
         return;
       }
+
       final decoded = jsonDecode(body);
       if (decoded is List) {
         rideNowList.value = decoded
             .map((item) =>
                 RideNowBookingModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
+        _logBooking('found ${rideNowList.length} booking(s): $body');
       } else {
-        log("rideNowBooking: unexpected JSON shape");
+        _logBooking('unexpected JSON: $body');
         rideNowList.value = [];
       }
       datas.value = rideNowList.isEmpty ? "" : "hello";
     } catch (e) {
-      log("ride now booking Exception-----", error: e.toString());
+      _logBooking('exception: $e');
       rideNowList.value = [];
       datas.value = "";
+    } finally {
+      _rideNowFetchInFlight = false;
     }
   }
 
