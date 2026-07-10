@@ -1,13 +1,34 @@
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:geolocator/geolocator.dart';
 
+import 'platform_helper.dart';
+
 /// Platform-specific geolocation settings for the driver app.
-LocationSettings driverLocationSettings({Duration? timeLimit}) {
+LocationSettings driverLocationSettings({
+  Duration? timeLimit,
+  bool enableForegroundService = false,
+}) {
   if (kIsWeb) {
     return WebSettings(
       accuracy: LocationAccuracy.bestForNavigation,
       maximumAge: Duration.zero,
       timeLimit: timeLimit ?? const Duration(seconds: 20),
+    );
+  }
+  if (isAndroid && enableForegroundService) {
+    return AndroidSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 5,
+      timeLimit: timeLimit,
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationTitle: 'POP Driver',
+        notificationText: 'You are online — waiting for ride requests',
+        notificationIcon: AndroidResource(
+          name: 'ic_launcher',
+          defType: 'mipmap',
+        ),
+        enableWakeLock: true,
+      ),
     );
   }
   return LocationSettings(

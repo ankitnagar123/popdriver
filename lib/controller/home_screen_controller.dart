@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
+import 'dart:math' as Math;
 
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../Network/urls.dart';
 import '../utils/colors.dart';
 import '../utils/driver_location_settings.dart';
 import '../utils/shared_preferences.dart';
+import '../service/notification_service.dart';
 
 import 'auth_controller.dart';
 import 'booking_controller.dart';
@@ -48,7 +50,13 @@ class HomeController extends GetxController {
   // var googleMapController = Rx<GoogleMapController?>(null);
 
   Rx<GoogleMapController?> googleMapController = Rx<GoogleMapController?>(null);
-  Uint8List? _driverMarkerBytes;
+  BitmapDescriptor? _driverMarkerIcon;
+  /// Visual smoothing state (marker interpolation).
+  Timer? _markerAnimTimer;
+  LatLng? _markerVisualPos;
+  LatLng? _markerTargetPos;
+  double? _markerVisualBearing;
+  DateTime? _markerTargetAt;
   DateTime? _lastDriverLatLongSyncAt;
   DateTime? _lastRideRefreshAt;
   DateTime? _lastPenaltyDialogAt;
@@ -59,6 +67,32 @@ class HomeController extends GetxController {
   bool _wasOnlineBeforePenalty = false;
   LatLng? _lastCameraTarget;
   bool _isListening = false;
+  bool _cameraMoveFromCode = false;
+  bool _mapReady = false;
+  bool _cameraAnimInFlight = false;
+  DateTime? _lastAnimateAt;
+
+  /// When true, map camera follows the driver car (Restart-style).
+  final RxBool mapFollowDriver = true.obs;
+
+  /// Clears all map markers except the driver's own marker (`MarkerId("1")`).
+  /// Many flows reset map state on booking cancel/complete; driver marker should persist.
+  void clearMarkersExceptDriver() {
+    markers.removeWhere((m) => m.markerId != const MarkerId('1'));
+    markers.refresh();
+  }
+
+  Future<BitmapDescriptor> _getDriverMarkerIcon() async {
+    // Match Restart driver's look: use the same car asset + fixed size.
+    final existing = _driverMarkerIcon;
+    if (existing != null) return existing;
+    final icon = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(23, 34)),
+      'assets/images/restart_car.png',
+    );
+    _driverMarkerIcon = icon;
+    return icon;
+  }
 
   /// Bump so `HomeScreen` rebuilds polylines after async Directions fetch.
   final RxInt mapPolylineEpoch = 0.obs;
@@ -66,38 +100,93 @@ class HomeController extends GetxController {
 
   void setGoogleMapController(GoogleMapController controller) {
     googleMapController.value = controller;
+    _mapReady = true;
   }
 
-  void updateCameraPosition(LatLng location) {
-    if (location.latitude == 0 && location.longitude == 0) return;
+  /// Call when GoogleMap widget is disposed / left Home so GPS sync
+  /// cannot animate a dead platform channel.
+  void clearGoogleMapController() {
+    _mapReady = false;
+    _cameraMoveFromCode = false;
+    _cameraAnimInFlight = false;
+    googleMapController.value = null;
+  }
 
-    final controller = googleMapController.value;
-    if (controller != null) {
-      if (_lastCameraTarget != null) {
-        final distance = Geolocator.distanceBetween(
-          _lastCameraTarget!.latitude,
-          _lastCameraTarget!.longitude,
-          location.latitude,
-          location.longitude,
-        );
-        if (distance < 8) return;
-      }
-      _lastCameraTarget = location;
-      try {
-        controller.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: location,
-              zoom: 16,
-            ),
-          ),
-        );
-      } on PlatformException catch (e) {
-        log('animateCamera skipped: ${e.message}');
-      } catch (e) {
-        log('animateCamera skipped: $e');
-      }
+  void onUserMapGesture() {
+    if (mapFollowDriver.value) {
+      mapFollowDriver.value = false;
     }
+  }
+
+  void onCameraMoveStarted() {
+    if (_cameraMoveFromCode) return;
+    onUserMapGesture();
+  }
+
+  void recenterMapOnDriver() {
+    if (!hasValidLocation.value) return;
+    mapFollowDriver.value = true;
+    _lastCameraTarget = null;
+    updateCameraPosition(startLocation.value, force: true);
+  }
+
+  Future<void> _safeAnimateCamera(CameraUpdate update) async {
+    if (!_mapReady) return;
+    final controller = googleMapController.value;
+    if (controller == null) return;
+    if (_cameraAnimInFlight) return;
+
+    final now = DateTime.now();
+    if (_lastAnimateAt != null &&
+        now.difference(_lastAnimateAt!).inMilliseconds < 250) {
+      return;
+    }
+    _lastAnimateAt = now;
+    _cameraAnimInFlight = true;
+    _cameraMoveFromCode = true;
+    try {
+      await controller.animateCamera(update);
+    } on PlatformException catch (e) {
+      // Map platform view torn down / channel reconnect — ignore.
+      log('animateCamera skipped: ${e.code} ${e.message}');
+      if (e.code == 'channel-error') {
+        clearGoogleMapController();
+      }
+    } catch (e) {
+      log('animateCamera skipped: $e');
+    } finally {
+      _cameraAnimInFlight = false;
+      _cameraMoveFromCode = false;
+    }
+  }
+
+  void updateCameraPosition(LatLng location, {bool force = false}) {
+    if (location.latitude == 0 && location.longitude == 0) return;
+    if (!force && !mapFollowDriver.value) return;
+    if (!_mapReady || googleMapController.value == null) return;
+
+    if (_lastCameraTarget != null && !force) {
+      final distance = Geolocator.distanceBetween(
+        _lastCameraTarget!.latitude,
+        _lastCameraTarget!.longitude,
+        location.latitude,
+        location.longitude,
+      );
+      if (distance < 8) return;
+    }
+    _lastCameraTarget = location;
+    // Fire-and-forget; errors are handled inside _safeAnimateCamera.
+    unawaited(
+      _safeAnimateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: location,
+            zoom: 16,
+            bearing: (_markerVisualBearing ?? 0) % 360.0,
+          ),
+        ),
+      ),
+    );
   }
 
   /// Called after the route polyline is decoded so the map refreshes and fits the path.
@@ -108,34 +197,33 @@ class HomeController extends GetxController {
   }
 
   void _fitCameraToRoute(List<LatLng> points) {
-    final mapCtl = googleMapController.value;
-    if (mapCtl == null || points.length < 2) return;
-    try {
-      double minLat = points.first.latitude;
-      double maxLat = points.first.latitude;
-      double minLng = points.first.longitude;
-      double maxLng = points.first.longitude;
-      for (final p in points) {
-        minLat = minLat < p.latitude ? minLat : p.latitude;
-        maxLat = maxLat > p.latitude ? maxLat : p.latitude;
-        minLng = minLng < p.longitude ? minLng : p.longitude;
-        maxLng = maxLng > p.longitude ? maxLng : p.longitude;
-      }
-      final bounds = LatLngBounds(
-        southwest: LatLng(minLat, minLng),
-        northeast: LatLng(maxLat, maxLng),
-      );
-      mapCtl.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
-    } on PlatformException catch (e) {
-      log('fitCameraToRoute skipped: ${e.message}');
-    } catch (e) {
-      log('fitCameraToRoute skipped: $e');
+    if (!_mapReady || googleMapController.value == null || points.length < 2) {
+      return;
     }
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+    for (final p in points) {
+      minLat = minLat < p.latitude ? minLat : p.latitude;
+      maxLat = maxLat > p.latitude ? maxLat : p.latitude;
+      minLng = minLng < p.longitude ? minLng : p.longitude;
+      maxLng = maxLng > p.longitude ? maxLng : p.longitude;
+    }
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+    unawaited(
+      _safeAnimateCamera(CameraUpdate.newLatLngBounds(bounds, 100)),
+    );
   }
 
   @override
   void onClose() {
     _penaltyExpiryTimer?.cancel();
+    _markerAnimTimer?.cancel();
+    clearGoogleMapController();
     _stopWebLocationSyncTimer();
     try {
       stopListening();
@@ -148,6 +236,8 @@ class HomeController extends GetxController {
   @override
   void dispose() {
     _penaltyExpiryTimer?.cancel();
+    _markerAnimTimer?.cancel();
+    clearGoogleMapController();
     _stopWebLocationSyncTimer();
     try {
       stopListening();
@@ -277,7 +367,9 @@ class HomeController extends GetxController {
     if (_isListening) return;
     _isListening = true;
     streamSubscription = Geolocator.getPositionStream(
-      locationSettings: driverLocationSettings(),
+      locationSettings: driverLocationSettings(
+        enableForegroundService: onOff.value && !kIsWeb,
+      ),
     ).listen(
       (Position position) {
         applyLivePosition(position);
@@ -349,8 +441,9 @@ class HomeController extends GetxController {
       }
 
       if (hasValidLocation.value) {
+        mapFollowDriver.value = true;
         _lastCameraTarget = null;
-        updateCameraPosition(startLocation.value);
+        updateCameraPosition(startLocation.value, force: true);
         updateDriverLatLong(
           startLocation.value.latitude.toString(),
           startLocation.value.longitude.toString(),
@@ -363,24 +456,46 @@ class HomeController extends GetxController {
       log('goOnlineAndSyncLocation failed: $e');
     }
     await Get.find<BookingController>().refreshAfterGoingOnline();
+    await restartLocationStreamForOnlineState();
   }
 
   void applyLivePosition(Position position, {bool recenterMap = false}) {
     if (position.latitude == 0 && position.longitude == 0) return;
-    if (recenterMap) _lastCameraTarget = null;
+    if (recenterMap) {
+      _lastCameraTarget = null;
+      mapFollowDriver.value = true;
+    }
     hasValidLocation.value = true;
     if (kIsWeb && position.accuracy > 1000) {
       log('Web location ~${position.accuracy.round()}m accurate — turn on precise location in browser & Windows');
     }
     startLocation.value = LatLng(position.latitude, position.longitude);
     updateMarker(position);
-    updateCameraPosition(startLocation.value);
+    updateCameraPosition(startLocation.value, force: recenterMap);
     if (onOff.value) {
       _syncDriverAvailability(
         position,
         Get.overlayContext ?? Get.context,
       );
     }
+  }
+
+  Future<void> restartLocationStreamForOnlineState() async {
+    if (!_isListening) return;
+    try {
+      await streamSubscription.cancel();
+    } catch (e) {
+      log('[LOCATION] stream cancel before restart: $e');
+    }
+    _isListening = false;
+    startListening();
+  }
+
+  Future<void> onDriverOnlineStatusChanged(bool online) async {
+    if (!online) {
+      await BookingRingManager.stopImmediate();
+    }
+    await restartLocationStreamForOnlineState();
   }
 
   void stopListening() {
@@ -423,36 +538,141 @@ class HomeController extends GetxController {
   Future<void> updateMarker(Position position) async {
     BitmapDescriptor icon;
     try {
-      _driverMarkerBytes ??= await getMarkers();
-      icon = BitmapDescriptor.bytes(_driverMarkerBytes!);
-    } catch (e) {
+      icon = await _getDriverMarkerIcon();
+    } catch (_) {
       icon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
     }
 
+    final nextTarget = LatLng(position.latitude, position.longitude);
+    final nextBearing = _chooseBearing(
+      position: position,
+      target: nextTarget,
+    );
+
+    // Initialize visual state on first fix.
+    _markerVisualPos ??= nextTarget;
+    _markerVisualBearing ??= nextBearing;
+
+    _markerTargetPos = nextTarget;
+    _markerTargetAt = DateTime.now();
+    _markerStartOrKickAnimation(icon: icon);
+  }
+
+  double _chooseBearing({
+    required Position position,
+    required LatLng target,
+  }) {
+    // Prefer plugin-provided heading when moving; otherwise compute from delta.
+    final speed = position.speed;
+    final hasMotion = speed.isFinite && speed > 1.0; // m/s
+
+    double candidate;
+    if (hasMotion && position.heading.isFinite && position.heading >= 0) {
+      candidate = position.heading % 360.0;
+    } else if (_markerVisualPos != null) {
+      candidate = _bearingBetween(_markerVisualPos!, target);
+    } else {
+      candidate = 0;
+    }
+
+    // Low-pass filter angle to reduce jitter.
+    final prev = _markerVisualBearing ?? candidate;
+    // alpha: 0 → stick, 1 → no smoothing
+    const alpha = 0.22;
+    return _lerpAngleDegrees(prev, candidate, alpha);
+  }
+
+  void _markerStartOrKickAnimation({required BitmapDescriptor icon}) {
+    // If we're already animating, just let it converge to the new target.
+    if (_markerAnimTimer?.isActive == true) return;
+
+    _markerAnimTimer =
+        Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      final target = _markerTargetPos;
+      final targetAt = _markerTargetAt;
+      if (target == null || targetAt == null) return;
+
+      final from = _markerVisualPos ?? target;
+      final to = target;
+
+      // Smoothly converge towards target; faster if far, slower if near.
+      final distMeters = Geolocator.distanceBetween(
+        from.latitude,
+        from.longitude,
+        to.latitude,
+        to.longitude,
+      );
+
+      // If we are basically at target, snap and stop.
+      if (distMeters < 1.2) {
+        _markerVisualPos = to;
+        _pushDriverMarker(icon: icon);
+        timer.cancel();
+        _markerAnimTimer = null;
+        return;
+      }
+
+      // Step factor: 0.08..0.35 (bigger gap → bigger step).
+      final t = (distMeters / 25.0).clamp(0.08, 0.35);
+      _markerVisualPos = _lerpLatLng(from, to, t);
+
+      // Bearing should keep moving towards the last chosen bearing.
+      // When target updates quickly, _markerVisualBearing is updated in updateMarker().
+      _pushDriverMarker(icon: icon);
+    });
+  }
+
+  void _pushDriverMarker({required BitmapDescriptor icon}) {
+    final pos = _markerVisualPos ?? _markerTargetPos;
+    if (pos == null) return;
+
     final marker =
         markers.firstWhereOrNull((m) => m.markerId == const MarkerId("1"));
-
     if (marker != null) {
       markers.remove(marker);
     }
 
     markers.add(Marker(
       markerId: const MarkerId("1"),
-      position: LatLng(position.latitude, position.longitude),
-      rotation: position.heading,
+      position: pos,
+      rotation: (_markerVisualBearing ?? 0) % 360.0,
       draggable: false,
       zIndexInt: 2,
       flat: true,
+      // Restart uses centered anchor for top-view car.
       anchor: const Offset(0.5, 0.5),
       icon: icon,
     ));
     markers.refresh();
   }
 
-  Future<Uint8List> getMarkers() async {
-    ByteData byteData = await rootBundle.load("assets/images/imagemarker.png");
-    return byteData.buffer.asUint8List();
+  static LatLng _lerpLatLng(LatLng a, LatLng b, double t) {
+    final clamped = t.clamp(0.0, 1.0);
+    return LatLng(
+      a.latitude + (b.latitude - a.latitude) * clamped,
+      a.longitude + (b.longitude - a.longitude) * clamped,
+    );
   }
+
+  static double _lerpAngleDegrees(double a, double b, double t) {
+    // Shortest-path interpolation over wrap-around at 360.
+    final delta = ((b - a + 540) % 360) - 180;
+    return (a + delta * t) % 360.0;
+  }
+
+  static double _bearingBetween(LatLng from, LatLng to) {
+    final lat1 = from.latitude * (3.141592653589793 / 180.0);
+    final lat2 = to.latitude * (3.141592653589793 / 180.0);
+    final dLon = (to.longitude - from.longitude) * (3.141592653589793 / 180.0);
+    final y = Math.sin(dLon) * Math.cos(lat2);
+    final x = Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    final brng = Math.atan2(y, x) * (180.0 / 3.141592653589793);
+    return (brng + 360.0) % 360.0;
+  }
+
+  // NOTE: legacy marker-byte loader removed in favor of [BitmapDescriptor.asset]
+  // to keep sizing consistent like Restart driver.
 
   // User pickup Location Marker
   Future<void> userPickupMarker(BuildContext context) async {
@@ -726,6 +946,7 @@ class HomeController extends GetxController {
     }
     onOff.value = false;
     sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+    BookingRingManager.stopImmediate();
 
     if (!wasOnline || !showDialog) return;
 
@@ -812,11 +1033,6 @@ class HomeController extends GetxController {
 
   Future<void> Data(Position position, BuildContext context) async {
     try {
-      // Check if Google Map controller is available
-      if (googleMapController.value != null) {
-        updateCameraPosition(LatLng(position.latitude, position.longitude));
-      }
-
       final now = DateTime.now();
       // Slightly looser polling reduces duplicate requests (helps with HTTP 429).
       final shouldRefreshRideState = _lastRideRefreshAt == null ||

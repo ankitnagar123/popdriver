@@ -172,11 +172,14 @@ class _CustomRideStartState extends State<CustomRideStart> {
             elevation: 12,
             shadowColor: Colors.black26,
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(16),
+                bottom: Radius.circular(16),
+              ),
             ),
             clipBehavior: Clip.antiAlias,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -459,7 +462,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                                         customSnackBar("Booking completed");
                                         contoller.onOff.value = true;
                                         polyline.clear();
-                                        contoller.markers.clear();
+                                        contoller.clearMarkersExceptDriver();
                                         contoller.hide.value = false;
                                         controller.completeText.value = "";
                                         contoller.polylineVariable.value = "";
@@ -486,9 +489,7 @@ class _CustomRideStartState extends State<CustomRideStart> {
                             },
                           ),
                   ),
-                  SizedBox(
-                    height: 12,
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),

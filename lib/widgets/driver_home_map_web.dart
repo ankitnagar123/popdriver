@@ -9,13 +9,14 @@ Widget buildDriverHomeMap({
   required double initialZoom,
   required double topPadding,
   required void Function(GoogleMapController controller) onMapCreated,
+  VoidCallback? onCameraMoveStarted,
 }) {
   final hasTarget = initialTarget.latitude != 0 || initialTarget.longitude != 0;
 
   return GoogleMap(
     key: ValueKey('driver_home_map_web_$initialTarget'),
-    myLocationButtonEnabled: true,
-    myLocationEnabled: true,
+    myLocationButtonEnabled: false,
+    myLocationEnabled: false,
     zoomControlsEnabled: false,
     zoomGesturesEnabled: true,
     scrollGesturesEnabled: true,
@@ -33,6 +34,7 @@ Widget buildDriverHomeMap({
     polylines: polylines,
     mapType: MapType.normal,
     onMapCreated: onMapCreated,
+    onCameraMoveStarted: onCameraMoveStarted,
     initialCameraPosition: CameraPosition(
       target: initialTarget,
       zoom: hasTarget ? initialZoom : 5,

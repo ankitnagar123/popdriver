@@ -19,6 +19,7 @@ import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import '../../utils/web_driver_layout.dart';
 import '../../widgets/driver_home_map.dart';
+import '../../service/booking_incoming_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -86,6 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     authController.updateDeviceId();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      BookingIncomingService.instance.processPendingWhenReady();
+    });
   }
 
   /* Timer? timer1;
@@ -112,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    contoller.clearGoogleMapController();
     _webRideSheetController.dispose();
     controller.cancel();
     super.dispose();
@@ -122,10 +128,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _rideSheetBottomClearance(BuildContext context) {
     if (kIsWeb) return 16;
+    // BottomAppBar is 60; keep sheet just above it (not under FAB notch).
     const bottomAppBarHeight = 60.0;
     final gestureInset = MediaQuery.viewPaddingOf(context).bottom;
-    const fabOverhang = 26.0;
-    return bottomAppBarHeight + gestureInset + fabOverhang;
+    return bottomAppBarHeight + gestureInset + 12;
   }
 
   LatLng _resolveMapTarget() {
@@ -287,6 +293,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             contoller.onOff.value = false;
                                             sp.setBoolValue(
                                                 sp.DRIVER_ONLINE_STATUS, false);
+                                            await contoller
+                                                .onDriverOnlineStatusChanged(
+                                                    false);
                                             contoller.updateDriverLatLong(
                                                 '0',
                                                 '0',
@@ -350,10 +359,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     topPadding: MediaQuery.paddingOf(context).top + 56,
                     initialTarget: _resolveMapTarget(),
                     initialZoom: 16,
+                    onCameraMoveStarted: contoller.onCameraMoveStarted,
+                    onMapDisposed: contoller.clearGoogleMapController,
                     onMapCreated: (GoogleMapController mapCtl) {
                       contoller.setGoogleMapController(mapCtl);
                       if (contoller.hasValidLocation.value) {
-                        contoller.updateCameraPosition(_resolveMapTarget());
+                        contoller.recenterMapOnDriver();
                       }
                     },
                   ),
@@ -433,6 +444,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           contoller.onOff.value = false;
                                           sp.setBoolValue(
                                               sp.DRIVER_ONLINE_STATUS, false);
+                                          contoller.onDriverOnlineStatusChanged(
+                                              false);
                                           contoller.updateDriverLatLong(
                                               '0',
                                               '0',
@@ -532,15 +545,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                       top: false,
                                       bottom: false,
                                       child: DraggableScrollableSheet(
-                                        initialChildSize: 0.32,
-                                        minChildSize: 0.16,
-                                        maxChildSize: 0.93,
+                                        // Tall enough for full card (incl. Arrive)
+                                        // so default state needs no scroll.
+                                        initialChildSize: 0.58,
+                                        minChildSize: 0.52,
+                                        maxChildSize: 0.92,
                                         snap: true,
                                         snapSizes: const <double>[
-                                          0.16,
-                                          0.32,
-                                          0.55,
-                                          0.93,
+                                          0.52,
+                                          0.58,
+                                          0.72,
+                                          0.92,
                                         ],
                                         builder: (context, scrollController) {
                                           return _buildActiveRideCard(
@@ -578,6 +593,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             )
                           : SizedBox.shrink(),
+                  if (!kIsWeb && !contoller.mapFollowDriver.value)
+                    Positioned(
+                      right: 16,
+                      bottom: _rideSheetBottomClearance(context) + 12,
+                      child: FloatingActionButton.small(
+                        heroTag: 'recenter_map',
+                        backgroundColor: Colors.white,
+                        foregroundColor: MyColors.primary,
+                        elevation: 4,
+                        onPressed: contoller.recenterMapOnDriver,
+                        child: const Icon(Icons.my_location),
+                      ),
+                    ),
                 ],
               ),
       );
@@ -1150,7 +1178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 controller.driverBookingCancel(bookingId, '',
                                     () {
                                   polyline.clear();
-                                  contoller.markers.clear();
+                                  contoller.clearMarkersExceptDriver();
                                   contoller.hide.value = false;
                                   contoller.onOff.value = true;
                                   controller.userAcceptBooking(() {});

@@ -7,6 +7,8 @@ import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import '../../utils/booking_cancellation_dialog.dart';
+import '../../service/notification_service.dart';
+import '../../service/booking_incoming_service.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
@@ -46,6 +48,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   static const Duration _webExtraRefreshInterval = Duration(seconds: 8);
 
   bool _rideNowFetchInFlight = false;
+  final Set<String> _knownBookingIds = <String>{};
 
   void _logBooking(String msg) => debugPrint('[BOOKING_API] $msg');
 
@@ -129,7 +132,11 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   void adminApprove() {
     timer?.cancel();
-    timer = Timer.periodic(Duration(seconds: 5), (timer) => adminLogout());
+    // Avoid spamming backend on app start; only check while online.
+    timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (!controller.onOff.value) return;
+      adminLogout();
+    });
   }
 
   void cancel() {
@@ -178,6 +185,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         _logBooking('empty response — no bookings');
         rideNowList.value = [];
         datas.value = "";
+        await BookingRingManager.syncWithPendingBookings([]);
         return;
       }
 
@@ -188,6 +196,40 @@ class BookingController extends GetxController with WidgetsBindingObserver {
                 RideNowBookingModel.fromJson(Map<String, dynamic>.from(item)))
             .toList();
         _logBooking('found ${rideNowList.length} booking(s): $body');
+
+        final pendingIds = rideNowList
+            .map((b) => b.bookingId)
+            .where((id) => id.isNotEmpty)
+            .toList();
+        final currentIdSet = pendingIds.toSet();
+        final newlyDetected =
+            currentIdSet.difference(_knownBookingIds).toList();
+        _knownBookingIds
+          ..clear()
+          ..addAll(currentIdSet);
+
+        try {
+          await BookingRingManager.syncWithPendingBookings(pendingIds);
+          if (newlyDetected.isNotEmpty) {
+            _logBooking(
+                'new booking(s) for ring/UI: ${newlyDetected.join(', ')}');
+            RideNowBookingModel? latest;
+            for (final b in rideNowList) {
+              if (b.bookingId == newlyDetected.first) {
+                latest = b;
+                break;
+              }
+            }
+            if (latest != null &&
+                BookingIncomingService.instance.isAppInBackground) {
+              await BookingIncomingService.instance.presentIncomingBooking(
+                booking: latest,
+              );
+            }
+          }
+        } catch (e) {
+          _logBooking('ring sync failed: $e');
+        }
       } else {
         _logBooking('unexpected JSON: $body');
         rideNowList.value = [];
@@ -197,6 +239,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       _logBooking('exception: $e');
       rideNowList.value = [];
       datas.value = "";
+      await BookingRingManager.syncWithPendingBookings([]);
     } finally {
       _rideNowFetchInFlight = false;
     }
@@ -217,6 +260,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 */
 
   void acceptBooking(String bookingId, VoidCallback callback) async {
+    await BookingRingManager.stopImmediate();
+    BookingIncomingService.instance.clearShownState();
     acceptBookLoader.value = true;
     final accept = {
       'driver_id': await secure.readData(secure.user_id),
@@ -258,6 +303,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   void cancelBooking(
       String bookingId, String reason, VoidCallback callback) async {
+    await BookingRingManager.stopImmediate();
+    BookingIncomingService.instance.clearShownState();
     cancelBookLoader.value = true;
     final accept = {
       'driver_id': await secure.readData(secure.user_id),
@@ -323,7 +370,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       }
       if (data['result'] == "success") {
         polyline.clear();
-        controller.markers.clear();
+        controller.clearMarkersExceptDriver();
         controller.onOff.value = true;
         controller.hide.value = false;
         cancelStartBookLoader.value = false;
@@ -418,6 +465,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   }
 
   void updateConfirmedState(double sourceLat, double sourceLong) {
+    BookingRingManager.stopImmediate();
     completeText.value = "Arrive".tr;
     controller.onOff.value = true;
     controller.driverArriveValue.value = true;
@@ -480,7 +528,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     polyline.clear();
     controller.polylineVariable.value = "";
     controller.polylineVariable2.value = "";
-    controller.markers.clear();
+    controller.clearMarkersExceptDriver();
     controller.driverArriveValue.value = false;
     controller.arriveDriver.value = "";
     controller.painButton.value = false;
@@ -490,8 +538,33 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     _userAcceptBookingModel = UserAcceptBookingModel.empty();
   }
 
+  /// Call on login / logout so previous-driver trip memory never leaks.
+  /// Does NOT show "Booking Cancelled" (unlike empty API after an active trip).
+  void clearSessionStateForNewLogin() {
+    BookingRingManager.clearSession();
+    _activeAcceptedBookingId = '';
+    _suppressUserCancellationDialog = true;
+    BookingCancellationDialog.clearLastShown();
+    deleteId.value = '';
+    bookingId.value = '';
+    rideNowList.clear();
+    _knownBookingIds.clear();
+    datas.value = '';
+    completeText.value = '';
+    startRideOtp.value = '';
+    reason.value = '';
+    selectedIndex.value = -1;
+    resetControllerState();
+    controller.onOff.value = false;
+    controller.hide.value = false;
+    controller.driverArriveValue.value = false;
+    controller.arriveDriver.value = '';
+    controller.mapFollowDriver.value = true;
+  }
+
   /// Passenger cancelled — reset trip UI and show global popup (FCM / polling).
   void handleUserSideCancellationShowDialog(String bookingId) {
+    BookingRingManager.stopImmediate();
     final id = bookingId.trim().isNotEmpty
         ? bookingId.trim()
         : (_activeAcceptedBookingId.isNotEmpty

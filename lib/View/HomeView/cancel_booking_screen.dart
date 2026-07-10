@@ -142,7 +142,7 @@ TextEditingController messageCtr = TextEditingController();
       controller.driverBookingCancel(bookingId,
           '${controller.reason.value}', () {
             polyline.clear();
-            controllers.markers.clear();
+            controllers.clearMarkersExceptDriver();
             controllers.hide.value = false;
             controllers.onOff.value = true;
         controller.userAcceptBooking(() { });

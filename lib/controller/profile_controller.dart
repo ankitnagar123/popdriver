@@ -60,7 +60,7 @@ class ProfileController extends GetxController{
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   ApiService apiService = ApiService();
 
-  void fetchDriverDetail()async{
+  Future<void> fetchDriverDetail() async {
     resultVar.value = 0;
     fetchDetailLoader.value = true;
     Map<String, dynamic> fetchDetail = {

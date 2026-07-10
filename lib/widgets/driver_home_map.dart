@@ -7,7 +7,7 @@ import 'driver_home_map_mobile.dart'
 /// Home-screen map widget.
 /// - **Mobile (Android/iOS):** native [GoogleMap]
 /// - **Web:** [GoogleMap] via Maps JavaScript API ([web/index.html])
-class DriverHomeMap extends StatelessWidget {
+class DriverHomeMap extends StatefulWidget {
   const DriverHomeMap({
     super.key,
     required this.markers,
@@ -16,6 +16,8 @@ class DriverHomeMap extends StatelessWidget {
     required this.initialZoom,
     required this.topPadding,
     required this.onMapCreated,
+    this.onCameraMoveStarted,
+    this.onMapDisposed,
   });
 
   final Set<Marker> markers;
@@ -24,16 +26,32 @@ class DriverHomeMap extends StatelessWidget {
   final double initialZoom;
   final double topPadding;
   final void Function(GoogleMapController controller) onMapCreated;
+  final VoidCallback? onCameraMoveStarted;
+  final VoidCallback? onMapDisposed;
+
+  @override
+  State<DriverHomeMap> createState() => _DriverHomeMapState();
+}
+
+class _DriverHomeMapState extends State<DriverHomeMap> {
+  @override
+  void dispose() {
+    // GoogleMap platform view is gone — drop channel so GPS sync
+    // cannot call animateCamera on a dead pigeon connection.
+    widget.onMapDisposed?.call();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return map_impl.buildDriverHomeMap(
-      markers: markers,
-      polylines: polylines,
-      initialTarget: initialTarget,
-      initialZoom: initialZoom,
-      topPadding: topPadding,
-      onMapCreated: onMapCreated,
+      markers: widget.markers,
+      polylines: widget.polylines,
+      initialTarget: widget.initialTarget,
+      initialZoom: widget.initialZoom,
+      topPadding: widget.topPadding,
+      onMapCreated: widget.onMapCreated,
+      onCameraMoveStarted: widget.onCameraMoveStarted,
     );
   }
 }
