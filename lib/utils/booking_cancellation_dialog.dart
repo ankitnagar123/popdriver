@@ -11,6 +11,10 @@ class BookingCancellationDialog {
   static String extractBookingId(RemoteMessage message) {
     final dataId = message.data['booking_id']?.toString() ??
         message.data['bookingId']?.toString() ??
+        message.data['bookingid']?.toString() ??
+        message.data['meta_id']?.toString() ??
+        message.data['ride_id']?.toString() ??
+        message.data['id']?.toString() ??
         '';
     if (dataId.trim().isNotEmpty) return dataId.trim();
 

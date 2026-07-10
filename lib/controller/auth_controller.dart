@@ -283,9 +283,19 @@ class AuthController extends GetxController {
           saveLoginDetails("", "", "", "");
         }
         print("user id -------${jsonString["driver_id"]}");
-        updateDeviceId();
-        await sp.setBoolValue(sp.LOGIN_KEY, true);
-        await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        // Wipe previous session trip state BEFORE writing new credentials &
+        // navigating home — otherwise empty accept-booking poll shows a
+        // spurious "Booking Cancelled" from the last logged-in driver.
+        try {
+          Get.find<BookingController>().clearSessionStateForNewLogin();
+          Get.find<HomeController>().onOff.value = false;
+          Get.find<HomeController>().hide.value = false;
+          Get.find<HomeController>().driverArriveValue.value = false;
+          Get.find<HomeController>().arriveDriver.value = "";
+          await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+        } catch (e) {
+          log('clearSessionStateForNewLogin: $e');
+        }
         await secure.writeData(secure.Token, jsonString['token']);
         await sp.setStringValue(sp.INVITE_CODE, inviteCode.toString());
         await sp.setStringValue(
@@ -293,6 +303,9 @@ class AuthController extends GetxController {
         await sp.setStringValue(sp.ACCESS_TOKEN, access_token.toString());
         await secure.writeData(secure.user_name, driverName.toString());
         await secure.writeData(secure.user_id, driverId.toString());
+        await sp.setBoolValue(sp.LOGIN_KEY, true);
+        await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        updateDeviceId();
         loginLoader.value = false;
         Get.offNamed(RouteHelper.getHomeScreenScreenRoute(),
             arguments: {"ArriveDriver": ""});
@@ -494,10 +507,17 @@ class AuthController extends GetxController {
       }
     }
 
+    try {
+      Get.find<BookingController>().clearSessionStateForNewLogin();
+    } catch (e) {
+      log('clearSessionStateForNewLogin on logout: $e');
+    }
+
     final language = await sp.getStringValue(sp.LANGUAGE);
     await sp.clearDataExceptLoginFields();
     await secure.deleteAllData();
     await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+    await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
 
     if (language != null && language.isNotEmpty) {
       await sp.setStringValue(sp.LANGUAGE, language);

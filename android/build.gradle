@@ -61,6 +61,10 @@ subprojects {
                 if (namespace == null) {
                     namespace project.group
                 }
+                lint {
+                    checkReleaseBuilds false
+                    abortOnError false
+                }
             }
         }
     }

@@ -11,11 +11,12 @@ Widget buildDriverHomeMap({
   required double initialZoom,
   required double topPadding,
   required DriverMapCreated onMapCreated,
+  VoidCallback? onCameraMoveStarted,
 }) {
   return GoogleMap(
     key: const ValueKey('driver_home_map'),
     myLocationButtonEnabled: false,
-    myLocationEnabled: true,
+    myLocationEnabled: false,
     zoomControlsEnabled: false,
     zoomGesturesEnabled: true,
     scrollGesturesEnabled: true,
@@ -33,6 +34,7 @@ Widget buildDriverHomeMap({
     polylines: polylines,
     mapType: MapType.normal,
     onMapCreated: onMapCreated,
+    onCameraMoveStarted: onCameraMoveStarted,
     initialCameraPosition: CameraPosition(
       target: initialTarget,
       zoom: initialZoom,

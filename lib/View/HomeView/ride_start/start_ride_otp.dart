@@ -1,5 +1,3 @@
-import 'package:pin_code_fields/pin_code_fields.dart';
-
 import '../../../controller/auth_controller.dart';
 import '../../../controller/booking_controller.dart';
 import '../../../utils/colors.dart';
@@ -20,25 +18,39 @@ class StartRideOtp extends StatefulWidget {
 class _StartRideOtpState extends State<StartRideOtp> {
   final BookingController controller = Get.find<BookingController>();
   final AuthController authController = Get.find<AuthController>();
-  final TextEditingController otpCtr = TextEditingController();
 
+  static const int _otpLength = 6;
+  late final List<TextEditingController> _digitCtrs;
+  late final List<FocusNode> _focusNodes;
   late final String id;
 
   @override
   void initState() {
     super.initState();
     id = Get.arguments?['id']?.toString() ?? '';
+    _digitCtrs = List.generate(_otpLength, (_) => TextEditingController());
+    _focusNodes = List.generate(_otpLength, (_) => FocusNode());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNodes.first.requestFocus();
+    });
   }
 
   @override
   void dispose() {
-    otpCtr.dispose();
+    for (final c in _digitCtrs) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
+  String get _otp => _digitCtrs.map((c) => c.text).join();
+
   void _submitOtp() {
-    final otp = otpCtr.text.trim();
-    if (otp.length != 6) {
+    final otp = _otp.trim();
+    if (otp.length != _otpLength) {
       customSnackBar("Enter OTP".tr);
       return;
     }
@@ -50,37 +62,143 @@ class _StartRideOtpState extends State<StartRideOtp> {
     });
   }
 
+  void _onDigitChanged(int index, String value) {
+    // Paste / autofill often dumps multiple digits into one box.
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      _digitCtrs[index].clear();
+      setState(() {});
+      return;
+    }
+
+    if (digits.length > 1) {
+      _applyPastedDigits(index, digits);
+      return;
+    }
+
+    _digitCtrs[index].text = digits;
+    _digitCtrs[index].selection = TextSelection.collapsed(offset: 1);
+
+    if (index < _otpLength - 1) {
+      _focusNodes[index + 1].requestFocus();
+      // Select existing digit so next keypress replaces it.
+      final next = _digitCtrs[index + 1];
+      if (next.text.isNotEmpty) {
+        next.selection = TextSelection(baseOffset: 0, extentOffset: next.text.length);
+      }
+    } else {
+      _focusNodes[index].unfocus();
+      if (_otp.length == _otpLength) _submitOtp();
+    }
+    setState(() {});
+  }
+
+  void _applyPastedDigits(int startIndex, String digits) {
+    var i = startIndex;
+    for (final ch in digits.split('')) {
+      if (i >= _otpLength) break;
+      _digitCtrs[i].text = ch;
+      i++;
+    }
+    final focusAt = i < _otpLength ? i : _otpLength - 1;
+    _focusNodes[focusAt].requestFocus();
+    if (_otp.length == _otpLength) {
+      _focusNodes[focusAt].unfocus();
+      _submitOtp();
+    }
+    setState(() {});
+  }
+
+  void _handleBackspace(int index) {
+    if (_digitCtrs[index].text.isNotEmpty) {
+      _digitCtrs[index].clear();
+      setState(() {});
+      return;
+    }
+    if (index > 0) {
+      _digitCtrs[index - 1].clear();
+      _focusNodes[index - 1].requestFocus();
+      setState(() {});
+    }
+  }
+
   Widget _buildPinField(BuildContext context) {
     final wide = WebAuthLayout.isWide(context);
-    return PinCodeTextField(
-      controller: otpCtr,
-      appContext: context,
-      length: 6,
-      autoFocus: true,
-      enableActiveFill: true,
-      enablePinAutofill: false,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      textStyle: TextStyle(
-        color: MyColors.black,
-        fontSize: wide ? 20 : 18,
-        fontWeight: FontWeight.w600,
-      ),
-      cursorColor: MyColors.primary,
-      pinTheme: PinTheme(
-        inactiveColor: Colors.grey.shade300,
-        inactiveFillColor: Colors.white,
-        selectedColor: MyColors.primary,
-        activeColor: MyColors.primary,
-        activeFillColor: Colors.white,
-        selectedFillColor: Colors.white,
-        fieldHeight: wide ? 52 : 46,
-        fieldWidth: wide ? 46 : 42,
-        shape: PinCodeFieldShape.box,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      onChanged: (_) => setState(() {}),
-      onCompleted: (_) => _submitOtp(),
+    final boxH = wide ? 52.0 : 46.0;
+    final boxW = wide ? 46.0 : 42.0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(_otpLength, (index) {
+        return SizedBox(
+          height: boxH,
+          width: boxW,
+          child: Focus(
+            onKeyEvent: (node, event) {
+              if (event is! KeyDownEvent) return KeyEventResult.ignored;
+              if (event.logicalKey == LogicalKeyboardKey.backspace) {
+                // Empty box: move to previous and clear.
+                if (_digitCtrs[index].text.isEmpty && index > 0) {
+                  _handleBackspace(index);
+                  return KeyEventResult.handled;
+                }
+              }
+              return KeyEventResult.ignored;
+            },
+            child: TextField(
+              controller: _digitCtrs[index],
+              focusNode: _focusNodes[index],
+              textAlign: TextAlign.center,
+              keyboardType: TextInputType.number,
+              textInputAction: index == _otpLength - 1
+                  ? TextInputAction.done
+                  : TextInputAction.next,
+              // Allow temporary multi-digit (paste); we normalize in onChanged.
+              style: TextStyle(
+                color: MyColors.black,
+                fontSize: wide ? 20 : 18,
+                fontWeight: FontWeight.w600,
+              ),
+              cursorColor: MyColors.primary,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              decoration: InputDecoration(
+                counterText: '',
+                contentPadding: EdgeInsets.zero,
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: _digitCtrs[index].text.isNotEmpty
+                        ? MyColors.primary
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: MyColors.primary, width: 1.6),
+                ),
+              ),
+              onTap: () {
+                // Tap any box → focus that digit & select it for replace-edit.
+                _focusNodes[index].requestFocus();
+                final t = _digitCtrs[index];
+                if (t.text.isNotEmpty) {
+                  t.selection =
+                      TextSelection(baseOffset: 0, extentOffset: t.text.length);
+                }
+              },
+              onChanged: (value) => _onDigitChanged(index, value),
+              onSubmitted: (_) {
+                if (_otp.length == _otpLength) _submitOtp();
+              },
+            ),
+          ),
+        );
+      }),
     );
   }
 

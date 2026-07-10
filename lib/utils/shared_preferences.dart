@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -72,41 +73,57 @@ class SharedPreferencesCrDriver{
 
 
 class SecureStorageService {
-  String user_id  = "user_id";
-  String user_name  = "user_name";
+  String user_id = "user_id";
+  String user_name = "user_name";
   String Token = "Token";
-  // Create a private constructor
+
+  static const _sessionKeys = ['user_id', 'user_name', 'Token'];
+
   SecureStorageService._internal();
 
-  // Create a static instance of the class
   static final SecureStorageService _instance = SecureStorageService._internal();
 
-  // Factory constructor to return the same instance every time
   factory SecureStorageService() {
     return _instance;
   }
 
-  // Create a FlutterSecureStorage instance
-  final FlutterSecureStorage _storage = FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  // Method to write data
+  Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
+
+  /// Web over plain HTTP cannot use [FlutterSecureStorage] (secure context).
+  /// SharedPreferences keeps login/signup and session reads working on web.
   Future<void> writeData(String key, String value) async {
+    if (kIsWeb) {
+      await (await _prefs()).setString(key, value);
+      return;
+    }
     await _storage.write(key: key, value: value);
   }
 
-  // Method to read data
   Future<String?> readData(String key) async {
-    return await _storage.read(key: key);
+    if (kIsWeb) {
+      return (await _prefs()).getString(key);
+    }
+    return _storage.read(key: key);
   }
 
-  // Method to delete data
   Future<void> deleteData(String key) async {
+    if (kIsWeb) {
+      await (await _prefs()).remove(key);
+      return;
+    }
     await _storage.delete(key: key);
   }
 
-  // Method to delete all data
   Future<void> deleteAllData() async {
+    if (kIsWeb) {
+      final prefs = await _prefs();
+      for (final key in _sessionKeys) {
+        await prefs.remove(key);
+      }
+      return;
+    }
     await _storage.deleteAll();
   }
-
 }

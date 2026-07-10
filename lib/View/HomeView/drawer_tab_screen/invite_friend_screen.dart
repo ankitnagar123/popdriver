@@ -1,133 +1,4 @@
-// import '../../../utils/colors.dart';
-// import '../../../utils/custom_button.dart';
-// import '../../../utils/shared_preferences.dart';
-// import '../../../utils/snackBar.dart';
-// import 'package:flutter/material.dart';
-// import 'package:flutter/services.dart';
-// import 'package:get/get.dart';
-// import 'package:share_plus/share_plus.dart';
-//
-// class InviteFriendScreen extends StatefulWidget {
-//   const InviteFriendScreen({Key? key}) : super(key: key);
-//
-//   @override
-//   State<InviteFriendScreen> createState() => _InviteFriendScreenState();
-// }
-//
-// class _InviteFriendScreenState extends State<InviteFriendScreen> {
-//   String link = "";
-//   String Name = "";
-//   String InviteCode = "";
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     getData();
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         leading: GestureDetector(
-//
-//             onTap: () {
-//               Get.back();
-//             },
-//             child: Icon(Icons.arrow_back_outlined,color: Colors.white,)),
-//         backgroundColor: MyColors.primary,
-//         title: Text("Invite Friends".tr,style: TextStyle(color: Colors.white,fontSize: 20),),
-//         centerTitle: true,
-//       ),
-//       body: Column(
-//         crossAxisAlignment: CrossAxisAlignment.center,
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Center(
-//             child: Container(
-//               height: Get.height / 6,
-//               width: Get.width / 2.6,
-//               decoration: BoxDecoration(
-//                   borderRadius: BorderRadius.circular(80),
-//                   color: MyColors.primary),
-//               child: Center(
-//                 child: Icon(
-//                   Icons.group_add,
-//                   color: MyColors.white,
-//                   size: 50,
-//                 ),
-//               ),
-//             ),
-//           ),
-//           SizedBox(
-//             height: 10,
-//           ),
-//           Text(
-//             "Invite Friends".tr,
-//             style: TextStyle(fontSize: 20),
-//           ),
-//           SizedBox(
-//             height: 10,
-//           ),
-//           Text("Invite your friends by sharing your invite link".tr),
-//           SizedBox(
-//             height: 10,
-//           ),
-//           Row(
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: [
-//               Container(
-//                   width: Get.width / 1.4,
-//                   child: Text("$link",
-//                       softWrap: false,
-//                       maxLines: 1,
-//                       overflow: TextOverflow.clip)),
-//               InkWell(
-//                   onTap: () {
-//                     Clipboard.setData(ClipboardData(text: link)).then((value) {
-//                       customSnackBar("Link Copied".tr);
-//                     });
-//                   },
-//                   child: Icon(
-//                     Icons.copy_rounded,
-//                     color: MyColors.black,
-//                   ))
-//             ],
-//           ),
-//           SizedBox(
-//             height: 20,
-//           ),
-//           Padding(
-//             padding: const EdgeInsets.symmetric(horizontal: 20),
-//             child: custom_buttons(voidCallback: onPressed, text: "Invite".tr),
-//           )
-//         ],
-//       ),
-//     );
-//   }
-//
-//   void onPressed() async {
-//     String message = "$Name" +
-//         " " +
-//         "invite You to join Mtaani  taxi".tr +
-//         "\n\n${MyColors.InviteCode}\n\n\n ";
-//
-//
-//     await Share.share("$message");
-//   }
-//
-//   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
-//   SecureStorageService secure = SecureStorageService();
-//
-//   void getData() async {
-//     Name = (await secure.readData(secure.user_name))??"";
-//
-//     link = "${MyColors.InviteCode}";
-//     setState(() {
-//
-//     });
-//   }
-// }
+import '../../../controller/profile_controller.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/shared_preferences.dart';
 import '../../../utils/snackBar.dart';
@@ -145,14 +16,29 @@ class InviteFriendScreen extends StatefulWidget {
 }
 
 class _InviteFriendScreenState extends State<InviteFriendScreen> {
-  String link = "";
-  String Name = "";
-  String InviteCode = "";
+  static const String _defaultPlayStoreUrl =
+      'https://play.google.com/store/apps/';
+
+  String link = '';
+  String Name = '';
+  bool _loading = true;
+
+  SecureStorageService secure = SecureStorageService();
 
   @override
   void initState() {
     super.initState();
     getData();
+  }
+
+  String _resolveInviteUrl() {
+    final fromApi = MyColors.InviteUrl.trim();
+    if (fromApi.isNotEmpty &&
+        fromApi != 'null' &&
+        fromApi.startsWith('http')) {
+      return fromApi;
+    }
+    return _defaultPlayStoreUrl;
   }
 
   @override
@@ -193,39 +79,43 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
               ),
         centerTitle: true,
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 24 : 16,
-            vertical: wide ? 28 : 16,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: wide ? 520 : double.infinity),
-            child: WebAuthLayout.formCard(
-              context: context,
-              padding: EdgeInsets.all(wide ? 28 : 20),
-              child: Column(
-                children: [
-                  if (!wide)
-                    Text(
-                      'Invite Friends'.tr,
-                      style: const TextStyle(fontSize: 18, color: Colors.black),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Align(
+              alignment: Alignment.topCenter,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: wide ? 24 : 16,
+                  vertical: wide ? 28 : 16,
+                ),
+                child: ConstrainedBox(
+                  constraints:
+                      BoxConstraints(maxWidth: wide ? 520 : double.infinity),
+                  child: WebAuthLayout.formCard(
+                    context: context,
+                    padding: EdgeInsets.all(wide ? 28 : 20),
+                    child: Column(
+                      children: [
+                        if (!wide)
+                          Text(
+                            'Invite Friends'.tr,
+                            style: const TextStyle(
+                                fontSize: 18, color: Colors.black),
+                          ),
+                        if (!wide) const SizedBox(height: 10),
+                        _buildHeroSection(wide),
+                        SizedBox(height: wide ? 28 : 40),
+                        _buildInviteMessage(wide),
+                        SizedBox(height: wide ? 20 : 24),
+                        _buildReferralLink(wide),
+                        SizedBox(height: wide ? 28 : 40),
+                        _buildInviteButton(),
+                      ],
                     ),
-                  if (!wide) const SizedBox(height: 10),
-                  _buildHeroSection(wide),
-                  SizedBox(height: wide ? 28 : 40),
-                  _buildInviteMessage(wide),
-                  SizedBox(height: wide ? 28 : 32),
-                  _buildReferralLink(wide),
-                  SizedBox(height: wide ? 28 : 40),
-                  _buildInviteButton(),
-                ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -240,9 +130,7 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
         border: Border.all(color: MyColors.primary, width: 2),
       ),
       child: Center(
-        child: Icon(Icons.group_add,
-            size: 64,
-            color: MyColors.primary),
+        child: Icon(Icons.group_add, size: 64, color: MyColors.primary),
       ),
     );
   }
@@ -260,7 +148,7 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Invite your friends to join POP Taxi and earn rewards together!',
+          'Invite your friends by sharing your invite link'.tr,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: wide ? 14 : 16,
@@ -277,11 +165,14 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(bottom: 8),
-          child: Text("Your referral link:",
-              style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700])),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Your referral link:',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[700],
+            ),
+          ),
         ),
         Container(
           decoration: BoxDecoration(
@@ -289,25 +180,23 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[300]!),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               Expanded(
-                child: Text(link,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: Colors.grey[800],
-                        fontSize: 14)),
+                child: Text(
+                  link.isEmpty ? _defaultPlayStoreUrl : link,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.grey[800], fontSize: 14),
+                ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: _copyToClipboard,
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.copy,
-                      size: 20,
-                      color: MyColors.primary),
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.copy, size: 20, color: MyColors.primary),
                 ),
               ),
             ],
@@ -317,44 +206,25 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
     );
   }
 
-  Widget _buildIncentiveCard() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MyColors.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: MyColors.primary.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.stars, color: MyColors.primary, size: 32),
-          SizedBox(width: 16),
-          Expanded(
-            child: Text("Earn \$10 for each friend who joins and completes their first ride!",
-                style: TextStyle(
-                    color: Colors.grey[700],
-                    fontWeight: FontWeight.w500)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildInviteButton() {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        icon: Icon(Icons.share, color: Colors.white,size: 25,),
-        label: Text("Invite Friends".tr,
-            style: TextStyle(
-              color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600)),
+        icon: const Icon(Icons.share, color: Colors.white, size: 25),
+        label: Text(
+          'Invite'.tr,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: MyColors.primary,
-          padding: EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
         ),
         onPressed: onPressed,
@@ -363,26 +233,44 @@ class _InviteFriendScreenState extends State<InviteFriendScreen> {
   }
 
   void onPressed() async {
-    String message = "$Name invites you to join Mtaani Taxi!\n\n"
-        "Use my referral code: ${MyColors.InviteCode}\n\n"
-        "Download app: ${MyColors.InviteUrl}";
+    final url = link.isNotEmpty ? link : _resolveInviteUrl();
+    final name = Name.trim().isEmpty ? 'POP Driver' : Name.trim();
+
+    final message = '$name invites you to join POP Taxi!\n\n'
+        'Download app: $url';
 
     await Share.share(message);
-    customSnackBar("Invite shared successfully!");
   }
 
   void _copyToClipboard() {
-    Clipboard.setData(ClipboardData(text: link)).then((_) {
-      customSnackBar("Link copied to clipboard!");
+    final text = link.isEmpty ? _defaultPlayStoreUrl : link;
+    Clipboard.setData(ClipboardData(text: text)).then((_) {
+      customSnackBar('Link copied to clipboard!');
     });
   }
 
-  SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
-  SecureStorageService secure = SecureStorageService();
+  Future<void> getData() async {
+    setState(() => _loading = true);
+    try {
+      Name = (await secure.readData(secure.user_name)) ?? '';
 
-  void getData() async {
-    Name = (await secure.readData(secure.user_name)) ?? "";
-    link = MyColors.InviteCode;
-    setState(() {});
+      // Ensure invite_url loaded from profile API.
+      if (MyColors.InviteUrl.trim().isEmpty || MyColors.InviteUrl == 'null') {
+        try {
+          final profile = Get.isRegistered<ProfileController>()
+              ? Get.find<ProfileController>()
+              : Get.put(ProfileController());
+          await profile.fetchDriverDetail();
+        } catch (_) {
+          /* keep fallbacks */
+        }
+      }
+
+      // Show invite_url from API (or Play Store fallback).
+      link = _resolveInviteUrl();
+      MyColors.InviteUrl = link;
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 }

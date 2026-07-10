@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:mtaanidriver/route_helper/route_helper.dart';
 import 'package:mtaanidriver/service/notification_service.dart';
+import 'package:mtaanidriver/service/booking_incoming_service.dart';
 import 'package:mtaanidriver/utils/my_binding.dart';
 import 'package:mtaanidriver/utils/webview_platform_init.dart';
 import 'firebase_options.dart';
@@ -36,6 +37,7 @@ void main() async {
       await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform);
       await NotificationService.initialize();
+      BookingIncomingService.instance.attach();
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     } else {
       debugPrint(

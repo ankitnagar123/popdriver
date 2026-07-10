@@ -15,6 +15,130 @@ class ApiService extends GetxService {
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   SecureStorageService secure = SecureStorageService();
 
+  static const _sensitiveKeys = {
+    'password',
+    'Password',
+    'access_token',
+    'login_device_key',
+  };
+
+  void _apiLog(String message) {
+    debugPrint(message);
+    log(message);
+  }
+
+  String _maskValue(String key, Object? value) {
+    if (value == null) return '';
+    final text = value.toString();
+    if (_sensitiveKeys.contains(key)) {
+      if (text.isEmpty) return '';
+      return '*** (${text.length} chars)';
+    }
+    if (key.toLowerCase() == 'token' || key == 'Authorization') {
+      if (text.length <= 8) return '***';
+      return '***${text.substring(text.length - 4)}';
+    }
+    return text;
+  }
+
+  Map<String, String> _maskMap(Map<String, dynamic> body) {
+    return body.map(
+      (key, value) => MapEntry(key, _maskValue(key, value)),
+    );
+  }
+
+  Map<String, String> _maskHeaders(Map<String, String> headers) {
+    return headers.map((key, value) {
+      if (key.toLowerCase() == 'authorization') {
+        return MapEntry(key, _maskValue('Authorization', value));
+      }
+      return MapEntry(key, value);
+    });
+  }
+
+  void _logRequest({
+    required String method,
+    required String endpoint,
+    required String fullUrl,
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    int? attempt,
+  }) {
+    final buffer = StringBuffer()
+      ..writeln('══════════════ API REQUEST ══════════════')
+      ..writeln('BASE_URL   : ${URLS.BASE_URL}')
+      ..writeln('METHOD     : $method')
+      ..writeln('ENDPOINT   : $endpoint')
+      ..writeln('FULL_URL   : $fullUrl');
+    if (attempt != null) {
+      buffer.writeln('ATTEMPT    : $attempt');
+    }
+    if (headers != null && headers.isNotEmpty) {
+      buffer.writeln('HEADERS    : ${_maskHeaders(headers)}');
+    }
+    if (body != null) {
+      buffer.writeln('REQ_BODY   : ${_maskMap(body)}');
+    }
+    buffer.writeln('══════════════════════════════════════════');
+    _apiLog(buffer.toString());
+  }
+
+  void _logResponse({
+    required String method,
+    required String endpoint,
+    required String fullUrl,
+    required int statusCode,
+    required String body,
+    int? attempt,
+  }) {
+    final buffer = StringBuffer()
+      ..writeln('══════════════ API RESPONSE ═════════════')
+      ..writeln('BASE_URL   : ${URLS.BASE_URL}')
+      ..writeln('METHOD     : $method')
+      ..writeln('ENDPOINT   : $endpoint')
+      ..writeln('FULL_URL   : $fullUrl');
+    if (attempt != null) {
+      buffer.writeln('ATTEMPT    : $attempt');
+    }
+    buffer
+      ..writeln('STATUS     : $statusCode')
+      ..writeln('RES_BODY   : ${body.isEmpty ? '<empty>' : body}')
+      ..writeln('══════════════════════════════════════════');
+    _apiLog(buffer.toString());
+  }
+
+  void _logError({
+    required String method,
+    required String endpoint,
+    required String fullUrl,
+    required Object error,
+    int? attempt,
+    StackTrace? stackTrace,
+  }) {
+    final buffer = StringBuffer()
+      ..writeln('══════════════ API ERROR ═════════════════')
+      ..writeln('BASE_URL   : ${URLS.BASE_URL}')
+      ..writeln('METHOD     : $method')
+      ..writeln('ENDPOINT   : $endpoint')
+      ..writeln('FULL_URL   : $fullUrl');
+    if (attempt != null) {
+      buffer.writeln('ATTEMPT    : $attempt');
+    }
+    buffer
+      ..writeln('ISSUE      : $error')
+      ..writeln('══════════════════════════════════════════');
+    _apiLog(buffer.toString());
+    if (stackTrace != null) {
+      log('API stack ($endpoint)', error: error, stackTrace: stackTrace);
+    }
+  }
+
+  String _responseBody(dynamic data) {
+    if (data == null) return '';
+    if (data is String) return data;
+    return data.toString();
+  }
+
   /// Web-safe form body — avoids `null is not a subtype of String` on http.post.
   String _encodeFormBody(Map<String, dynamic> body) {
     return body.entries
@@ -25,124 +149,246 @@ class ApiService extends GetxService {
         .join('&');
   }
 
-  /// Same [http.post] as mobile on all platforms — web gets retries only.
   Future<http.Response> postData(String url, Map<String, dynamic> body) async {
     final fullUrl = URLS.api(url);
-    final maxAttempts = kIsWeb ? 3 : 1;
-    Object? lastError;
-    final encodedBody = _encodeFormBody(body);
+    final headers = const {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
 
-    if (kIsWeb &&
-        (url.contains('latlong') || url.contains('update_driver_latlong'))) {
-      debugPrint('[LOCATION] POST $url payload=$encodedBody');
-    }
+    _logRequest(
+      method: 'POST',
+      endpoint: url,
+      fullUrl: fullUrl,
+      body: body,
+      headers: headers,
+    );
 
-    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        final response = await http
-            .post(
-              Uri.parse(fullUrl),
-              headers: const {
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: encodedBody,
-            )
-            .timeout(Duration(seconds: timeoutInSecond));
+    try {
+      final response = await http
+          .post(
+            Uri.parse(fullUrl),
+            headers: headers,
+            body: _encodeFormBody(body),
+          )
+          .timeout(Duration(seconds: timeoutInSecond));
 
-        if (kIsWeb) {
-          debugPrint(
-            '[API] POST $url attempt=$attempt status=${response.statusCode}',
-          );
-        }
-        return response;
-      } catch (e) {
-        lastError = e;
-        log('HTTP attempt $attempt failed ($url): $e');
-        if (kIsWeb) {
-          debugPrint('[API] POST $url attempt=$attempt FAILED: $e');
-        }
-        if (attempt < maxAttempts) {
-          await Future.delayed(Duration(milliseconds: 400 * attempt));
-        }
+      _logResponse(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        statusCode: response.statusCode,
+        body: response.body,
+      );
+      return response;
+    } catch (e, stack) {
+      _logError(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        error: e,
+        stackTrace: stack,
+      );
+      if (kIsWeb) {
+        return http.Response('', 503);
       }
+      Error.throwWithStackTrace(
+        e is Exception ? e : Exception(e.toString()),
+        stack,
+      );
     }
-
-    log('HTTP failed after $maxAttempts attempts ($url): $lastError');
-    if (kIsWeb) {
-      return http.Response('', 503);
-    }
-    throw lastError ?? Exception('HTTP request failed');
   }
 
   Future<DIO.Response> postDatas(String url, Map<String, dynamic> body) async {
-    DIO.FormData formData = DIO.FormData.fromMap(body);
-    String jwtToken = await secure.readData(secure.Token) ?? "";
+    final fullUrl = URLS.api(url);
+    final jwtToken = await secure.readData(secure.Token) ?? '';
+    final formData = DIO.FormData.fromMap(body);
+    final headers = {
+      'Authorization': 'Bearer $jwtToken',
+    };
 
-    log("Request URL: ${URLS.api(url)}");
-    log("Request Body: $body");
-    log("Bearer: $jwtToken");
+    _logRequest(
+      method: 'POST',
+      endpoint: url,
+      fullUrl: fullUrl,
+      body: body,
+      headers: headers,
+    );
 
-    return await dioClient
-        .post(
-          URLS.api(url),
-          data: formData,
-          options: DIO.Options(
-            responseType: DIO.ResponseType.plain,
-          ),
-        )
-        .timeout(Duration(seconds: timeoutInSecond));
+    try {
+      final response = await dioClient
+          .post(
+            fullUrl,
+            data: formData,
+            options: DIO.Options(
+              responseType: DIO.ResponseType.plain,
+              headers: headers,
+            ),
+          )
+          .timeout(Duration(seconds: timeoutInSecond));
+
+      _logResponse(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        statusCode: response.statusCode ?? 0,
+        body: _responseBody(response.data),
+      );
+      return response;
+    } catch (e, stack) {
+      _logError(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
   Future<DIO.Response> postDatatoken(
-      String url, Map<String, dynamic> body) async {
-    DIO.FormData formData = DIO.FormData.fromMap(body);
-    log("Request URL: ${URLS.api(url)}");
-    log("Request Body: $body");
-    return await dioClient
-        .post(
-          URLS.api(url),
-          data: formData,
-          options: DIO.Options(
-            responseType: DIO.ResponseType.plain,
-          ),
-        )
-        .timeout(Duration(seconds: timeoutInSecond));
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    final fullUrl = URLS.api(url);
+    final formData = DIO.FormData.fromMap(body);
+
+    _logRequest(
+      method: 'POST',
+      endpoint: url,
+      fullUrl: fullUrl,
+      body: body,
+    );
+
+    try {
+      final response = await dioClient
+          .post(
+            fullUrl,
+            data: formData,
+            options: DIO.Options(
+              responseType: DIO.ResponseType.plain,
+            ),
+          )
+          .timeout(Duration(seconds: timeoutInSecond));
+
+      _logResponse(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        statusCode: response.statusCode ?? 0,
+        body: _responseBody(response.data),
+      );
+      return response;
+    } catch (e, stack) {
+      _logError(
+        method: 'POST',
+        endpoint: url,
+        fullUrl: fullUrl,
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
-  Future<DIO.Response> getData(
-    String url,
-  ) async {
-    String jwtToken = await secure.readData(secure.Token) ?? "";
-    return await dioClient
-        .get(
-          URLS.api(url),
-          options: DIO.Options(
-            responseType: DIO.ResponseType.plain,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $jwtToken',
-            },
-          ),
-        )
-        .timeout(Duration(seconds: timeoutInSecond));
+  Future<DIO.Response> getData(String url) async {
+    final fullUrl = URLS.api(url);
+    final jwtToken = await secure.readData(secure.Token) ?? '';
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $jwtToken',
+    };
+
+    _logRequest(
+      method: 'GET',
+      endpoint: url,
+      fullUrl: fullUrl,
+      headers: headers,
+    );
+
+    try {
+      final response = await dioClient
+          .get(
+            fullUrl,
+            options: DIO.Options(
+              responseType: DIO.ResponseType.plain,
+              headers: headers,
+            ),
+          )
+          .timeout(Duration(seconds: timeoutInSecond));
+
+      _logResponse(
+        method: 'GET',
+        endpoint: url,
+        fullUrl: fullUrl,
+        statusCode: response.statusCode ?? 0,
+        body: _responseBody(response.data),
+      );
+      return response;
+    } catch (e, stack) {
+      _logError(
+        method: 'GET',
+        endpoint: url,
+        fullUrl: fullUrl,
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 
   Future<DIO.Response> multiPartFile(
     String url,
     DIO.FormData formData,
   ) async {
-    String jwtToken = await secure.readData(secure.Token) ?? "";
-    return await dioClient.post(
-      URLS.api(url),
-      data: formData,
-      options: DIO.Options(
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $jwtToken',
-        },
-      ),
+    final fullUrl = URLS.api(url);
+    final jwtToken = await secure.readData(secure.Token) ?? '';
+    final headers = {
+      'Content-Type': 'multipart/form-data',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $jwtToken',
+    };
+    final body = <String, dynamic>{
+      for (final field in formData.fields) field.key: field.value,
+      for (final file in formData.files)
+        file.key: '<file: ${file.value.filename ?? 'unknown'}>',
+    };
+
+    _logRequest(
+      method: 'POST (multipart)',
+      endpoint: url,
+      fullUrl: fullUrl,
+      body: body,
+      headers: headers,
     );
+
+    try {
+      final response = await dioClient.post(
+        fullUrl,
+        data: formData,
+        options: DIO.Options(
+          headers: headers,
+        ),
+      );
+
+      _logResponse(
+        method: 'POST (multipart)',
+        endpoint: url,
+        fullUrl: fullUrl,
+        statusCode: response.statusCode ?? 0,
+        body: _responseBody(response.data),
+      );
+      return response;
+    } catch (e, stack) {
+      _logError(
+        method: 'POST (multipart)',
+        endpoint: url,
+        fullUrl: fullUrl,
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
+    }
   }
 }

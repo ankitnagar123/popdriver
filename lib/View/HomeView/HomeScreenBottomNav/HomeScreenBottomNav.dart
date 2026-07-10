@@ -35,7 +35,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   final List<Widget> _mobilePages = [
     const HomeScreen(),
     const RideHistory(),
-    const WalletScreen(),
+    const NotificationScreen(),
     MtaaniSidebar(),
   ];
 
@@ -281,7 +281,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
                                 CircleBorder(side: BorderSide(color:routeController.pageIndex.value == 2? Colors.white70:Colors.transparent)))
                         ),
                         icon: Icon(
-                          Icons.payments,
+                          Icons.notifications_outlined,
                           size: 25,
                           color: routeController.pageIndex.value == 2
                               ? Colors.white
