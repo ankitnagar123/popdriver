@@ -38,6 +38,8 @@ class URLS {
 
   static const String DEVICE_ID_UPDATE = 'update_driverdevice_id.php';
   static const String DRIVER_LATLONG_UPDATE = 'update_driver_latlong.php';
+  static const String FETCH_DRIVER_AVAILABILITY_STATUS =
+      'fetch_driver_availability_status.php';
 
 /*--------------------------------------------PROFILE PROCESS------------------------------------*/
 

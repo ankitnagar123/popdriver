@@ -351,6 +351,11 @@ class NotificationService {
   }
 
   static Future<void> initialize() async {
+    if (kIsWeb) {
+      await _initializeWebMessaging();
+      return;
+    }
+
     const AndroidInitializationSettings androidInitializationSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -440,6 +445,33 @@ class NotificationService {
     });
 
     log('FCM auth status: ${settings.authorizationStatus}');
+  }
+
+  static Future<void> _initializeWebMessaging() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        log('Web foreground FCM: title=${message.notification?.title} '
+            'data=${message.data}');
+        showNotificationForeground(message);
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        log('Web opened from tray: ${message.notification?.title}');
+        if (isBookingCancellation(message)) {
+          _handleBookingCancellationNotification(message);
+        }
+      });
+
+      log('Web FCM auth status: ${settings.authorizationStatus}');
+    } catch (e, st) {
+      log('Web FCM init failed', error: e, stackTrace: st);
+    }
   }
 
   static Future<void> _ensureAndroidBookingCancelChannel() async {
@@ -603,6 +635,11 @@ class NotificationService {
   }
 
   static Future<void> showNotificationForeground(RemoteMessage message) async {
+    if (kIsWeb) {
+      await _handleWebForegroundMessage(message);
+      return;
+    }
+
     final isBooking = isNewBookingRequest(message);
     final isCancel = isBookingCancellation(message);
 
@@ -653,6 +690,29 @@ class NotificationService {
   }
 
   /// Background / lock-screen Rapido-style alert with Accept & Pass actions.
+  static Future<void> _handleWebForegroundMessage(RemoteMessage message) async {
+    if (isNewBookingRequest(message)) {
+      if (!BookingRingManager.canRingFromControllers()) {
+        try {
+          Get.find<BookingController>().rideNowBooking();
+        } catch (_) {
+          /* ignore */
+        }
+        return;
+      }
+      try {
+        await Get.find<BookingController>().rideNowBooking();
+      } catch (_) {
+        /* ignore */
+      }
+      return;
+    }
+
+    if (isBookingCancellation(message)) {
+      _handleBookingCancellationNotification(message);
+    }
+  }
+
   static Future<void> showIncomingBookingAlert({
     required String bookingId,
     required String userName,

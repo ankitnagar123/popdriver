@@ -333,6 +333,13 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         cancelBookLoader.value = false;
         await userAcceptBooking(() {});
         await rideNowBooking();
+        try {
+          await Get.find<HomeController>().refreshAvailabilityStatus(
+            forceDialog: true,
+          );
+        } catch (_) {
+          /* ignore */
+        }
         callback();
         customSnackBar("Booking Canceled");
       } else {

@@ -17,12 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web. '
-        'Add a Web app in Firebase Console, then run: '
-        'dart pub global activate flutterfire_cli && flutterfire configure --platforms=web '
-        '(or skip Firebase on web in main.dart until configured).',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -66,5 +61,15 @@ class DefaultFirebaseOptions {
     projectId: 'poptaxi-ae8fd',
     storageBucket: 'poptaxi-ae8fd.firebasestorage.app',
     iosBundleId: 'com.popdriver.app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBoLEvc5Qo_dolZ1uK8GwTQ1J6dJkKOBh4',
+    appId: '1:537584520795:web:6d64971b7337b957e2797e',
+    messagingSenderId: '537584520795',
+    projectId: 'poptaxi-ae8fd',
+    authDomain: 'poptaxi-ae8fd.firebaseapp.com',
+    storageBucket: 'poptaxi-ae8fd.firebasestorage.app',
+    measurementId: 'G-7508CB7VPX',
   );
 }

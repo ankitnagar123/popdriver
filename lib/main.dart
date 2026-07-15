@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -28,21 +28,12 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     ensureWebViewPlatform();
-    // Web: no Web app in firebase_options yet; FCM + local notification paths are
-    // mobile-oriented. Skip Firebase here so Chrome runs for UI/debug.
-    // To enable Firebase on web: add a Web app in Firebase Console, then run:
-    //   dart pub global activate flutterfire_cli
-    //   flutterfire configure -p <projectId> --platforms=web
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+    await NotificationService.initialize();
     if (!kIsWeb) {
-      await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
-      await NotificationService.initialize();
       BookingIncomingService.instance.attach();
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    } else {
-      debugPrint(
-          'Web: Firebase not initialized (configure Web in Firebase + flutterfire configure). '
-          'Push/token APIs are skipped.');
     }
 
     if (!kIsWeb) {

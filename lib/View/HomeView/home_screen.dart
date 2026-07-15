@@ -22,7 +22,6 @@ import '../../widgets/driver_home_map.dart';
 import '../../service/booking_incoming_service.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../controller/painic_controller.dart';
@@ -127,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _webRideSheetController = ScrollController();
 
   double _rideSheetBottomClearance(BuildContext context) {
-    if (kIsWeb) return 16;
+    if (WebDriverLayout.isWidePanel(context)) return 16;
     // BottomAppBar is 60; keep sheet just above it (not under FAB notch).
     const bottomAppBarHeight = 60.0;
     final gestureInset = MediaQuery.viewPaddingOf(context).bottom;
@@ -189,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (!kIsWeb)
+                            if (WebDriverLayout.isMobileLayout(context))
                               InkWell(
                                 onTap: () {
                                   Get.to(() => MtaaniSidebar(),
@@ -377,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          if (!kIsWeb)
+                          if (WebDriverLayout.isMobileLayout(context))
                             InkWell(
                               onTap: () {
                                 Get.to(() => MtaaniSidebar(), arguments: "Home");
@@ -518,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? SizedBox.shrink()
                       : Visibility(
                           visible: contoller.driverArriveValue.value,
-                          child: kIsWeb
+                          child: WebDriverLayout.isWidePanel(context)
                               ? Positioned(
                                   top: 64,
                                   right: 20,
@@ -573,15 +572,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       : contoller.onOff.value == true
                           ? Positioned(
                               top: 80,
-                              left: kIsWeb ? null : 5,
-                              right: kIsWeb ? 20 : 15,
-                              bottom: kIsWeb ? 20 : null,
-                              width: kIsWeb
+                              left: WebDriverLayout.isWidePanel(context) ? null : 5,
+                              right: WebDriverLayout.isWidePanel(context) ? 20 : 15,
+                              bottom: WebDriverLayout.isWidePanel(context) ? 20 : null,
+                              width: WebDriverLayout.isWidePanel(context)
                                   ? WebDriverLayout.panelWidth
                                   : null,
                               child: IgnorePointer(
                                 ignoring: controller.rideNowList.isEmpty,
-                                child: kIsWeb
+                                child: WebDriverLayout.isWidePanel(context)
                                     ? Material(
                                         color: Colors.transparent,
                                         child: rideNow(),
@@ -593,7 +592,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             )
                           : SizedBox.shrink(),
-                  if (!kIsWeb && !contoller.mapFollowDriver.value)
+                  if (WebDriverLayout.isMobileLayout(context) &&
+                      !contoller.mapFollowDriver.value)
                     Positioned(
                       right: 16,
                       bottom: _rideSheetBottomClearance(context) + 12,
@@ -657,9 +657,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Obx(() {
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        shrinkWrap: !kIsWeb,
+        shrinkWrap: WebDriverLayout.isMobileLayout(context),
         padding: EdgeInsets.symmetric(
-          horizontal: kIsWeb ? 4 : 10,
+          horizontal: WebDriverLayout.isWidePanel(context) ? 4 : 10,
           vertical: 8,
         ),
         itemCount: controller.rideNowList.length,
@@ -668,12 +668,16 @@ class _HomeScreenState extends State<HomeScreen> {
           var list = reverseList[index];
 
           return Padding(
-            padding: EdgeInsets.only(bottom: kIsWeb ? 12 : 0),
+            padding: EdgeInsets.only(
+              bottom: WebDriverLayout.isWidePanel(context) ? 12 : 0,
+            ),
             child: Card(
-            elevation: kIsWeb ? 6 : 3,
+            elevation: WebDriverLayout.isWidePanel(context) ? 6 : 3,
             shadowColor: Colors.black26,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(kIsWeb ? 16 : 15),
+              borderRadius: BorderRadius.circular(
+                WebDriverLayout.isWidePanel(context) ? 16 : 15,
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
