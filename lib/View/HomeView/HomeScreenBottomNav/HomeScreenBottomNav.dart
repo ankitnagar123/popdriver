@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import 'package:mtaanidriver/utils/colors.dart';
 import 'package:mtaanidriver/utils/web_auth_layout.dart';
+import 'package:mtaanidriver/utils/web_driver_layout.dart';
 import 'package:mtaanidriver/widgets/web_driver_sidebar.dart';
 
 import '../../../controller/route_controller.dart';
@@ -119,7 +119,7 @@ class _BottomNavScreenState extends State<BottomNavScreen> {
   }
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
+    if (WebDriverLayout.isWidePanel(context)) {
       return _buildWebShell(context);
     }
     return _buildMobileShell(context);

@@ -7,6 +7,7 @@ import 'package:mtaanidriver/controller/profile_controller.dart';
 
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
+import '../../utils/firebase_messaging_config.dart';
 import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
@@ -562,19 +563,23 @@ class AuthController extends GetxController {
   }
 
   void updateDeviceId() async {
-    if (kIsWeb) return;
     String deviceStatus = "";
     String? device_id = "";
-    if (isAndroid) {
+    if (kIsWeb) {
+      deviceStatus = "Web";
+      await FirebaseMessaging.instance
+          .getToken(vapidKey: FirebaseMessagingConfig.webVapidKey)
+          .then((value) {
+        device_id = value;
+      });
+    } else if (isAndroid) {
       deviceStatus = "Android";
       await FirebaseMessaging.instance.getToken().then((value) {
         device_id = value;
       });
     } else if (isIOS) {
       await FirebaseMessaging.instance
-          .getToken(
-              vapidKey:
-                  "BMnb7_ZxdnVb55eNi0sJRzxoI2QdFGUZrMBgIiL2tlPLcB4NYT4OAnhcJW3BY2F7g0gs-AKFQ-omjP0x5sk7UMc")
+          .getToken(vapidKey: FirebaseMessagingConfig.iosVapidKey)
           .then((value) {
         device_id = value;
       });

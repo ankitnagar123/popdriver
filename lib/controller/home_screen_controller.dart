@@ -63,8 +63,15 @@ class HomeController extends GetxController {
   DateTime? _lastBookingFetchAfterLatLong;
   DateTime? _penaltyUntil;
   Timer? _penaltyExpiryTimer;
+  Timer? _availabilityPollTimer;
   Timer? _webLocationSyncTimer;
-  bool _wasOnlineBeforePenalty = false;
+  bool _wasOnlineBeforeForcedOffline = false;
+  bool _adminBlockedActive = false;
+  bool _userChoseOffline = false;
+  bool _backendPenaltyActive = false;
+  bool _canGoOnlineFromBackend = true;
+  String _blockReason = '';
+  bool _availabilityFetchInFlight = false;
   LatLng? _lastCameraTarget;
   bool _isListening = false;
   bool _cameraMoveFromCode = false;
@@ -220,8 +227,15 @@ class HomeController extends GetxController {
   }
 
   @override
+  void onInit() {
+    super.onInit();
+    startAvailabilityPolling();
+  }
+
+  @override
   void onClose() {
     _penaltyExpiryTimer?.cancel();
+    _availabilityPollTimer?.cancel();
     _markerAnimTimer?.cancel();
     clearGoogleMapController();
     _stopWebLocationSyncTimer();
@@ -236,6 +250,7 @@ class HomeController extends GetxController {
   @override
   void dispose() {
     _penaltyExpiryTimer?.cancel();
+    _availabilityPollTimer?.cancel();
     _markerAnimTimer?.cancel();
     clearGoogleMapController();
     _stopWebLocationSyncTimer();
@@ -247,10 +262,82 @@ class HomeController extends GetxController {
     super.dispose();
   }
 
-  /// Call when driver manually goes offline — don't auto-restore after penalty.
+  /// Call when driver manually goes offline — don't auto-restore after block/penalty.
   void clearPenaltyAutoRestore() {
-    _wasOnlineBeforePenalty = false;
+    _wasOnlineBeforeForcedOffline = false;
+    _userChoseOffline = true;
     _penaltyExpiryTimer?.cancel();
+  }
+
+  bool _parseIsPenalty(dynamic value) {
+    if (value is bool) return value;
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+  }
+
+  bool _parseBool(dynamic value, {required bool defaultValue}) {
+    if (value is bool) return value;
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
+      return true;
+    }
+    if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+      return false;
+    }
+    return defaultValue;
+  }
+
+  void startAvailabilityPolling() {
+    _availabilityPollTimer?.cancel();
+    unawaited(fetchDriverAvailabilityStatus());
+    _availabilityPollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      unawaited(fetchDriverAvailabilityStatus());
+    });
+  }
+
+  void stopAvailabilityPolling() {
+    _availabilityPollTimer?.cancel();
+    _availabilityPollTimer = null;
+  }
+
+  Future<void> refreshAvailabilityStatus({
+    BuildContext? context,
+    bool forceDialog = false,
+  }) =>
+      fetchDriverAvailabilityStatus(context: context, forceDialog: forceDialog);
+
+  Future<void> fetchDriverAvailabilityStatus({
+    BuildContext? context,
+    bool forceDialog = false,
+  }) async {
+    if (_availabilityFetchInFlight) return;
+    _availabilityFetchInFlight = true;
+    try {
+      final driverId = await _resolveDriverId();
+      if (driverId == null || driverId.isEmpty) return;
+
+      final response = await apiService.postData(
+        URLS.FETCH_DRIVER_AVAILABILITY_STATUS,
+        {'driver_id': driverId},
+      );
+      if (response.statusCode == 429) return;
+      final body = response.body.trim();
+      if (body.isEmpty || body.startsWith('<')) return;
+
+      final decoded = jsonDecode(body);
+      if (decoded is! Map) return;
+      final data = Map<String, dynamic>.from(decoded);
+      log('availability status ---->:$data');
+      _applyAvailabilityStatus(
+        data,
+        context: context,
+        forceDialog: forceDialog,
+      );
+    } catch (e, st) {
+      log('fetchDriverAvailabilityStatus failed', error: e, stackTrace: st);
+    } finally {
+      _availabilityFetchInFlight = false;
+    }
   }
 
   // User location — on web, call [ensureLocationFromUserGesture] from Online toggle.
@@ -429,6 +516,10 @@ class HomeController extends GetxController {
 
   /// Push GPS to server as Available, then refresh booking list (web needs this).
   Future<void> goOnlineAndSyncLocation(BuildContext context) async {
+    await fetchDriverAvailabilityStatus(context: context);
+    if (!canGoOnline(showMessage: true)) return;
+
+    _userChoseOffline = false;
     try {
       if (!hasValidLocation.value) {
         final located = await ensureLocationFromUserGesture();
@@ -756,7 +847,6 @@ class HomeController extends GetxController {
       final data = Map<String, dynamic>.from(decoded);
       log("update driver latlong response ---->:$data");
       log("result------->:${data['result']}");
-      _handleLatLongResponse(data, context: context);
 
       if (onOff.value && status == 'Available') {
         final now = DateTime.now();
@@ -771,12 +861,8 @@ class HomeController extends GetxController {
     }
   }
 
-  bool _isUnavailableStatus(String? status) {
-    final normalized = (status ?? '').trim().toLowerCase().replaceAll(' ', '');
-    return normalized == 'unavailable';
-  }
-
   bool isPenaltyActive() {
+    if (_backendPenaltyActive) return true;
     if (_penaltyUntil == null) return false;
     return DateTime.now().isBefore(_penaltyUntil!);
   }
@@ -803,35 +889,54 @@ class HomeController extends GetxController {
         .trParams({'seconds': '$remaining'});
   }
 
-  void _applyPenaltyFromBackend(int penaltySeconds) {
+  void _applyPenaltyFromBackend({
+    required bool isPenalty,
+    required int penaltySeconds,
+  }) {
     _penaltyExpiryTimer?.cancel();
-    penaltyRemainingSeconds.value = penaltySeconds;
-    if (penaltySeconds > 0) {
-      _penaltyUntil = DateTime.now().add(Duration(seconds: penaltySeconds));
-      _penaltyExpiryTimer = Timer(Duration(seconds: penaltySeconds), () {
-        if (!isPenaltyActive()) {
-          _onPenaltyCleared();
-        }
+    if (isPenalty) {
+      final seconds = penaltySeconds > 0 ? penaltySeconds : 1;
+      penaltyRemainingSeconds.value = seconds;
+      _penaltyUntil = DateTime.now().add(Duration(seconds: seconds));
+      _penaltyExpiryTimer = Timer(Duration(seconds: seconds), () {
+        _onLocalPenaltyTimerExpired();
       });
-    } else {
-      _penaltyUntil = null;
+      return;
     }
+
+    penaltyRemainingSeconds.value = 0;
+    _penaltyUntil = null;
   }
 
-  void _onPenaltyCleared({BuildContext? context, Position? position}) {
+  void _onLocalPenaltyTimerExpired() {
+    if (_penaltyUntil != null && DateTime.now().isBefore(_penaltyUntil!)) {
+      return;
+    }
+    _penaltyUntil = null;
+    unawaited(fetchDriverAvailabilityStatus());
+  }
+
+  void _restoreDriverOnline({
+    BuildContext? context,
+    Position? position,
+    bool allowWithoutPriorFlag = false,
+  }) {
     _penaltyExpiryTimer?.cancel();
     _penaltyUntil = null;
+    _backendPenaltyActive = false;
+    _adminBlockedActive = false;
     penaltyRemainingSeconds.value = 0;
 
-    if (!_wasOnlineBeforePenalty) return;
-    _wasOnlineBeforePenalty = false;
+    if (!allowWithoutPriorFlag && !_wasOnlineBeforeForcedOffline) return;
+    _wasOnlineBeforeForcedOffline = false;
+    _userChoseOffline = false;
 
     onOff.value = true;
     sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);
     Get.find<BookingController>().rideNowBooking();
 
+    _lastDriverLatLongSyncAt = null;
     if (position != null) {
-      _lastDriverLatLongSyncAt = null;
       updateDriverLatLong(
         position.latitude.toString(),
         position.longitude.toString(),
@@ -839,18 +944,28 @@ class HomeController extends GetxController {
         'Available',
         context: context,
       );
+    } else if (hasValidLocation.value) {
+      updateDriverLatLong(
+        startLocation.value.latitude.toString(),
+        startLocation.value.longitude.toString(),
+        '0',
+        'Available',
+        context: context,
+      );
     }
 
-    log('Penalty cleared — driver restored to online');
+    log('Driver restored to online');
   }
 
   void _showPenaltyDialog({
     required String message,
     BuildContext? context,
     bool isPenalty = true,
+    bool forceShow = false,
   }) {
     final now = DateTime.now();
-    if (_lastPenaltyDialogAt != null &&
+    if (!forceShow &&
+        _lastPenaltyDialogAt != null &&
         now.difference(_lastPenaltyDialogAt!).inSeconds < 30) {
       return;
     }
@@ -937,60 +1052,127 @@ class HomeController extends GetxController {
     BuildContext? context,
     bool showDialog = true,
     bool isPenalty = false,
+    bool isAdminBlock = false,
+    bool forceDialog = false,
   }) {
     final wasOnline = onOff.value;
-    if (wasOnline && isPenalty) {
-      _wasOnlineBeforePenalty = true;
-    } else if (!isPenalty) {
-      _wasOnlineBeforePenalty = false;
+    if (wasOnline && (isPenalty || isAdminBlock)) {
+      _wasOnlineBeforeForcedOffline = true;
+    }
+    if (isAdminBlock) {
+      _adminBlockedActive = true;
     }
     onOff.value = false;
     sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
     BookingRingManager.stopImmediate();
 
-    if (!wasOnline || !showDialog) return;
+    if (!showDialog) return;
 
-    _showPenaltyDialog(
-      message: message,
-      context: context,
-      isPenalty: isPenalty,
-    );
-  }
-
-  void _handleLatLongResponse(
-    Map<String, dynamic> data, {
-    BuildContext? context,
-  }) {
-    final backendStatus = data['available_status']?.toString();
-    final penaltySeconds =
-        int.tryParse(data['penalty_remaining_seconds']?.toString() ?? '0') ?? 0;
-
-    _applyPenaltyFromBackend(penaltySeconds);
-
-    // Backend penalty OR unavailable → driver must go offline.
-    // Next GPS sync will send UnAvailable automatically (onOff = false).
-    if (penaltySeconds > 0 || _isUnavailableStatus(backendStatus)) {
-      final message = penaltySeconds > 0
-          ? _penaltyMessage(penaltySeconds)
-          : 'You have been marked unavailable by admin'.tr;
-      _forceDriverUnavailable(
+    if (isPenalty) {
+      _showPenaltyDialog(
         message: message,
         context: context,
-        isPenalty: penaltySeconds > 0,
+        isPenalty: true,
+        forceShow: forceDialog,
       );
       return;
     }
 
-    _onPenaltyCleared(context: context);
+    if (wasOnline || isAdminBlock) {
+      _showPenaltyDialog(
+        message: message,
+        context: context,
+        isPenalty: false,
+        forceShow: forceDialog,
+      );
+    }
+  }
+
+  void _applyAvailabilityStatus(
+    Map<String, dynamic> data, {
+    BuildContext? context,
+    bool forceDialog = false,
+  }) {
+    final isPenalty = _parseIsPenalty(data['is_penalty']);
+    final canGoOnline =
+        _parseBool(data['can_go_online'], defaultValue: !isPenalty);
+    final penaltySeconds =
+        int.tryParse(data['penalty_remaining_seconds']?.toString() ?? '0') ?? 0;
+    final blockReason = data['block_reason']?.toString().trim().toLowerCase() ??
+        '';
+    final wasPenaltyActive = _backendPenaltyActive;
+    final wasAdminBlocked = _adminBlockedActive;
+
+    _canGoOnlineFromBackend = canGoOnline;
+    _blockReason = blockReason;
+
+    if (isPenalty || blockReason == 'penalty') {
+      _backendPenaltyActive = true;
+      _applyPenaltyFromBackend(isPenalty: true, penaltySeconds: penaltySeconds);
+      _forceDriverUnavailable(
+        message: penaltySeconds > 0
+            ? _penaltyMessage(penaltySeconds)
+            : _penaltyMessage(),
+        context: context,
+        isPenalty: true,
+        showDialog: forceDialog || !wasPenaltyActive,
+        forceDialog: forceDialog || !wasPenaltyActive,
+      );
+      return;
+    }
+
+    _backendPenaltyActive = false;
+    _applyPenaltyFromBackend(isPenalty: false, penaltySeconds: 0);
+
+    if (!canGoOnline && blockReason == 'admin_blocked') {
+      _adminBlockedActive = true;
+      _forceDriverUnavailable(
+        message: 'You have been marked unavailable by admin'.tr,
+        context: context,
+        isPenalty: false,
+        isAdminBlock: true,
+        showDialog: forceDialog || !wasAdminBlocked || onOff.value,
+        forceDialog: forceDialog,
+      );
+      return;
+    }
+
+    _adminBlockedActive = false;
+    _blockReason = '';
+
+    if (canGoOnline) {
+      if (wasAdminBlocked && !_userChoseOffline) {
+        _restoreDriverOnline(
+          context: context,
+          allowWithoutPriorFlag: true,
+        );
+      } else if (_wasOnlineBeforeForcedOffline) {
+        _restoreDriverOnline(context: context);
+      }
+    }
   }
 
   bool canGoOnline({bool showMessage = true}) {
-    if (isPenaltyActive()) {
+    if (!_canGoOnlineFromBackend ||
+        isPenaltyActive() ||
+        _backendPenaltyActive ||
+        _adminBlockedActive) {
       if (showMessage) {
-        _showPenaltyDialog(
-          message: _penaltyMessage(),
-          isPenalty: true,
-        );
+        if (_blockReason == 'admin_blocked') {
+          _showPenaltyDialog(
+            message: 'You have been marked unavailable by admin'.tr,
+            context: Get.overlayContext ?? Get.context,
+            isPenalty: false,
+            forceShow: true,
+          );
+        } else {
+          _showPenaltyDialog(
+            message: _penaltyMessage(),
+            context: Get.overlayContext ?? Get.context,
+            isPenalty: true,
+            forceShow: true,
+          );
+        }
       }
       return false;
     }
@@ -1006,15 +1188,6 @@ class HomeController extends GetxController {
     _lastDriverLatLongSyncAt = now;
 
     if (onOff.value) {
-      if (isPenaltyActive()) {
-        _forceDriverUnavailable(
-          message: _penaltyMessage(),
-          context: context,
-          isPenalty: true,
-        );
-        updateDriverLatLong('0', '0', '0', 'UnAvailable', context: context);
-        return;
-      }
       updateDriverLatLong(
         position.latitude.toString(),
         position.longitude.toString(),
@@ -1023,10 +1196,6 @@ class HomeController extends GetxController {
         context: context,
       );
     } else {
-      if (!isPenaltyActive() && _wasOnlineBeforePenalty) {
-        _onPenaltyCleared(context: context, position: position);
-        return;
-      }
       updateDriverLatLong('0', '0', '0', 'UnAvailable', context: context);
     }
   }

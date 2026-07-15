@@ -16,6 +16,12 @@ class WebDriverLayout {
     return MediaQuery.sizeOf(context).width >= wideBreakpoint;
   }
 
+  /// Native app, or web on phone/tablet — bottom nav + full-width map.
+  static bool isMobileLayout(BuildContext context) {
+    if (!kIsWeb) return true;
+    return MediaQuery.sizeOf(context).width < wideBreakpoint;
+  }
+
   static double slideButtonWidth(BuildContext context) {
     if (!kIsWeb) return MediaQuery.sizeOf(context).width - 32;
     return panelWidth - 48;
