@@ -1,8 +1,6 @@
-
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../../controller/auth_controller.dart';
 import '../../../route_helper/route_helper.dart';
 import '../../../utils/colors.dart';
