@@ -17,6 +17,7 @@ import '../../utils/polyline_handler.dart';
 import '../../utils/redirect_map.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/web_auth_layout.dart';
 import '../../utils/web_driver_layout.dart';
 import '../../widgets/driver_home_map.dart';
 import '../../service/booking_incoming_service.dart';
@@ -804,15 +805,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildInfoBadge(
+                      _buildInfoBadge1(
+
                         icon: Icons.local_taxi,
                         value: "Taxi \$ ${list.taxiPrice}",
-                        color: Colors.orange,
+                        color: Colors.red,
                       ),
-                      _buildInfoBadge(
+                      _buildInfoBadge1(
                         icon: Icons.people,
                         value: "R/S \$ ${list.sharePrice}",
-                        color: Colors.purple,
+                        color: Colors.black,
                       ),
                     ],
                   ),
@@ -930,6 +932,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildInfoBadge1(
+      {required IconData icon, required String value, required Color color}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLocationRow(
       {required IconData icon,
       required Color iconColor,
@@ -1015,10 +1043,9 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+      builder: (dialogContext) => WebAuthLayout.dialog(
+        context: dialogContext,
+        maxWidth: 400,
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -1099,10 +1126,9 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+        builder: (dialogContext) => WebAuthLayout.dialog(
+              context: dialogContext,
+              maxWidth: 420,
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1159,7 +1185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const EdgeInsets.symmetric(vertical: 12),
                                 side: const BorderSide(color: Colors.grey),
                               ),
-                              onPressed: () => Navigator.pop(context),
+                              onPressed: () => Navigator.pop(dialogContext),
                               child: Text(
                                 "Back".tr,
                                 style: const TextStyle(
@@ -1217,20 +1243,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future showMoreInfo() {
     return showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        elevation: 10,
-        insetPadding: EdgeInsets.symmetric(horizontal: 20),
+      builder: (dialogContext) => WebAuthLayout.dialog(
+        context: dialogContext,
+        maxWidth: 480,
         child: SingleChildScrollView(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.9, // Wider dialog
-            padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1248,8 +1266,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontFamily: "Poppins"),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, size: 22),
-                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(dialogContext),
                       padding: EdgeInsets.zero,
                     ),
                   ],
@@ -1348,7 +1366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Action button
                 Center(
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(dialogContext),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xff019ba5),
                       shape: RoundedRectangleBorder(
@@ -1379,7 +1397,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildInfoCard(
       String emoji, String title, String subtitle, BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.35,
+      width: WebAuthLayout.isWide(context)
+          ? 150
+          : MediaQuery.of(context).size.width * 0.35,
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey[50],

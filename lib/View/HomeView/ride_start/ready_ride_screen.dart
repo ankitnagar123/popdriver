@@ -1,16 +1,9 @@
 import 'dart:async';
 
-import '../../../controller/auth_controller.dart';
 import '../../../controller/booking_controller.dart';
-import '../../../route_helper/route_helper.dart';
-import '../../../utils/colors.dart';
-import '../../../utils/custom_button.dart';
-import '../../../utils/snackBar.dart';
-import '../../../utils/text_field.dart';
+import '../../../utils/web_auth_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-import '../../../controller/home_screen_controller.dart';
 
 class ReadyForRide extends StatefulWidget {
   const ReadyForRide({Key? key}) : super(key: key);
@@ -24,22 +17,36 @@ class _ReadyForRideState extends State<ReadyForRide> {
 
   @override
   void initState() {
-    controller.rideNowBooking();
-    Timer(Duration(seconds: 3), () {
-      Navigator.of(context).pop();
-    });
-
     super.initState();
+    controller.rideNowBooking();
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
     return Scaffold(
-        body: Image.asset(
-      'assets/images/readforride.png',
-      height: Get.height,
-      width: Get.width,
-      fit: BoxFit.fill,
-    ));
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: wide ? 32 : 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: wide ? 420 : double.infinity,
+              ),
+              child: Image.asset(
+                'assets/images/readforride.png',
+                fit: BoxFit.contain,
+                width: double.infinity,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

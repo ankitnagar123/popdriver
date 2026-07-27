@@ -43,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void initState() {
+    phoneCtr.text = "4";
     info();
     setValue();
     accessToken = uuid.v1();
@@ -218,8 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Checkbox(
                         value: _checked,
-                        onChanged: (value) =>
-                            setState(() => _checked = value),
+                        onChanged: (value) => setState(() => _checked = value),
                         activeColor: MyColors.primary,
                       ),
                       Text(
@@ -236,8 +236,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: EdgeInsets.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      onPressed: () =>
-                          Get.toNamed(RouteHelper.getForgotPasswordScreenRoute()),
+                      onPressed: () => Get.toNamed(
+                          RouteHelper.getForgotPasswordScreenRoute()),
                       child: Text(
                         "Forgot Password?".tr,
                         style: TextStyle(
@@ -333,7 +333,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-
   bool valid() {
     if (phoneCtr.text.isEmpty) {
       customSnackBar("Please Enter Mobile Number".tr, context: context);
@@ -361,7 +360,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
   Future<void> setValue() async {
     // Get mobile number using sp.getString()
     String mobileNumber = (await sp.getStringValue(sp.MOBILE_NO)) ?? "";
@@ -377,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       if (mobileNumber.isNotEmpty) {
         phoneCtr.text = mobileNumber;
-        _checked =true;
+        _checked = true;
       }
       if (password.isNotEmpty) {
         passwordCtr.text = password;
@@ -388,8 +386,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (flag.isNotEmpty) {
         countryFlag = flag;
       }
-
     });
   }
-
 }

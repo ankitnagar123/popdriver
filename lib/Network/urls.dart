@@ -1,5 +1,5 @@
 class URLS {
-  static const String BASE_URL = 'https://popadmin.cyberimpulses.tech/API/';
+  static const String BASE_URL = 'https://poptaxi.com.au/API/';
 
   /// Builds a full API URL from an endpoint filename.
   static String api(String endpoint) {

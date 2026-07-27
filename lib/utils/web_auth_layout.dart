@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'colors.dart';
@@ -9,7 +8,7 @@ class WebAuthLayout {
   static const double wideBreakpoint = 720;
 
   static bool isWide(BuildContext context) {
-    return kIsWeb || MediaQuery.sizeOf(context).width >= wideBreakpoint;
+    return MediaQuery.sizeOf(context).width >= wideBreakpoint;
   }
 
   static Widget constrainForm(BuildContext context, Widget child) {

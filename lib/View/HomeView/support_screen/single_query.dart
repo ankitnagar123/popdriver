@@ -7,6 +7,7 @@ import '../../../Model/fetch_single_query.dart';
 import '../../../controller/support_controller.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/snackBar.dart';
+import '../../../utils/web_auth_layout.dart';
 
 class FetchSingleQuery extends StatefulWidget {
   const FetchSingleQuery({super.key});
@@ -102,7 +103,8 @@ class _FetchSingleQueryState extends State<FetchSingleQuery> {
           ),
           centerTitle: true,
         ),
-        body: Obx(() {
+        body: _wrapResponsiveBody(
+          Obx(() {
           final loading =
               controller.fetchSingleQueryLoader.value && !_initialLoadDone;
           final messages = controller.fetchSingleQueryList;
@@ -124,8 +126,28 @@ class _FetchSingleQueryState extends State<FetchSingleQuery> {
             ],
           );
         }),
+        ),
       ),
     );
+  }
+
+  Widget _wrapResponsiveBody(Widget child) {
+    if (!WebAuthLayout.isWide(context)) return child;
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: child,
+      ),
+    );
+  }
+
+  double _bubbleMaxWidth(BuildContext context) {
+    final screenW = MediaQuery.sizeOf(context).width;
+    final wide = WebAuthLayout.isWide(context);
+    final base = wide ? screenW.clamp(0, 640) * 0.78 : screenW * 0.78;
+    return base.clamp(180, 480);
   }
 
   Widget _buildEmptyState() {
@@ -199,7 +221,7 @@ class _FetchSingleQueryState extends State<FetchSingleQuery> {
           Flexible(
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+                maxWidth: _bubbleMaxWidth(context),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -324,97 +346,107 @@ class _FetchSingleQueryState extends State<FetchSingleQuery> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(ctx).bottom,
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+      builder: (ctx) {
+        final wide = WebAuthLayout.isWide(ctx);
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: wide ? 480 : double.infinity),
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(ctx).bottom,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Reply to support'.tr,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: messageCtr,
-                maxLines: 4,
-                autofocus: true,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Type your message...'.tr,
-                  filled: true,
-                  fillColor: MyColors.background,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: MyColors.primary, width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Obx(() {
-                final loading = controller.replyLoader.value;
-                return SizedBox(
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: loading ? null : () => _sendReply(ctx),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: MyColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                     ),
-                    child: loading
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Send'.tr,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                    const SizedBox(height: 16),
+                    Text(
+                      'Reply to support'.tr,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: messageCtr,
+                      maxLines: 4,
+                      autofocus: true,
+                      style:
+                          const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Type your message...'.tr,
+                        filled: true,
+                        fillColor: MyColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: MyColors.primary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Obx(() {
+                      final loading = controller.replyLoader.value;
+                      return SizedBox(
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: loading ? null : () => _sendReply(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: MyColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                  ),
-                );
-              }),
-            ],
+                          child: loading
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Send'.tr,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -436,41 +468,68 @@ class _FetchSingleQueryState extends State<FetchSingleQuery> {
   void _confirmCloseTicket() {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Close ticket?'.tr,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 16)),
-        content: Text(
-          'This ticket will be marked as closed. You can open a new one if needed.'
-              .tr,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel'.tr),
+      builder: (ctx) => WebAuthLayout.dialog(
+        context: ctx,
+        maxWidth: 400,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Close ticket?'.tr,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Text(
+                'This ticket will be marked as closed. You can open a new one if needed.'
+                    .tr,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Cancel'.tr),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() {
+                      if (controller.closeQueryLoader.value) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        );
+                      }
+                      return ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          controller.closeTicket(complainNumber);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Close'.tr),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ],
           ),
-          Obx(() {
-            if (controller.closeQueryLoader.value) {
-              return const Padding(
-                padding: EdgeInsets.all(12),
-                child: SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            }
-            return TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                controller.closeTicket(complainNumber);
-              },
-              child: Text('Close'.tr,
-                  style: TextStyle(color: Colors.red.shade600)),
-            );
-          }),
-        ],
+        ),
       ),
     );
   }

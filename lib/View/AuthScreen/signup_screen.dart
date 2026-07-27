@@ -63,7 +63,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void initState() {
-    phoneCtr.text ="4";
+    phoneCtr.text = "4";
     super.initState();
     vehicleController.fetchVehicle();
   }
@@ -114,234 +114,232 @@ class _SignUpScreenState extends State<SignUpScreen> {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: custom_textfield(
-                    manditory: "*",
-                    labletext: "First Name".tr,
-                    textInputType: TextInputType.text,
-                    textEditingController: nameCtr,
-                  ),
-                ),
-                SizedBox(
-                  width: 8,
-                ),
-                Expanded(
-                  child: custom_textfield(
-                    manditory: "*",
-                    labletext: "Last Name".tr,
-                    textInputType: TextInputType.text,
-                    textEditingController: sirNameCtr,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(
-              height: 5,
-            ),
-            custom_textfield(
-              allowSpecialCharacters: true,
-              isEmail: true,
-              manditory: "*",
-              labletext: "Email Address".tr,
-              textInputType: TextInputType.emailAddress,
-              textEditingController: emailCtr,
-            ),
-            SizedBox(
-              height: 15,
-            ),
-            Column(
-              children: [
-                Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Row(
-                      children: [
-                        Text('Enter Mobile No.'.tr),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        Text(
-                          "*",
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ],
-                    )),
-                Container(
-                  height: 50,
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(top: 5),
-                  padding: EdgeInsets.only(left: 10),
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: MyColors.TextField),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: IntlPhoneField(
-                        controller: phoneCtr,
-                        textInputAction: TextInputAction.next,
-                        showDropdownIcon: false,
-                        autovalidateMode: AutovalidateMode.disabled,
-                        /*disableLengthCheck: true,*/
-                        initialCountryCode: countryFlag,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
-                        decoration: InputDecoration(
-                            counterText: "",
-                            hintStyle: TextStyle(
-                                color: MyColors.DarkBlue, fontSize: 12),
-                            hintText: 'Mobile Number'.tr,
-                            focusedBorder: InputBorder.none,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none),
-                        onChanged: (phone) {
-                          setState(
-                            () {
-                              countryCode = phone.countryCode;
-                              print(countryCode);
-                              countryFlag = phone.countryISOCode;
-                              log("${countryFlag}");
-                            },
-                          );
-                        },
-                        onCountryChanged: (country) {
-                          setState(
-                            () {
-                              countryCode = '${country.dialCode}';
-                              print(countryCode);
-                              countryFlag = country.code;
-                              print(countryFlag);
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            custom_textfield(
-                allowSpecialCharacters: false,
+        Row(
+          children: [
+            Expanded(
+              child: custom_textfield(
                 manditory: "*",
-                labletext: "Password".tr,
-                ishide: isHide,
+                labletext: "First Name".tr,
                 textInputType: TextInputType.text,
-                textEditingController: passwordCtr,
-                icon: InkWell(
-                    onTap: () {
-                      setState(() {
-                        isHide = !isHide;
-                      });
-                    },
-                    child: isHide
-                        ? Icon(
-                            size: 18,
-                            Icons.visibility_off,
-                            color: MyColors.DarkBlue,
-                          )
-                        : Icon(
-                            size: 18,
-                            Icons.visibility,
-                            color: MyColors.DarkBlue,
-                          ))),
-            custom_textfield(
-              manditory: "*",
-              allowSpecialCharacters: false,
-              labletext: "Vehicle Number".tr,
-              textEditingController: vehicleNumberCtr,
-              textInputType: TextInputType.text,
-            ),
-            custom_textfield(
-              manditory: "*",
-              allowSpecialCharacters: false,
-              labletext: "Identity Number".tr,
-              textEditingController: identityNoCtr,
-              textInputType: TextInputType.text,
+                textEditingController: nameCtr,
+              ),
             ),
             SizedBox(
-              height: 10,
+              width: 8,
             ),
-            _buildCarListDropdown(vehicleController),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                SizedBox(
-                  height: 40,
-                  width: 25,
-                  child: Checkbox(
-                      //visualDensity: VisualDensity(horizontal:-4),
-                      checkColor: MyColors.white,
-                      activeColor: MyColors.primary,
-                      side: const BorderSide(color: MyColors.primary),
-                      value: isCheck,
-                      onChanged: (bool? val) {
-                        setState(() {
-                          isCheck = val!;
-                          print(isCheck);
-                        });
-                      }),
-                ),
-                Text(
-                  "I agree to the".tr,
-                  style: TextStyle(color: MyColors.DarkBlue, fontSize: 10),
-                ),
-                SizedBox(
-                  width: 3,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Get.to(() => TermConditionScreen());
-                  },
-                  child: Text(
-                    "terms of service and ".tr,
-                    style: TextStyle(color: MyColors.primary, fontSize: 10),
+            Expanded(
+              child: custom_textfield(
+                manditory: "*",
+                labletext: "Last Name".tr,
+                textInputType: TextInputType.text,
+                textEditingController: sirNameCtr,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        custom_textfield(
+          allowSpecialCharacters: true,
+          isEmail: true,
+          manditory: "*",
+          labletext: "Email Address".tr,
+          textInputType: TextInputType.emailAddress,
+          textEditingController: emailCtr,
+        ),
+        SizedBox(
+          height: 15,
+        ),
+        Column(
+          children: [
+            Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Row(
+                  children: [
+                    Text('Enter Mobile No.'.tr),
+                    SizedBox(
+                      width: 5,
+                    ),
+                    Text(
+                      "*",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                )),
+            Container(
+              height: 50,
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 5),
+              padding: EdgeInsets.only(left: 10),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: MyColors.TextField),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 5),
+                  child: IntlPhoneField(
+                    controller: phoneCtr,
+                    textInputAction: TextInputAction.next,
+                    showDropdownIcon: false,
+                    autovalidateMode: AutovalidateMode.disabled,
+                    /*disableLengthCheck: true,*/
+                    initialCountryCode: countryFlag,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                        counterText: "",
+                        hintStyle:
+                            TextStyle(color: MyColors.DarkBlue, fontSize: 12),
+                        hintText: 'Mobile Number'.tr,
+                        focusedBorder: InputBorder.none,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none),
+                    onChanged: (phone) {
+                      setState(
+                        () {
+                          countryCode = phone.countryCode;
+                          print(countryCode);
+                          countryFlag = phone.countryISOCode;
+                          log("${countryFlag}");
+                        },
+                      );
+                    },
+                    onCountryChanged: (country) {
+                      setState(
+                        () {
+                          countryCode = '${country.dialCode}';
+                          print(countryCode);
+                          countryFlag = country.code;
+                          print(countryFlag);
+                        },
+                      );
+                    },
                   ),
                 ),
-                SizedBox(
-                  width: 5,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Get.to(() => PolicyScreen());
-                  },
-                  child: Text(
-                    "privacy policy".tr,
-                    style: TextStyle(color: MyColors.primary, fontSize: 10),
-                  ),
-                ),
-              ],
+              ),
+            ),
+          ],
+        ),
+        custom_textfield(
+            allowSpecialCharacters: false,
+            manditory: "*",
+            labletext: "Password".tr,
+            ishide: isHide,
+            textInputType: TextInputType.text,
+            textEditingController: passwordCtr,
+            icon: InkWell(
+                onTap: () {
+                  setState(() {
+                    isHide = !isHide;
+                  });
+                },
+                child: isHide
+                    ? Icon(
+                        size: 18,
+                        Icons.visibility_off,
+                        color: MyColors.DarkBlue,
+                      )
+                    : Icon(
+                        size: 18,
+                        Icons.visibility,
+                        color: MyColors.DarkBlue,
+                      ))),
+        custom_textfield(
+          manditory: "*",
+          allowSpecialCharacters: false,
+          labletext: "Vehicle Number".tr,
+          textEditingController: vehicleNumberCtr,
+          textInputType: TextInputType.text,
+        ),
+        custom_textfield(
+          manditory: "*",
+          allowSpecialCharacters: false,
+          labletext: "Identity Number".tr,
+          textEditingController: identityNoCtr,
+          textInputType: TextInputType.text,
+        ),
+        SizedBox(
+          height: 10,
+        ),
+        _buildCarListDropdown(vehicleController),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              height: 40,
+              width: 25,
+              child: Checkbox(
+                  //visualDensity: VisualDensity(horizontal:-4),
+                  checkColor: MyColors.white,
+                  activeColor: MyColors.primary,
+                  side: const BorderSide(color: MyColors.primary),
+                  value: isCheck,
+                  onChanged: (bool? val) {
+                    setState(() {
+                      isCheck = val!;
+                      print(isCheck);
+                    });
+                  }),
+            ),
+            Text(
+              "I agree to the".tr,
+              style: TextStyle(color: MyColors.DarkBlue, fontSize: 10),
             ),
             SizedBox(
-              height: 10,
+              width: 3,
             ),
-            Obx(
-              () => custom_buttons(
-                  loading: controller.signUpLoader.value,
-                  voidCallback: () {
-                    validate();
-                    /*Get.toNamed(RouteHelper.getAddBankDetailsScreenRoute());*/
-                  },
-                  text: "Sign Up".tr),
+            GestureDetector(
+              onTap: () {
+                Get.to(() => TermConditionScreen());
+              },
+              child: Text(
+                "terms of service and ".tr,
+                style: TextStyle(color: MyColors.primary, fontSize: 10),
+              ),
             ),
             SizedBox(
-              height: 5,
+              width: 5,
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Already have an account?".tr),
-                TextButton(
-                    onPressed: () {
-                      Get.offNamed(RouteHelper.getLoginScreenRoute());
-                    },
-                    child: Text(
-                      "Login".tr,
-                      style: TextStyle(color: MyColors.primary),
-                    ))
-              ],
+            GestureDetector(
+              onTap: () {
+                Get.to(() => PolicyScreen());
+              },
+              child: Text(
+                "privacy policy".tr,
+                style: TextStyle(color: MyColors.primary, fontSize: 10),
+              ),
             ),
+          ],
+        ),
+        SizedBox(
+          height: 10,
+        ),
+        Obx(
+          () => custom_buttons(
+              loading: controller.signUpLoader.value,
+              voidCallback: () {
+                validate();
+                /*Get.toNamed(RouteHelper.getAddBankDetailsScreenRoute());*/
+              },
+              text: "Sign Up".tr),
+        ),
+        SizedBox(
+          height: 5,
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Already have an account?".tr),
+            TextButton(
+                onPressed: () {
+                  Get.offNamed(RouteHelper.getLoginScreenRoute());
+                },
+                child: Text(
+                  "Login".tr,
+                  style: TextStyle(color: MyColors.primary),
+                ))
+          ],
+        ),
         const SizedBox(height: 20),
       ],
     );
@@ -381,7 +379,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       customSnackBar("Please Enter Mobile Number".tr);
     } else if (passwordCtr.text.isEmpty) {
       customSnackBar("Please Enter Your Password".tr);
-    }/* else if (passwordCtr.text.length < 6) {
+    } /* else if (passwordCtr.text.length < 6) {
       customSnackBar(" Password length should be 6 digit".tr);
     } else if (!hasUppercase) {
       customSnackBar('Password must contain at least one uppercase letter'.tr);
@@ -391,7 +389,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       customSnackBar('Password must contain at least one digit'.tr);
     } else if (!hasSpecialCharacter) {
       customSnackBar('Password must contain at least one special character'.tr);
-    }*/ else if (vehicleNumberCtr.text.isEmpty) {
+    }*/
+    else if (vehicleNumberCtr.text.isEmpty) {
       customSnackBar("Please Enter Vehicle Registration Number".tr);
     } else if (identityNoCtr.text.isEmpty) {
       customSnackBar("Please Enter Identity Number".tr);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'colors.dart';
+import 'web_auth_layout.dart';
 
 /// Global popup when passenger cancels an accepted/active booking.
 class BookingCancellationDialog {
@@ -47,10 +48,9 @@ class BookingCancellationDialog {
       showDialog<void>(
         context: dialogContext,
         barrierDismissible: false,
-        builder: (dialogCtx) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+        builder: (dialogCtx) => WebAuthLayout.dialog(
+          context: dialogCtx,
+          maxWidth: 400,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
             child: Column(
