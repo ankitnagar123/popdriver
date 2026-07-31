@@ -40,10 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
   String accessToken = "";
 
   var uuid = Uuid();
-
+/// /
   @override
   void initState() {
     phoneCtr.text = "4";
+
     info();
     setValue();
     accessToken = uuid.v1();

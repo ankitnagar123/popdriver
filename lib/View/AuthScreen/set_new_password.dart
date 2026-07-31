@@ -1,14 +1,11 @@
-import '../../route_helper/route_helper.dart';
 import '../../utils/colors.dart';
 import '../../utils/text_field.dart';
 import '../../controller/auth_controller.dart';
-import '../../utils/colors.dart';
-import '../../utils/custom_button.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/web_auth_layout.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../utils/colors.dart';
 
 class SetPassword extends StatefulWidget {
   const SetPassword({Key? key}) : super(key: key);
@@ -18,137 +15,189 @@ class SetPassword extends StatefulWidget {
 }
 
 class _SetPasswordState extends State<SetPassword> {
-
-  TextEditingController passCtr = TextEditingController();
-  TextEditingController rePassCtr = TextEditingController();
-
-  final controller = Get.find<AuthController>();
+  final TextEditingController passCtr = TextEditingController();
+  final TextEditingController rePassCtr = TextEditingController();
+  final AuthController controller = Get.find<AuthController>();
 
   String id = "";
   bool isHide = true;
   bool isVisible = true;
+
   @override
   void initState() {
-   id = Get.arguments["id"];
     super.initState();
+    id = Get.arguments?["id"]?.toString() ?? '';
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        leading: InkWell(
-            onTap: (){
-              Get.back();
-            },
-            child: Icon(Icons.arrow_back,color: MyColors.black,)),
-        backgroundColor: MyColors.white,
-        title:  Image.asset("assets/images/logo.png",height: 50,),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: 40,horizontal: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SizedBox(height: 100,),
-            Text("Set New Password".tr,style: TextStyle(fontSize: 20),),
-            SizedBox(height: 20,),
-            Text("Enter new password. password must be 5 to 10 character long".tr,style: TextStyle(fontSize: 15),),
-            SizedBox(height: 20,),
-            custom_textfield(
-              allowSpecialCharacters: false,
-              labletext: "Create New Password".tr,
-              textEditingController: passCtr,
-              ishide: isHide,
-              textInputType: TextInputType.text,
-              icon: InkWell(
-                onTap: (){
-                  setState(() {
-                    isHide = !isHide;
-                  });
-                },
-                  child: isHide
-                      ? Icon(
-                    Icons.visibility_off,
-                    color: MyColors.DarkBlue,
-                  )
-                      : Icon(
-                    Icons.visibility,
-                    color: MyColors.DarkBlue,
-                  )),
-            ),
-            custom_textfield(
-              allowSpecialCharacters: false,
-              labletext: "Re-enter Password".tr,
-              textEditingController: rePassCtr,
-              ishide: isVisible,
-              textInputType: TextInputType.text,
-              icon: InkWell(
-                onTap: (){
-                 setState(() {
-                   isVisible = !isVisible;
-                 });
-                },
-                  child:isVisible
-                      ? Icon(
-                    Icons.visibility_off,
-                    color: MyColors.DarkBlue,
-                  )
-                      : Icon(
-                    Icons.visibility,
-                    color: MyColors.DarkBlue,
-                  )),
-            ),
+  void dispose() {
+    passCtr.dispose();
+    rePassCtr.dispose();
+    super.dispose();
+  }
 
-            SizedBox(height: 50,),
-          Obx(() =>  custom_buttons(
-            loading: controller.setPasswordLoader.value,
-              voidCallback: (){
-              if(valid()== true){
-                controller.setPassword(passCtr.text, id.toString());
-              }
-          }, text: "Continue".tr))
-          ],
-        ),
+  PreferredSizeWidget _appBar() {
+    return AppBar(
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_rounded, color: MyColors.primary),
+        onPressed: () => Get.back(),
+      ),
+      backgroundColor: Colors.transparent,
+      centerTitle: true,
+    );
+  }
+
+  Widget _eyeIcon(bool hidden, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Icon(
+        hidden ? Icons.visibility_off : Icons.visibility,
+        color: MyColors.DarkBlue,
       ),
     );
   }
 
- bool valid(){
-
-   String password = passCtr.value.text.toString();
-
-/*   final hasUppercase = password.contains(RegExp(r'[A-Z]'));
-   final hasLowercase = password.contains(RegExp(r'[a-z]'));
-   final hasDigit = password.contains(RegExp(r'[0-9]'));
-   final hasSpecialCharacter = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));*/
-
-    if(passCtr.text.isEmpty){
+  bool valid() {
+    if (passCtr.text.isEmpty) {
       customSnackBar("Please enter New Password".tr);
-    }/*else if (password.length < 6) {
-      customSnackBar("Password must be at least 6 characters long".tr);
-    }else
-    if (!hasUppercase) {
-      customSnackBar('Password must contain at least one uppercase letter'.tr);
-    }
-    else if (!hasLowercase) {
-      customSnackBar('Password must contain at least one lowercase letter'.tr);
-    }
-    else if (!hasDigit) {
-      customSnackBar('Password must contain at least one digit'.tr);
-    }
-    else if (!hasSpecialCharacter) {
-      customSnackBar('Password must contain at least one special character'.tr);
-    }*/else if(rePassCtr.text.isEmpty){
+    } else if (rePassCtr.text.isEmpty) {
       customSnackBar("Please Re-enter Password".tr);
-    }else if(passCtr.text != rePassCtr.text){
+    } else if (passCtr.text != rePassCtr.text) {
       customSnackBar("Password Does Not Match".tr);
-    }else{
+    } else {
       return true;
     }
     return false;
- }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = WebAuthLayout.isWide(context);
+
+    return WebAuthLayout.page(
+      context: context,
+      appBar: _appBar(),
+      child: Column(
+        children: [
+          SizedBox(height: wide ? 8 : 12),
+          Image.asset(
+            "assets/images/logo.png",
+            height: WebAuthLayout.logoHeight(context),
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          ),
+          SizedBox(height: wide ? 16 : 20),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: wide ? 0 : 20),
+            child: WebAuthLayout.formCard(
+              context: context,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Set New Password".tr,
+                    style: TextStyle(
+                      fontSize: wide ? 24 : 28,
+                      fontWeight: FontWeight.w700,
+                      color: MyColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Enter new password. Password must be 5 to 10 characters long"
+                        .tr,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: MyColors.black.withValues(alpha: 0.75),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  custom_textfield(
+                    allowSpecialCharacters: false,
+                    labletext: "Create New Password".tr,
+                    textEditingController: passCtr,
+                    ishide: isHide,
+                    textInputType: TextInputType.text,
+                    icon: _eyeIcon(isHide, () {
+                      setState(() => isHide = !isHide);
+                    }),
+                  ),
+                  custom_textfield(
+                    allowSpecialCharacters: false,
+                    labletext: "Re-enter Password".tr,
+                    textEditingController: rePassCtr,
+                    ishide: isVisible,
+                    textInputType: TextInputType.text,
+                    icon: _eyeIcon(isVisible, () {
+                      setState(() => isVisible = !isVisible);
+                    }),
+                  ),
+                  const SizedBox(height: 28),
+                  Obx(() => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [
+                              MyColors.primary,
+                              MyColors.black,
+                            ],
+                          ),
+                          boxShadow: [
+                            if (!controller.setPasswordLoader.value)
+                              BoxShadow(
+                                color: MyColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              )
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (valid()) {
+                              controller.setPassword(
+                                passCtr.text,
+                                id.toString(),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size(double.infinity, 0),
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: controller.setPasswordLoader.value
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  "Continue".tr,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      )),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: wide ? 24 : 16),
+        ],
+      ),
+    );
+  }
 }
