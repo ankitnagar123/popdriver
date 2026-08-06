@@ -383,6 +383,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         cancelStartBookLoader.value = false;
         _suppressUserCancellationDialog = true;
         _activeAcceptedBookingId = '';
+        // Ignore delayed iOS FCM / poll "Booking Cancelled" for this ride.
+        BookingCancellationDialog.suppressForDriverCancel(bookingId);
         BookingCancellationDialog.clearLastShown();
         callback();
         customSnackBar("Booking Canceled".tr);
@@ -429,10 +431,16 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         resetControllerState();
         _activeAcceptedBookingId = '';
         await rideNowBooking();
-        if (hadActiveBooking && !_suppressUserCancellationDialog) {
+        if (hadActiveBooking &&
+            !_suppressUserCancellationDialog &&
+            !BookingCancellationDialog.isSuppressed(previousActiveId)) {
           BookingCancellationDialog.show(previousActiveId);
         }
-        _suppressUserCancellationDialog = false;
+        // Keep suppress true a bit longer when driver cancelled — reset only
+        // if this empty response was a true passenger cancel path.
+        if (!BookingCancellationDialog.isSuppressed(previousActiveId)) {
+          _suppressUserCancellationDialog = false;
+        }
       } else {
         _activeAcceptedBookingId = bookingIdStr;
         _suppressUserCancellationDialog = false;
@@ -580,7 +588,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     _suppressUserCancellationDialog = true;
     _activeAcceptedBookingId = '';
     resetControllerState();
-    if (id.isNotEmpty) {
+    // Driver already cancelled this booking — never show passenger popup.
+    if (id.isNotEmpty && !BookingCancellationDialog.isSuppressed(id)) {
       BookingCancellationDialog.show(id);
     }
     rideNowBooking();

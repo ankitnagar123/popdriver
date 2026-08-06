@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -8,6 +10,10 @@ import 'web_auth_layout.dart';
 /// Global popup when passenger cancels an accepted/active booking.
 class BookingCancellationDialog {
   static String? _lastShownBookingId;
+
+  /// Driver self-cancel / local reset — ignore delayed FCM / poll popups (esp. iOS).
+  static final Set<String> _suppressedByDriver = <String>{};
+  static final Map<String, Timer> _suppressTimers = <String, Timer>{};
 
   static String extractBookingId(RemoteMessage message) {
     final dataId = message.data['booking_id']?.toString() ??
@@ -33,9 +39,33 @@ class BookingCancellationDialog {
     return '';
   }
 
+  /// Call after driver successfully cancels so late push/poll never re-opens UI.
+  static void suppressForDriverCancel(
+    String bookingId, {
+    Duration ttl = const Duration(minutes: 2),
+  }) {
+    final id = bookingId.trim();
+    if (id.isEmpty) return;
+    _suppressedByDriver.add(id);
+    _lastShownBookingId = id;
+    _suppressTimers[id]?.cancel();
+    _suppressTimers[id] = Timer(ttl, () {
+      _suppressedByDriver.remove(id);
+      _suppressTimers.remove(id);
+    });
+  }
+
+  static bool isSuppressed(String bookingId) {
+    final id = bookingId.trim();
+    return id.isNotEmpty && _suppressedByDriver.contains(id);
+  }
+
   static void show(String bookingId) {
     final id = bookingId.trim();
     if (id.isEmpty) return;
+
+    // Driver already cancelled locally — skip FCM/poll "Booking Cancelled".
+    if (_suppressedByDriver.contains(id)) return;
 
     // Avoid duplicate popup for the same cancellation burst.
     if (_lastShownBookingId == id) return;
@@ -44,6 +74,9 @@ class BookingCancellationDialog {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final dialogContext = Get.overlayContext ?? Get.context;
       if (dialogContext == null || !dialogContext.mounted) return;
+
+      // Re-check after frame — suppress may have been set mid-flight.
+      if (_suppressedByDriver.contains(id)) return;
 
       showDialog<void>(
         context: dialogContext,
@@ -86,7 +119,12 @@ class BookingCancellationDialog {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(dialogCtx),
+                    onPressed: () {
+                      if (Navigator.of(dialogCtx, rootNavigator: true)
+                          .canPop()) {
+                        Navigator.of(dialogCtx, rootNavigator: true).pop();
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MyColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -116,5 +154,26 @@ class BookingCancellationDialog {
 
   static void clearLastShown() {
     _lastShownBookingId = null;
+  }
+
+  /// Force-close any open dialogs (confirm / cancelled) — iOS-safe fallback.
+  static void dismissOpenDialogs() {
+    try {
+      final ctx = Get.overlayContext ?? Get.context;
+      if (ctx == null) return;
+      final nav = Navigator.of(ctx, rootNavigator: true);
+      var guard = 0;
+      while (nav.canPop() && guard < 3) {
+        // Only pop routes that are dialogs when possible.
+        if (Get.isDialogOpen == true || Get.isOverlaysOpen) {
+          nav.pop();
+        } else {
+          break;
+        }
+        guard++;
+      }
+    } catch (_) {
+      /* ignore */
+    }
   }
 }

@@ -13,8 +13,10 @@ Widget buildDriverHomeMap({
 }) {
   final hasTarget = initialTarget.latitude != 0 || initialTarget.longitude != 0;
 
+  // Stable key — never include lat/lng. Changing the key remounts the whole
+  // Maps JS view and causes blink/flicker on every GPS tick (Chrome/Edge/Safari).
   return GoogleMap(
-    key: ValueKey('driver_home_map_web_$initialTarget'),
+    key: const ValueKey('driver_home_map_web'),
     myLocationButtonEnabled: false,
     myLocationEnabled: false,
     zoomControlsEnabled: false,

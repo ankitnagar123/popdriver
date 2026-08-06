@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../controller/booking_controller.dart';
 import '../../controller/home_screen_controller.dart';
+import '../../utils/booking_cancellation_dialog.dart';
 import '../../utils/colors.dart';
 import '../../utils/custom_button.dart';
 import '../../utils/polyline_handler.dart';
@@ -132,54 +133,53 @@ TextEditingController messageCtr = TextEditingController();
     );
   }
 
-  Future<void> validation()async{
-    if(controller.reason.value == "Please tell us Why You Want To Cancel".tr&& messageCtr.text.isEmpty){
+  Future<void> validation({BuildContext? dialogContext}) async {
+    if (controller.reason.value ==
+            "Please tell us Why You Want To Cancel".tr &&
+        messageCtr.text.isEmpty) {
       customSnackBar('Please write cancel reason'.tr);
-    }else if(controller.reason.value ==""){
+    } else if (controller.reason.value == "") {
       customSnackBar('Please choose cancel reason'.tr);
-    }else{
+    } else {
+      controller.driverBookingCancel(bookingId, '${controller.reason.value}',
+          () {
+        polyline.clear();
+        controllers.clearMarkersExceptDriver();
+        controllers.hide.value = false;
+        controllers.onOff.value = true;
+        controller.completeText.value = "";
+        controllers.polylineVariable.value = "";
+        controllers.polylineVariable2.value = "";
+        controllers.driverArriveValue.value = false;
+        controller.reason.value = "";
+        controller.selectedIndex.value = -1;
+        controllers.arriveDriver.value = "";
+        controllers.painButton.value = false;
 
-      controller.driverBookingCancel(bookingId,
-          '${controller.reason.value}', () {
-            polyline.clear();
-            controllers.clearMarkersExceptDriver();
-            controllers.hide.value = false;
-            controllers.onOff.value = true;
-        controller.userAcceptBooking(() { });
-          controller.completeText.value = "";
-            controllers.polylineVariable.value = "";
-            controllers.polylineVariable2.value = "";
-            controllers.driverArriveValue.value = false;
-            controller.reason.value = "";
-            controller.selectedIndex.value = -1;
-            controllers.arriveDriver.value = "";
-            controllers.painButton.value = false;
-            Get.back();
-            Get.back();
-          });
-
-        /*controller.cancelBooking(Get.arguments["ID"],'${controller.reason.value + messageCtr.text}',(){
-          controllers.polylineVariable.value = "";
-          controllers.polylineVariable2.value = "";
-          controller.rideLaterBooking();
-          controllers.driverArriveValue.value = false;
-          controller.reason.value = "";
-          controller.selectedIndex.value = -1;
-          Get.back();
-        });*/
-      }
+        // Close confirm dialog first (iOS-safe).
+        if (dialogContext != null && dialogContext.mounted) {
+          final nav = Navigator.of(dialogContext, rootNavigator: true);
+          if (nav.canPop()) nav.pop();
+        } else {
+          BookingCancellationDialog.dismissOpenDialogs();
+        }
+        // Then leave cancel reason screen if still open.
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        controller.userAcceptBooking(() {});
+      });
     }
-
+  }
 
   void showCustomDialog(BuildContext context) {
-
-    final String dialogTitle = "Are you sure you want to cancel this booking"
-        .tr;
+    final String dialogTitle =
+        "Are you sure you want to cancel this booking".tr;
 
     showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Dialog(
+        builder: (dialogContext) => Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -191,8 +191,7 @@ TextEditingController messageCtr = TextEditingController();
                 // Header Icon
                 Icon(
                   Icons.warning_amber_rounded,
-
-                  color:  Colors.orange,
+                  color: Colors.orange,
                   size: 40,
                 ),
                 const SizedBox(height: 16),
@@ -206,10 +205,11 @@ TextEditingController messageCtr = TextEditingController();
                     fontWeight: FontWeight.w500,
                     fontFamily: "Poppins",
                   ),
-                ),     Text(
+                ),
+                Text(
                   "If you cancel this booking, you will not receive any new bookings for the next 10 minutes",
                   textAlign: TextAlign.center,
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade600,
                     fontWeight: FontWeight.w400,
@@ -220,7 +220,8 @@ TextEditingController messageCtr = TextEditingController();
 
                 // Buttons Row
                 Obx(() {
-                  if (controller.cancelBookLoader.value || controller.cancelStartBookLoader.value) {
+                  if (controller.cancelBookLoader.value ||
+                      controller.cancelStartBookLoader.value) {
                     return const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Center(child: CircularProgressIndicator()),
@@ -230,15 +231,13 @@ TextEditingController messageCtr = TextEditingController();
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      // Cancel Button
                       Expanded(
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             side: const BorderSide(color: Colors.grey),
                           ),
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(dialogContext),
                           child: Text(
                             "Back".tr,
                             style: const TextStyle(
@@ -248,18 +247,14 @@ TextEditingController messageCtr = TextEditingController();
                         ),
                       ),
                       const SizedBox(width: 16),
-
-                      // Confirm Button
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                           Colors.red,
-                            padding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           onPressed: () {
-                            validation();
+                            validation(dialogContext: dialogContext);
                           },
                           child: Text(
                             "Cancel".tr,
@@ -277,7 +272,4 @@ TextEditingController messageCtr = TextEditingController();
           ),
         ));
   }
-
 }
-
-

@@ -16,6 +16,7 @@ import '../../utils/colors.dart';
 import '../../utils/polyline_handler.dart';
 import '../../utils/redirect_map.dart';
 import '../../utils/shared_preferences.dart';
+import '../../utils/booking_cancellation_dialog.dart';
 import '../../utils/snackBar.dart';
 import '../../utils/web_auth_layout.dart';
 import '../../utils/web_driver_layout.dart';
@@ -171,11 +172,13 @@ class _HomeScreenState extends State<HomeScreen> {
     print("-----------message");
 
     return Obx(() {
-      // Rebuild when route polyline finishes decoding (global `polyline` is not observable).
+      // Rebuild for markers / route / online toggle only.
+      // Do NOT read startLocation here — every GPS tick would rebuild the map
+      // and caused blink/flicker on some web browsers.
       contoller.mapPolylineEpoch.value;
-      contoller.startLocation.value;
-      contoller.hasValidLocation.value;
       contoller.markers.length;
+      contoller.onOff.value;
+      contoller.mapFollowDriver.value;
       return Scaffold(
         key: _scaffoldKey,
         body: contoller.onOff.value == false
@@ -1205,13 +1208,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const EdgeInsets.symmetric(vertical: 12),
                               ),
                               onPressed: () {
+                                if (controller.cancelBookLoader.value ||
+                                    controller.cancelStartBookLoader.value) {
+                                  return;
+                                }
                                 controller.driverBookingCancel(bookingId, '',
                                     () {
                                   polyline.clear();
                                   contoller.clearMarkersExceptDriver();
                                   contoller.hide.value = false;
                                   contoller.onOff.value = true;
-                                  controller.userAcceptBooking(() {});
                                   controller.completeText.value = "";
                                   contoller.polylineVariable.value = "";
                                   contoller.polylineVariable2.value = "";
@@ -1220,7 +1226,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                   controller.selectedIndex.value = -1;
                                   contoller.arriveDriver.value = "";
                                   contoller.painButton.value = false;
-                                  Get.back();
+
+                                  // iOS-safe: close confirm dialog by context,
+                                  // not Get.back() (often pops wrong route).
+                                  void closeConfirmDialog() {
+                                    if (dialogContext.mounted) {
+                                      final nav = Navigator.of(
+                                        dialogContext,
+                                        rootNavigator: true,
+                                      );
+                                      if (nav.canPop()) nav.pop();
+                                    } else {
+                                      BookingCancellationDialog
+                                          .dismissOpenDialogs();
+                                    }
+                                  }
+
+                                  closeConfirmDialog();
+                                  // Refresh active booking after dialog closed.
+                                  controller.userAcceptBooking(() {});
                                 });
                               },
                               child: Text(
