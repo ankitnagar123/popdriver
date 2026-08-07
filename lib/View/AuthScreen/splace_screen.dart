@@ -84,8 +84,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _startWebSplashFlow() {
-    // Web: skip native root/permission_handler; try browser location then continue.
-    requestLocationPermission();
+    // Safari: never request geolocation without a user tap (silent deny).
+    // Chrome/Android Online toggle handles permission. Just continue splash.
+    getData();
   }
 
   @override
@@ -148,10 +149,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> requestLocationPermission() async {
     if (isWeb) {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
-      }
+      // Do not call requestPermission() here — Safari blocks / silent-denies
+      // prompts that are not from a user gesture. Continue app flow only.
       getData();
       return;
     }

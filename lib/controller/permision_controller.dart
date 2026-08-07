@@ -10,12 +10,10 @@ import '../utils/driver_location_settings.dart';
 import '../utils/platform_helper.dart';
 import 'home_screen_controller.dart';
 
-class PermissionController extends GetxController{
-
-  var  mapInitialLocation = LatLng(0.0, 0.0).obs;
+class PermissionController extends GetxController {
+  var mapInitialLocation = LatLng(0.0, 0.0).obs;
   var permission = false.obs;
   StreamSubscription? mapSubscription;
-
 
   @override
   void onInit() {
@@ -25,7 +23,7 @@ class PermissionController extends GetxController{
     });
   }
 
-  Future<void> permissionHandle()async{
+  Future<void> permissionHandle() async {
     if (kIsWeb || isWeb) return;
     Map<Permission, PermissionStatus> statuses = await [
       Permission.storage,
@@ -36,24 +34,45 @@ class PermissionController extends GetxController{
       //add more permission to request here.
     ].request();
 
-    if(statuses[Permission.storage]!.isDenied){
-      await Permission.storage.request();//check each permission status after.
+    if (statuses[Permission.storage]!.isDenied) {
+      await Permission.storage.request(); //check each permission status after.
       print("storage permission is denied.");
     }
-    if(statuses[Permission.photos]!.isDenied){ //check each permission status after.
+    if (statuses[Permission.photos]!.isDenied) {
+      //check each permission status after.
       print("Photos permission is denied.");
     }
-    if(statuses[Permission.notification]!.isDenied){ //check each permission status after.
+    if (statuses[Permission.notification]!.isDenied) {
+      //check each permission status after.
       print("Notification permission is denied.");
     }
 
-    if(statuses[Permission.camera]!.isDenied){ //check each permission status after.
+    if (statuses[Permission.camera]!.isDenied) {
+      //check each permission status after.
       print("Camera permission is denied.");
     }
   }
 
-
   Future<void> getCurrentPosition() async {
+    // Web: never auto-prompt (Safari silent-deny). Online toggle requests GPS.
+    if (kIsWeb || isWeb) {
+      try {
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          return;
+        }
+        final position = await getDriverPosition();
+        final latLng = LatLng(position.latitude, position.longitude);
+        mapInitialLocation.value = latLng;
+        final home = Get.find<HomeController>();
+        home.applyLivePosition(position, recenterMap: true);
+      } catch (e) {
+        log('getCurrentPosition web skip/fail: $e');
+      }
+      return;
+    }
+
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) return;
@@ -85,5 +104,3 @@ class PermissionController extends GetxController{
     }
   }
 }
-
-

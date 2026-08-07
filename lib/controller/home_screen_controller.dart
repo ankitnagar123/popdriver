@@ -17,6 +17,7 @@ import '../Network/urls.dart';
 import '../utils/colors.dart';
 import '../utils/driver_location_settings.dart';
 import '../utils/shared_preferences.dart';
+import '../utils/snackBar.dart';
 import '../service/notification_service.dart';
 
 import 'auth_controller.dart';
@@ -349,6 +350,10 @@ class HomeController extends GetxController {
         log('[LOCATION] device location services disabled');
         return;
       }
+    } else {
+      // Web auto-path: never prompt. Only attach if already allowed (Chrome).
+      await tryAttachLocationIfAlreadyGranted();
+      return;
     }
 
     final permission = await _requestLocationPermission();
@@ -356,6 +361,30 @@ class HomeController extends GetxController {
 
     startListening();
     await _fetchInitialPosition();
+  }
+
+  /// Chrome returning user: permission already Allow → start GPS, no new prompt.
+  /// Safari first visit: returns false (prompt deferred to Online tap).
+  Future<bool> tryAttachLocationIfAlreadyGranted() async {
+    if (hasValidLocation.value) return true;
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (kIsWeb) {
+        debugPrint('[LOCATION] web grant check (no prompt): $permission');
+      }
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return false;
+      }
+      if (!_isListening) startListening();
+      await _fetchInitialPosition();
+      return hasValidLocation.value;
+    } catch (e) {
+      if (kIsWeb) {
+        debugPrint('[LOCATION] tryAttachLocationIfAlreadyGranted: $e');
+      }
+      return false;
+    }
   }
 
   Future<LocationPermission?> _requestLocationPermission() async {
@@ -373,7 +402,7 @@ class HomeController extends GetxController {
       log('[LOCATION] permission denied');
       if (kIsWeb) {
         debugPrint(
-          '[LOCATION] Allow location: Chrome lock icon → Site settings → Location → Allow',
+          '[LOCATION] Allow location: browser lock icon → Location → Allow',
         );
       }
       return null;
@@ -404,13 +433,44 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Must be called from a user tap (Online toggle) — browsers block GPS otherwise.
+  /// Must be called from a user tap (Online toggle) — Safari requires this.
   Future<bool> ensureLocationFromUserGesture() async {
     if (hasValidLocation.value) return true;
 
     if (kIsWeb) {
       debugPrint('[LOCATION] requesting GPS from user gesture...');
+      try {
+        // Safari: do NOT await checkPermission() first — that consumes the
+        // user-gesture and the location prompt never appears (map stuck at 0,0).
+        final permission = await Geolocator.requestPermission();
+        debugPrint('[LOCATION] permission after request: $permission');
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          customSnackBar(
+            'Location permission is required. In Safari: allow Location for this site, then turn Online again.',
+          );
+          return false;
+        }
+        if (!_isListening) startListening();
+        final position = await getDriverPosition(
+          timeLimit: const Duration(seconds: 25),
+        );
+        applyLivePosition(position, recenterMap: true);
+        _syncDriverAvailability(
+          position,
+          Get.overlayContext ?? Get.context,
+        );
+        return true;
+      } catch (e) {
+        log('[LOCATION] user-gesture GPS failed: $e');
+        debugPrint('[LOCATION] user-gesture GPS failed: $e');
+        customSnackBar(
+          'Could not get your location. Check Safari location settings and try Online again.',
+        );
+        return hasValidLocation.value;
+      }
     }
+
     final permission = await _requestLocationPermission();
     if (permission == null) return false;
 
@@ -430,7 +490,6 @@ class HomeController extends GetxController {
       return true;
     } catch (e) {
       log('[LOCATION] user-gesture GPS failed: $e');
-      if (kIsWeb) debugPrint('[LOCATION] user-gesture GPS failed: $e');
       return hasValidLocation.value;
     }
   }
@@ -516,19 +575,36 @@ class HomeController extends GetxController {
 
   /// Push GPS to server as Available, then refresh booking list (web needs this).
   Future<void> goOnlineAndSyncLocation(BuildContext context) async {
-    await fetchDriverAvailabilityStatus(context: context);
-    if (!canGoOnline(showMessage: true)) return;
-
     _userChoseOffline = false;
+
     try {
+      // Safari: geolocation MUST run before other awaits, or the browser
+      // drops the user-gesture and never shows the location prompt (map → 0,0).
       if (!hasValidLocation.value) {
         final located = await ensureLocationFromUserGesture();
-        if (!located && kIsWeb) {
-          debugPrint('[LOCATION] online without GPS — allow browser location');
+        if (!located) {
+          onOff.value = false;
+          await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+          if (kIsWeb) {
+            debugPrint('[LOCATION] online aborted — Safari/web GPS not granted');
+          }
+          return;
         }
       }
+
+      await fetchDriverAvailabilityStatus(context: context);
+      if (!canGoOnline(showMessage: true)) {
+        onOff.value = false;
+        await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+        return;
+      }
+
       if (!_isListening) {
-        await getLocation();
+        if (kIsWeb) {
+          await tryAttachLocationIfAlreadyGranted();
+        } else {
+          await getLocation();
+        }
       }
 
       if (hasValidLocation.value) {
@@ -542,9 +618,22 @@ class HomeController extends GetxController {
           'Available',
           context: context,
         );
+      } else {
+        onOff.value = false;
+        await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+        if (kIsWeb) {
+          customSnackBar(
+            'Location not detected. Allow location in Safari, then turn Online again.',
+          );
+        }
+        return;
       }
     } catch (e) {
       log('goOnlineAndSyncLocation failed: $e');
+      if (kIsWeb) {
+        onOff.value = false;
+        await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+      }
     }
     await Get.find<BookingController>().refreshAfterGoingOnline();
     await restartLocationStreamForOnlineState();

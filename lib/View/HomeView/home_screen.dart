@@ -24,6 +24,7 @@ import '../../widgets/driver_home_map.dart';
 import '../../service/booking_incoming_service.dart';
 import '../../service/device_token_sync.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -78,8 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
     log("onOff------------Direct ${contoller.onOff.value}");
 
     getData();
-    contrl.getCurrentPosition();
-    contoller.getLocation();
+    // Web (esp. Safari): never auto-prompt GPS — only Online tap.
+    // Android / iOS: keep existing auto location start.
+    if (!kIsWeb) {
+      contrl.getCurrentPosition();
+      contoller.getLocation();
+    } else {
+      contoller.tryAttachLocationIfAlreadyGranted();
+    }
     controller.adminApprove();
     controller.userAcceptBooking();
 
@@ -102,11 +109,33 @@ class _HomeScreenState extends State<HomeScreen> {
   void getData() async {
     if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
       if (contoller.canGoOnline(showMessage: false)) {
-        contoller.onOff.value = true;
-        await contoller.goOnlineAndSyncLocation(context);
-        var loginKey = await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-        var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
-        authController.loginCheck(loginKey.toString(), accessToken, context);
+        if (kIsWeb) {
+          // Safari page reload: cannot get GPS without a tap. Stay offline
+          // until driver toggles Online (Chrome with prior Allow still resumes).
+          final alreadyGranted =
+              await contoller.tryAttachLocationIfAlreadyGranted();
+          if (!alreadyGranted) {
+            await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+            contoller.onOff.value = false;
+          } else {
+            contoller.onOff.value = true;
+            await contoller.goOnlineAndSyncLocation(context);
+            var loginKey =
+                await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+            var accessToken =
+                await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+            authController.loginCheck(
+                loginKey.toString(), accessToken, context);
+          }
+        } else {
+          contoller.onOff.value = true;
+          await contoller.goOnlineAndSyncLocation(context);
+          var loginKey =
+              await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
+          var accessToken =
+              await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+          authController.loginCheck(loginKey.toString(), accessToken, context);
+        }
       } else {
         await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
         contoller.onOff.value = false;
@@ -179,9 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
       contoller.markers.length;
       contoller.onOff.value;
       contoller.mapFollowDriver.value;
+      contoller.hasValidLocation.value;
+      // Web/Safari: never show map at LatLng(0,0) — look like West Africa.
+      final showMap = contoller.onOff.value &&
+          (!kIsWeb || contoller.hasValidLocation.value);
       return Scaffold(
         key: _scaffoldKey,
-        body: contoller.onOff.value == false
+        body: !showMap
             ? Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
@@ -284,6 +317,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                           if (value) {
                                             if (!contoller.canGoOnline()) {
                                               return;
+                                            }
+                                            // Safari: ask GPS in the same tap
+                                            // before flipping Online / API calls.
+                                            if (kIsWeb &&
+                                                !contoller
+                                                    .hasValidLocation.value) {
+                                              final located = await contoller
+                                                  .ensureLocationFromUserGesture();
+                                              if (!located) return;
                                             }
                                             contoller.onOff.value = true;
                                             await sp.setBoolValue(
