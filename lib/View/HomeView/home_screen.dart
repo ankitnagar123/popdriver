@@ -22,6 +22,7 @@ import '../../utils/web_auth_layout.dart';
 import '../../utils/web_driver_layout.dart';
 import '../../widgets/driver_home_map.dart';
 import '../../service/booking_incoming_service.dart';
+import '../../service/device_token_sync.dart';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -85,9 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       contoller.arriveDriver.value = Get.arguments["ArriveDriver"];
       ctr.fetchDriverDetail();
+      DeviceTokenSync.syncAfterLogin();
     });
-
-    authController.updateDeviceId();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       BookingIncomingService.instance.processPendingWhenReady();

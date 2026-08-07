@@ -8,11 +8,11 @@ import 'package:mtaanidriver/controller/profile_controller.dart';
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/firebase_messaging_config.dart';
-import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../service/device_token_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -29,6 +29,12 @@ import 'booking_controller.dart';
 import 'home_screen_controller.dart';
 
 class AuthController extends GetxController {
+  @override
+  void onInit() {
+    super.onInit();
+    DeviceTokenSync.attachTokenRefreshListener();
+  }
+
   DIO.Dio dioClient = DIO.Dio();
   RxString language = "English".obs;
   var destLocation = LatLng(22.719568, 75.857727).obs;
@@ -527,6 +533,7 @@ class AuthController extends GetxController {
 
   Future<void> driverLogout(String text, VoidCallback callback) async {
     logoutLoader.value = true;
+    DeviceTokenSync.blockSyncForLogout();
 
     final driverId = await secure.readData(secure.user_id);
     final logout = {"driver_id": driverId};
@@ -563,55 +570,47 @@ class AuthController extends GetxController {
   }
 
   void updateDeviceId() async {
-    String deviceStatus = "";
-    String? device_id = "";
     if (kIsWeb) {
-      deviceStatus = "Web";
+      String deviceStatus = "Web";
+      String? device_id = "";
       await FirebaseMessaging.instance
           .getToken(vapidKey: FirebaseMessagingConfig.webVapidKey)
           .then((value) {
         device_id = value;
       });
-    } else if (isAndroid) {
-      deviceStatus = "Android";
-      await FirebaseMessaging.instance.getToken().then((value) {
-        device_id = value;
-      });
-    } else if (isIOS) {
-      await FirebaseMessaging.instance
-          .getToken(vapidKey: FirebaseMessagingConfig.iosVapidKey)
-          .then((value) {
-        device_id = value;
-      });
-      deviceStatus = "IOS";
-      log('device id------$device_id');
-    }
 
-    Map<String, dynamic> deviceId = {
-      "driver_id": await secure.readData(secure.user_id),
-      "device_id": device_id,
-      "device_status": deviceStatus,
-    };
+      Map<String, dynamic> deviceId = {
+        "driver_id": await secure.readData(secure.user_id),
+        "device_id": device_id,
+        "device_status": deviceStatus,
+      };
 
-    log("Parameter update device id--------$deviceId");
+      log("Parameter update device id--------$deviceId");
+      print("Parameter update device id--------$deviceId");
 
-    try {
-      final response =
-          await apiService.postData(URLS.DEVICE_ID_UPDATE, deviceId);
+      try {
+        final response =
+            await apiService.postData(URLS.DEVICE_ID_UPDATE, deviceId);
 
-      var jsonString = jsonDecode(response.body);
+        var jsonString = jsonDecode(response.body);
 
-      log("device id update response------>:$jsonString");
+        log("device id update response------>:$jsonString");
 
-      var result = jsonString['result'];
-      if (result == "Update successfully") {
-        log("updated device id");
-      } else {
-        log('Something went wrong'.tr);
+        var result = jsonString['result'];
+        if (result == "Update successfully") {
+          log("updated device id");
+        } else {
+          log('Something went wrong'.tr);
+        }
+      } catch (e) {
+        print("exception device id==>${e}");
       }
-    } catch (e) {
-      print("exception device id==>${e}");
+      return;
     }
+
+    final userId = await secure.readData(secure.user_id);
+    if (userId == null || userId.isEmpty) return;
+    await DeviceTokenSync.syncAfterLogin(userId: userId);
   }
 
   void loginCheck(String loginDeviceKey, accessToken, context) async {

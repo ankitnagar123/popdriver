@@ -297,6 +297,33 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
+  static bool _mobileListenersBound = false;
+  static bool _initialMessageChecked = false;
+  static bool _serviceInitialized = false;
+
+  /// pop_user-style push logging — copy FCM token from console for Firebase test sends.
+  static void logRemoteMessage(String source, RemoteMessage message) {
+    final notification = message.notification;
+    final title =
+        notification?.title ?? message.data['title']?.toString() ?? '';
+    final body =
+        notification?.body ?? message.data['body']?.toString() ?? '';
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('🔔 PUSH [$source]');
+    debugPrint('  messageId : ${message.messageId ?? '-'}');
+    debugPrint('  from      : ${message.from ?? '-'}');
+    debugPrint('  sentTime  : ${message.sentTime ?? '-'}');
+    debugPrint('  title     : $title');
+    debugPrint('  body      : $body');
+    debugPrint('  data      : ${message.data}');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  }
+
+  static void _logNotificationTap(String source,
+      {String? title, String? payload}) {
+    debugPrint('👆 NOTIFICATION TAP [$source] title=$title payload=$payload');
+  }
+
   static String notificationTitleLc(RemoteMessage message) {
     final n = message.notification?.title;
     if (n != null && n.trim().isNotEmpty) {
@@ -355,6 +382,8 @@ class NotificationService {
       await _initializeWebMessaging();
       return;
     }
+    if (_serviceInitialized) return;
+    _serviceInitialized = true;
 
     const AndroidInitializationSettings androidInitializationSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -363,7 +392,6 @@ class NotificationService {
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
-      requestCriticalPermission: true,
       requestSoundPermission: true,
     );
 
@@ -377,7 +405,11 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse:
           (NotificationResponse notificationResponse) async {
-        log('Notification clicked: ${notificationResponse.payload}');
+        _logNotificationTap(
+          'LOCAL',
+          title: notificationResponse.payload,
+          payload: notificationResponse.payload,
+        );
         BookingIncomingService.instance.handleNotificationResponse(
           actionId: notificationResponse.actionId,
           payload: notificationResponse.payload,
@@ -419,32 +451,87 @@ class NotificationService {
       }
     }
 
+    if (isIOS) {
+      try {
+        final ios = _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        final granted = await ios?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        debugPrint('iOS local notification permission granted: $granted');
+      } catch (e) {
+        debugPrint('iOS local notification permission error: $e');
+      }
+    }
+
     final NotificationSettings settings =
         await FirebaseMessaging.instance.requestPermission(
       alert: true,
-      announcement: true,
       badge: true,
-      carPlay: false,
-      criticalAlert: true,
-      provisional: false,
       sound: true,
     );
 
-    // Listen even if permission status is not fully "authorized" on some OEMs.
+    if (isIOS) {
+      // pop_user pattern: never auto-show FCM banner in foreground (prevents double alert).
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+        alert: false,
+        badge: false,
+        sound: false,
+      );
+    }
+
+    final notificationsAllowed =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional;
+
+    if (notificationsAllowed) {
+      debugPrint('Firebase Messaging permission: ${settings.authorizationStatus}');
+    } else {
+      debugPrint(
+        'Notification permission denied: ${settings.authorizationStatus}',
+      );
+    }
+
+    // Bind on all mobile platforms — some OEMs deliver before status is "authorized".
+    _bindFirebaseListeners();
+
+    log('FCM auth status: ${settings.authorizationStatus}');
+  }
+
+  static void _bindFirebaseListeners() {
+    if (_mobileListenersBound) return;
+    _mobileListenersBound = true;
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      log('Foreground FCM: title=${message.notification?.title} '
-          'data=${message.data}');
-      showNotificationForeground(message);
+      logRemoteMessage('FOREGROUND (onMessage)', message);
+      unawaited(showNotificationForeground(message));
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      log('Opened from tray: ${message.notification?.title}');
+      logRemoteMessage('OPENED_APP (tap)', message);
       if (isBookingCancellation(message)) {
         _handleBookingCancellationNotification(message);
       }
     });
 
-    log('FCM auth status: ${settings.authorizationStatus}');
+    if (!_initialMessageChecked) {
+      _initialMessageChecked = true;
+      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+        if (message == null) return;
+        logRemoteMessage('INITIAL (cold start)', message);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (isBookingCancellation(message)) {
+            _handleBookingCancellationNotification(message);
+          }
+        });
+      });
+    }
+
+    debugPrint('NotificationService: FCM listeners bound');
   }
 
   static Future<void> _initializeWebMessaging() async {
@@ -456,13 +543,12 @@ class NotificationService {
       );
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        log('Web foreground FCM: title=${message.notification?.title} '
-            'data=${message.data}');
+        logRemoteMessage('WEB FOREGROUND (onMessage)', message);
         showNotificationForeground(message);
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        log('Web opened from tray: ${message.notification?.title}');
+        logRemoteMessage('WEB OPENED_APP (tap)', message);
         if (isBookingCancellation(message)) {
           _handleBookingCancellationNotification(message);
         }
@@ -551,11 +637,34 @@ class NotificationService {
   @pragma('vm:entry-point')
   static Future<void> handleBackgroundTray(RemoteMessage message) async {
     try {
+      logRemoteMessage('BACKGROUND (handleBackgroundTray)', message);
+
       final isBooking = isNewBookingRequest(message);
       final isCancel = isBookingCancellation(message);
 
       if (!isBooking && !isCancel) {
-        log('Background FCM ignored: ${message.notification?.title}');
+        // iOS data-only pushes need a local tray. Notification-payload pushes are
+        // already shown by APNs — do not post a second local banner.
+        if (isIOS && message.notification == null) {
+          final plugin = FlutterLocalNotificationsPlugin();
+          const iosInit = DarwinInitializationSettings();
+          await plugin.initialize(
+            const InitializationSettings(iOS: iosInit),
+            onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+          );
+          await _presentLocalNotification(
+            plugin: plugin,
+            message: message,
+            allowHeavyAssets: false,
+            suppressBookingTraySound: false,
+          );
+          debugPrint('🔔 iOS background data-only notification shown');
+        } else {
+          debugPrint(
+            '🔔 BACKGROUND: non-booking message '
+            '(system tray handles notification payload on iOS)',
+          );
+        }
         return;
       }
 
@@ -635,57 +744,71 @@ class NotificationService {
   }
 
   static Future<void> showNotificationForeground(RemoteMessage message) async {
-    if (kIsWeb) {
-      await _handleWebForegroundMessage(message);
-      return;
-    }
-
-    final isBooking = isNewBookingRequest(message);
-    final isCancel = isBookingCancellation(message);
-
-    if (isBooking && !BookingRingManager.canRingFromControllers()) {
-      log('Foreground booking FCM skipped — driver offline or on trip');
-      try {
-        Get.find<BookingController>().rideNowBooking();
-      } catch (_) {
-        /* ignore */
-      }
-      return;
-    }
-
-    await _presentLocalNotification(
-      plugin: _flutterLocalNotificationsPlugin,
-      message: message,
-      allowHeavyAssets: true,
-
-      /// Avoid double audio: silent tray + in-app loop player.
-      suppressBookingTraySound: true,
-    );
-
-    if (isBooking) {
-      final bookingId = BookingCancellationDialog.extractBookingId(message);
-      if (BookingIncomingService.instance.isAppInBackground) {
-        await BookingIncomingService.instance.presentIncomingBooking(
-          bookingId: bookingId,
-        );
-      } else {
-        await BookingRingManager.onNewBookingDetected(bookingId: bookingId);
-      }
-    } else if (isCancel) {
-      // Cancel sound handled in _handleBookingCancellationNotification.
-    }
-
-    log('Notification Shown: ${message.notification?.title}');
-
     try {
-      if (isCancel) {
-        _handleBookingCancellationNotification(message);
+      if (kIsWeb) {
+        await _handleWebForegroundMessage(message);
         return;
       }
 
-      Get.find<BookingController>().rideNowBooking();
+      final isBooking = isNewBookingRequest(message);
+      final isCancel = isBookingCancellation(message);
+
+      if (isBooking && !BookingRingManager.canRingFromControllers()) {
+        debugPrint(
+          '🔔 FOREGROUND: booking skipped — driver offline or on trip '
+          'title=${message.notification?.title ?? message.data['title']}',
+        );
+        try {
+          Get.find<BookingController>().rideNowBooking();
+        } catch (_) {
+          /* ignore */
+        }
+        return;
+      }
+
+      // Android booking: [BookingRingManager] posts the tray — skip duplicate local banner.
+      final skipForegroundLocalTray = isAndroid && isBooking;
+
+      if (!skipForegroundLocalTray) {
+        await _presentLocalNotification(
+          plugin: _flutterLocalNotificationsPlugin,
+          message: message,
+          allowHeavyAssets: true,
+          suppressBookingTraySound: true,
+        );
+      }
+
+      if (isBooking) {
+        final bookingId = BookingCancellationDialog.extractBookingId(message);
+        if (BookingIncomingService.instance.isAppInBackground) {
+          await BookingIncomingService.instance.presentIncomingBooking(
+            bookingId: bookingId,
+          );
+        } else {
+          await BookingRingManager.onNewBookingDetected(bookingId: bookingId);
+        }
+      } else if (isCancel) {
+        // Cancel sound handled in _handleBookingCancellationNotification.
+      }
+
+      log('Notification Shown: ${message.notification?.title}');
+      debugPrint(
+        '🔔 FOREGROUND handled title="${message.notification?.title ?? message.data['title']}"',
+      );
+
+      try {
+        if (isCancel) {
+          _handleBookingCancellationNotification(message);
+          return;
+        }
+
+        Get.find<BookingController>().rideNowBooking();
+      } catch (e, st) {
+        log('post-notification GetX handlers failed', error: e, stackTrace: st);
+      }
     } catch (e, st) {
-      log('post-notification GetX handlers failed', error: e, stackTrace: st);
+      debugPrint('🔔 FOREGROUND handler error: $e');
+      log('showNotificationForeground failed', error: e, stackTrace: st);
     }
   }
 
@@ -815,6 +938,18 @@ class NotificationService {
     }
   }
 
+  /// pop_user-style iOS details — no custom sound file (booking_ring.mp3 is Android-only).
+  static DarwinNotificationDetails _iosDarwinDetails({
+    required bool muteFgTray,
+  }) {
+    return DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: !muteFgTray,
+      interruptionLevel: InterruptionLevel.active,
+    );
+  }
+
   /// When true and notifications that use in-app playback (new booking /
   /// cancellation) post to the silent Android channel instead of ringing twice.
   static Future<void> _presentLocalNotification({
@@ -829,6 +964,11 @@ class NotificationService {
     final body = message.notification?.body ??
         message.data['body']?.toString() ??
         message.data.toString();
+
+    if (title.trim().isEmpty && body.trim().isEmpty) {
+      debugPrint('🔔 LOCAL BANNER skip — empty title and body');
+      return;
+    }
 
     FilePathAndroidBitmap? largeIcon;
     if (allowHeavyAssets) {
@@ -907,12 +1047,7 @@ class NotificationService {
       );
     }
 
-    final darwinDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: !muteFgTray,
-      sound: muteFgTray ? null : 'booking_ring.mp3',
-    );
+    final darwinDetails = _iosDarwinDetails(muteFgTray: muteFgTray);
 
     final NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,
@@ -922,13 +1057,23 @@ class NotificationService {
     final int notificationId =
         (message.hashCode ^ DateTime.now().millisecondsSinceEpoch) & 0x7fffffff;
 
-    await plugin.show(
-      notificationId,
-      title,
-      body,
-      notificationDetails,
-      payload: message.data.toString(),
+    debugPrint(
+      '🔔 LOCAL BANNER show id=$notificationId title="$title" body="$body"',
     );
+
+    try {
+      await plugin.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: message.data.toString(),
+      );
+      debugPrint('🔔 LOCAL BANNER shown OK id=$notificationId');
+    } catch (e, st) {
+      debugPrint('🔔 LOCAL BANNER failed: $e');
+      log('local notification show failed', error: e, stackTrace: st);
+    }
   }
 
   /// Kept if something still calls `showNotification`; forwards to foreground.
@@ -947,8 +1092,10 @@ class NotificationService {
 @pragma('vm:entry-point')
 Future<void> notificationTapBackground(
     NotificationResponse notificationResponse) async {
-  log('notification(${notificationResponse.id}) action:'
-      '${notificationResponse.actionId} payload: ${notificationResponse.payload}');
+  debugPrint(
+    '👆 NOTIFICATION TAP [BACKGROUND] id=${notificationResponse.id} '
+    'action=${notificationResponse.actionId} payload=${notificationResponse.payload}',
+  );
   await BookingIncomingService.persistNotificationResponse(
     actionId: notificationResponse.actionId,
     payload: notificationResponse.payload,

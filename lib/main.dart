@@ -21,6 +21,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform);
+  NotificationService.logRemoteMessage('BACKGROUND (main isolate)', message);
   await NotificationService.handleBackgroundTray(message);
 }
 

@@ -284,7 +284,6 @@ class _SplashScreenState extends State<SplashScreen> {
     final isLoggedIn = hasSecureSession ||
         (loginKeyTrue && uid != null && uid.isNotEmpty);
 
-    controllers?.updateDeviceId();
     if (await sp.getStringValue(sp.LANGUAGE) == "en_US") {
       Get.updateLocale(Locale('en', 'US'));
     } else {
