@@ -7,11 +7,8 @@ import 'package:mtaanidriver/controller/profile_controller.dart';
 
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
-import '../../utils/firebase_messaging_config.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../service/device_token_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -570,44 +567,6 @@ class AuthController extends GetxController {
   }
 
   void updateDeviceId() async {
-    if (kIsWeb) {
-      String deviceStatus = "Web";
-      String? device_id = "";
-      await FirebaseMessaging.instance
-          .getToken(vapidKey: FirebaseMessagingConfig.webVapidKey)
-          .then((value) {
-        device_id = value;
-      });
-
-      Map<String, dynamic> deviceId = {
-        "driver_id": await secure.readData(secure.user_id),
-        "device_id": device_id,
-        "device_status": deviceStatus,
-      };
-
-      log("Parameter update device id--------$deviceId");
-      print("Parameter update device id--------$deviceId");
-
-      try {
-        final response =
-            await apiService.postData(URLS.DEVICE_ID_UPDATE, deviceId);
-
-        var jsonString = jsonDecode(response.body);
-
-        log("device id update response------>:$jsonString");
-
-        var result = jsonString['result'];
-        if (result == "Update successfully") {
-          log("updated device id");
-        } else {
-          log('Something went wrong'.tr);
-        }
-      } catch (e) {
-        print("exception device id==>${e}");
-      }
-      return;
-    }
-
     final userId = await secure.readData(secure.user_id);
     if (userId == null || userId.isEmpty) return;
     await DeviceTokenSync.syncAfterLogin(userId: userId);

@@ -10,9 +10,9 @@ LocationSettings driverLocationSettings({
 }) {
   if (kIsWeb) {
     return WebSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      maximumAge: Duration.zero,
-      timeLimit: timeLimit ?? const Duration(seconds: 20),
+      accuracy: LocationAccuracy.high,
+      maximumAge: const Duration(seconds: 30),
+      timeLimit: timeLimit ?? const Duration(seconds: 12),
     );
   }
   if (isAndroid && enableForegroundService) {
@@ -56,30 +56,36 @@ LocationSettings driverLocationFallbackSettings({Duration? timeLimit}) {
 
 /// Fetch driver position — retries with lower accuracy on web if needed.
 Future<Position> getDriverPosition({Duration? timeLimit}) async {
-  final limit = timeLimit ?? const Duration(seconds: 20);
-
-  try {
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: driverLocationSettings(timeLimit: limit),
-    );
-    if (kIsWeb) {
+  if (kIsWeb) {
+    final mediumLimit = timeLimit ?? const Duration(seconds: 10);
+    try {
+      // Laptop / Chrome: medium + cached fix is enough to go Online.
+      // High-accuracy GPS often times out on Wi‑Fi and looks like a stuck toggle.
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: driverLocationFallbackSettings(timeLimit: mediumLimit),
+      );
       debugPrint(
         '[LOCATION] GPS fix: ${position.latitude}, ${position.longitude} '
         'accuracy=${position.accuracy.round()}m',
       );
+      return position;
+    } catch (mediumError) {
+      debugPrint('[LOCATION] medium failed: $mediumError — trying high');
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: driverLocationSettings(
+          timeLimit: const Duration(seconds: 12),
+        ),
+      );
+      debugPrint(
+        '[LOCATION] high fix: ${position.latitude}, ${position.longitude} '
+        'accuracy=${position.accuracy.round()}m',
+      );
+      return position;
     }
-    return position;
-  } catch (highAccuracyError) {
-    if (!kIsWeb) rethrow;
-
-    debugPrint('[LOCATION] high-accuracy failed: $highAccuracyError — trying medium');
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: driverLocationFallbackSettings(timeLimit: limit),
-    );
-    debugPrint(
-      '[LOCATION] fallback fix: ${position.latitude}, ${position.longitude} '
-      'accuracy=${position.accuracy.round()}m',
-    );
-    return position;
   }
+
+  final limit = timeLimit ?? const Duration(seconds: 20);
+  return Geolocator.getCurrentPosition(
+    locationSettings: driverLocationSettings(timeLimit: limit),
+  );
 }

@@ -18,6 +18,7 @@ import '../utils/colors.dart';
 import '../utils/driver_location_settings.dart';
 import '../utils/shared_preferences.dart';
 import '../utils/snackBar.dart';
+import '../utils/web_geolocation.dart';
 import '../service/notification_service.dart';
 
 import 'auth_controller.dart';
@@ -36,6 +37,7 @@ class HomeController extends GetxController {
   var polylineVariable2 = "".obs;
   var cancelIndex = -1.obs;
   RxBool onOff = false.obs;
+  final RxBool goingOnline = false.obs;
   RxBool painButton = false.obs;
   var startLocation = const LatLng(0, 0).obs;
   final RxBool hasValidLocation = false.obs;
@@ -433,39 +435,47 @@ class HomeController extends GetxController {
     }
   }
 
-  /// Must be called from a user tap (Online toggle) — Safari requires this.
+  /// Must be called from a user tap (Online toggle) — Safari/Chrome require this.
   Future<bool> ensureLocationFromUserGesture() async {
     if (hasValidLocation.value) return true;
 
     if (kIsWeb) {
       debugPrint('[LOCATION] requesting GPS from user gesture...');
       try {
-        // Safari: do NOT await checkPermission() first — that consumes the
-        // user-gesture and the location prompt never appears (map stuck at 0,0).
-        final permission = await Geolocator.requestPermission();
-        debugPrint('[LOCATION] permission after request: $permission');
-        if (permission == LocationPermission.denied ||
-            permission == LocationPermission.deniedForever) {
-          customSnackBar(
-            'Location permission is required. In Safari: allow Location for this site, then turn Online again.',
-          );
-          return false;
-        }
-        if (!_isListening) startListening();
-        final position = await getDriverPosition(
-          timeLimit: const Duration(seconds: 25),
+        // Bypass geolocator_web: its timeout is sent as microseconds, so
+        // getCurrentPosition can hang until the user gives up on Online.
+        final fix = await getBrowserLocation(
+          timeout: const Duration(seconds: 10),
+        );
+        debugPrint(
+          '[LOCATION] GPS fix: ${fix.latitude}, ${fix.longitude} '
+          'accuracy=${fix.accuracy.round()}m',
+        );
+        final position = Position(
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          timestamp: DateTime.now(),
+          accuracy: fix.accuracy,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          headingAccuracy: 0,
+          speed: 0,
+          speedAccuracy: 0,
         );
         applyLivePosition(position, recenterMap: true);
+        if (!_isListening) startListening();
         _syncDriverAvailability(
           position,
           Get.overlayContext ?? Get.context,
         );
+        unawaited(BookingRingManager.unlockAudioForWeb());
         return true;
       } catch (e) {
         log('[LOCATION] user-gesture GPS failed: $e');
         debugPrint('[LOCATION] user-gesture GPS failed: $e');
         customSnackBar(
-          'Could not get your location. Check Safari location settings and try Online again.',
+          'Allow location for this site (address-bar lock icon), turn on Windows Location, then tap Online again.',
         );
         return hasValidLocation.value;
       }
@@ -573,6 +583,31 @@ class HomeController extends GetxController {
     );
   }
 
+  /// Online toggle / sidebar — same path, GPS first (browser user-gesture).
+  Future<bool> tryGoOnlineFromUserGesture(BuildContext context) async {
+    if (goingOnline.value) return onOff.value;
+    if (!canGoOnline(showMessage: true)) return false;
+
+    if (!hasValidLocation.value) {
+      final located = await ensureLocationFromUserGesture();
+      if (!located) {
+        onOff.value = false;
+        await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+        return false;
+      }
+    }
+
+    goingOnline.value = true;
+    try {
+      onOff.value = true;
+      await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, true);
+      await goOnlineAndSyncLocation(context);
+      return onOff.value;
+    } finally {
+      goingOnline.value = false;
+    }
+  }
+
   /// Push GPS to server as Available, then refresh booking list (web needs this).
   Future<void> goOnlineAndSyncLocation(BuildContext context) async {
     _userChoseOffline = false;
@@ -586,9 +621,18 @@ class HomeController extends GetxController {
           onOff.value = false;
           await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
           if (kIsWeb) {
-            debugPrint('[LOCATION] online aborted — Safari/web GPS not granted');
+            debugPrint('[LOCATION] online aborted — web GPS not granted');
           }
           return;
+        }
+      }
+
+      if (kIsWeb) {
+        try {
+          await BookingRingManager.unlockAudioForWeb();
+          await NotificationService.ensureWebPushReady();
+        } catch (e) {
+          log('web audio/push unlock failed: $e');
         }
       }
 
@@ -623,7 +667,7 @@ class HomeController extends GetxController {
         await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
         if (kIsWeb) {
           customSnackBar(
-            'Location not detected. Allow location in Safari, then turn Online again.',
+            'Location not detected. Allow location in the address-bar lock icon, then turn Online again.',
           );
         }
         return;

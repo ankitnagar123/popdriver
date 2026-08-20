@@ -42,10 +42,16 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   Timer? timer;
   Timer? _rideListRefreshTimer;
   Timer? _webRideListRefreshTimer;
+  Timer? _activeBookingPollTimer;
+  bool _userAcceptFetchInFlight = false;
 
-  /// Web has no FCM — poll faster to match app notification refresh.
+  /// Web FCM is unreliable — poll faster to match app notification refresh.
   static Duration get _rideListRefreshInterval => const Duration(seconds: 15);
   static const Duration _webExtraRefreshInterval = Duration(seconds: 8);
+
+  /// Active-trip cancel fallback (web FCM often misses cancel pushes).
+  static Duration get _activeBookingPollInterval =>
+      kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 12);
 
   bool _rideNowFetchInFlight = false;
   final Set<String> _knownBookingIds = <String>{};
@@ -65,11 +71,23 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     userAcceptBooking(() {});
     startRideListAutoRefresh();
+    startActiveBookingPoll();
+  }
+
+  @override
+  void onClose() {
+    timer?.cancel();
+    stopRideListAutoRefresh();
+    stopActiveBookingPoll();
+    WidgetsBinding.instance.removeObserver(this);
+    super.onClose();
   }
 
   @override
   void dispose() {
     timer?.cancel();
+    stopRideListAutoRefresh();
+    stopActiveBookingPoll();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -114,6 +132,26 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     _webRideListRefreshTimer = null;
   }
 
+  /// Poll confirm-booking API while on an active trip so passenger cancel
+  /// still refreshes UI + plays cancel sound when FCM is missing (esp. web).
+  void startActiveBookingPoll() {
+    _activeBookingPollTimer?.cancel();
+    _activeBookingPollTimer =
+        Timer.periodic(_activeBookingPollInterval, (_) {
+      if (!controller.onOff.value) return;
+      final onTrip = controller.hide.value ||
+          controller.driverArriveValue.value ||
+          _activeAcceptedBookingId.isNotEmpty;
+      if (!onTrip) return;
+      userAcceptBooking();
+    });
+  }
+
+  void stopActiveBookingPoll() {
+    _activeBookingPollTimer?.cancel();
+    _activeBookingPollTimer = null;
+  }
+
   /// Call when driver goes online — wait for GPS on web, then fetch bookings.
   Future<void> refreshAfterGoingOnline() async {
     if (kIsWeb && !controller.hasValidLocation.value) {
@@ -142,6 +180,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   void cancel() {
     timer?.cancel();
     stopRideListAutoRefresh();
+    stopActiveBookingPoll();
   }
 
   Future<void> rideNowBooking() async {
@@ -401,6 +440,11 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> userAcceptBooking([VoidCallback? callback]) async {
+    if (_userAcceptFetchInFlight) {
+      callback?.call();
+      return;
+    }
+    _userAcceptFetchInFlight = true;
     final user = {"driver_id": await secure.readData(secure.user_id)};
     try {
       final response =
@@ -428,18 +472,25 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       deleteId.value = bookingIdStr;
       if (bookingIdStr.isEmpty) {
         final hadActiveBooking = previousActiveId.isNotEmpty;
-        resetControllerState();
-        _activeAcceptedBookingId = '';
-        await rideNowBooking();
-        if (hadActiveBooking &&
+        final wasOnTripUi = controller.hide.value ||
+            controller.driverArriveValue.value;
+        final passengerCancel = (hadActiveBooking || wasOnTripUi) &&
             !_suppressUserCancellationDialog &&
-            !BookingCancellationDialog.isSuppressed(previousActiveId)) {
-          BookingCancellationDialog.show(previousActiveId);
-        }
-        // Keep suppress true a bit longer when driver cancelled — reset only
-        // if this empty response was a true passenger cancel path.
-        if (!BookingCancellationDialog.isSuppressed(previousActiveId)) {
-          _suppressUserCancellationDialog = false;
+            !BookingCancellationDialog.isSuppressed(previousActiveId);
+
+        if (passengerCancel) {
+          // Same path as FCM: cancel sound + dialog + UI reset (poll fallback).
+          final idForDialog = previousActiveId.isNotEmpty
+              ? previousActiveId
+              : deleteId.value;
+          handleUserSideCancellationShowDialog(idForDialog);
+        } else {
+          resetControllerState();
+          _activeAcceptedBookingId = '';
+          await rideNowBooking();
+          if (!BookingCancellationDialog.isSuppressed(previousActiveId)) {
+            _suppressUserCancellationDialog = false;
+          }
         }
       } else {
         _activeAcceptedBookingId = bookingIdStr;
@@ -452,6 +503,8 @@ class BookingController extends GetxController with WidgetsBindingObserver {
     } catch (e) {
       log("Exception-----booking", error: e.toString());
       callback?.call();
+    } finally {
+      _userAcceptFetchInFlight = false;
     }
   }
 
@@ -585,11 +638,16 @@ class BookingController extends GetxController with WidgetsBindingObserver {
         : (_activeAcceptedBookingId.isNotEmpty
             ? _activeAcceptedBookingId
             : deleteId.value);
+    final suppressed = id.isNotEmpty &&
+        BookingCancellationDialog.isSuppressed(id);
+    if (!suppressed) {
+      unawaited(BookingCancelPlayer.playFiveSeconds());
+    }
     _suppressUserCancellationDialog = true;
     _activeAcceptedBookingId = '';
     resetControllerState();
     // Driver already cancelled this booking — never show passenger popup.
-    if (id.isNotEmpty && !BookingCancellationDialog.isSuppressed(id)) {
+    if (id.isNotEmpty && !suppressed) {
       BookingCancellationDialog.show(id);
     }
     rideNowBooking();

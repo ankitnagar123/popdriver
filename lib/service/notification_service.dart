@@ -16,10 +16,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../controller/booking_controller.dart';
 import '../controller/home_screen_controller.dart';
 import '../utils/booking_cancellation_dialog.dart';
+import '../utils/firebase_messaging_config.dart';
 import '../utils/platform_helper.dart';
 import '../utils/polyline_handler.dart';
 import '../utils/shared_preferences.dart';
+import '../utils/web_push_notification.dart';
 import 'booking_incoming_service.dart';
+import 'device_token_sync.dart';
 
 /// Android `res/raw/booking_ring.mp3` → name without extension.
 const String _kBookingAndroidRawSound = 'booking_ring';
@@ -82,16 +85,17 @@ class BookingRingManager {
 
   /// Poll fallback — ring only once per new booking id (never re-ring on resume).
   static Future<void> syncWithPendingBookings(List<String> bookingIds) async {
-    if (kIsWeb) return;
-
     final ids = bookingIds.where((id) => id.trim().isNotEmpty).toList();
     if (!canRingFromControllers()) {
       await stopImmediate();
       return;
     }
     if (ids.isEmpty) {
-      if (_ringingForBookingId != null) {
+      // Incoming booking vanished while ringing → passenger cancelled (poll path).
+      final wasRinging = _ringingForBookingId != null;
+      if (wasRinging) {
         await stopImmediate();
+        unawaited(BookingCancelPlayer.playFiveSeconds());
       }
       return;
     }
@@ -101,8 +105,9 @@ class BookingRingManager {
       return;
     }
 
-    // Background: notification plays sound — skip in-app audio to avoid double ring.
-    if (BookingIncomingService.instance.isAppInBackground) {
+    // Mobile background: notification plays sound — skip in-app audio to avoid double ring.
+    // Web has no reliable background tray sound — always play in-app.
+    if (!kIsWeb && BookingIncomingService.instance.isAppInBackground) {
       markBookingAnnounced(targetId);
       return;
     }
@@ -115,7 +120,6 @@ class BookingRingManager {
     String? bookingId,
     bool showTraySound = false,
   }) async {
-    if (kIsWeb) return;
     if (!await _canRing()) return;
 
     final id = (bookingId ?? '').trim();
@@ -138,7 +142,6 @@ class BookingRingManager {
     String bookingId, {
     required bool showTrayInForeground,
   }) async {
-    if (kIsWeb) return;
     if (!await _canRing()) return;
 
     _ringingForBookingId = bookingId;
@@ -158,15 +161,16 @@ class BookingRingManager {
       _player = p;
       _stopTimer?.cancel();
       _stopTimer = Timer(_ringDuration, stopImmediate);
-      log('booking ring started for #$bookingId (${_ringDuration.inSeconds}s)');
+      log('booking ring started for #$bookingId (${_ringDuration.inSeconds}s)'
+          '${kIsWeb ? ' [web]' : ''}');
     } catch (e, st) {
       log('booking ring playback error', error: e, stackTrace: st);
       await stopImmediate();
       return;
     }
 
-    // Foreground: silent tray + in-app audio only (no tray sound = no double).
-    if (canRingFromControllers() && !showTrayInForeground) {
+    // Foreground: silent tray + in-app audio only (Android).
+    if (!kIsWeb && canRingFromControllers() && !showTrayInForeground) {
       await _showBookingAlertTray(playSound: false);
     }
   }
@@ -243,6 +247,20 @@ class BookingRingManager {
     }
   }
 
+  static Future<void> unlockAudioForWeb() async {
+    if (!kIsWeb) return;
+    try {
+      final p = AudioPlayer();
+      await p.setVolume(0.0);
+      await p.play(AssetSource('sound/booking_ring.mp3'));
+      await p.stop();
+      await p.dispose();
+      log('web audio unlocked');
+    } catch (e) {
+      log('web audio unlock failed: $e');
+    }
+  }
+
   static void clearSession() {
     _announcedBookingIds.clear();
     stopImmediate();
@@ -263,8 +281,6 @@ class BookingCancelPlayer {
   static Timer? _stopTimer;
 
   static Future<void> playFiveSeconds() async {
-    if (kIsWeb) return;
-
     await BookingRingManager.stopImmediate();
     await stopImmediate();
     try {
@@ -274,6 +290,7 @@ class BookingCancelPlayer {
       await p.play(AssetSource('sound/bookingcancel.mp3'));
       _player = p;
       _stopTimer = Timer(const Duration(seconds: 5), stopImmediate);
+      log('booking cancel sound started${kIsWeb ? ' [web]' : ''}');
     } catch (e, st) {
       log('booking cancel sound playback error', error: e, stackTrace: st);
       await stopImmediate();
@@ -298,6 +315,7 @@ class NotificationService {
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   static bool _mobileListenersBound = false;
+  static bool _webListenersBound = false;
   static bool _initialMessageChecked = false;
   static bool _serviceInitialized = false;
 
@@ -306,8 +324,7 @@ class NotificationService {
     final notification = message.notification;
     final title =
         notification?.title ?? message.data['title']?.toString() ?? '';
-    final body =
-        notification?.body ?? message.data['body']?.toString() ?? '';
+    final body = notification?.body ?? message.data['body']?.toString() ?? '';
     debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     debugPrint('🔔 PUSH [$source]');
     debugPrint('  messageId : ${message.messageId ?? '-'}');
@@ -424,8 +441,8 @@ class NotificationService {
 
     // Cold start from Accept/Pass notification while app was killed.
     try {
-      final launchDetails =
-          await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+      final launchDetails = await _flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp ?? false) {
         final response = launchDetails!.notificationResponse;
         if (response != null) {
@@ -489,7 +506,8 @@ class NotificationService {
             settings.authorizationStatus == AuthorizationStatus.provisional;
 
     if (notificationsAllowed) {
-      debugPrint('Firebase Messaging permission: ${settings.authorizationStatus}');
+      debugPrint(
+          'Firebase Messaging permission: ${settings.authorizationStatus}');
     } else {
       debugPrint(
         'Notification permission denied: ${settings.authorizationStatus}',
@@ -520,7 +538,9 @@ class NotificationService {
 
     if (!_initialMessageChecked) {
       _initialMessageChecked = true;
-      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+      FirebaseMessaging.instance
+          .getInitialMessage()
+          .then((RemoteMessage? message) {
         if (message == null) return;
         logRemoteMessage('INITIAL (cold start)', message);
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -534,27 +554,77 @@ class NotificationService {
     debugPrint('NotificationService: FCM listeners bound');
   }
 
+  /// Retry permission + token from a user tap (Online). Safe to call many times.
+  static Future<void> ensureWebPushReady() async {
+    if (!kIsWeb) return;
+    await _initializeWebMessaging();
+  }
+
+  static Future<void> _resolveAndPersistWebToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken(
+        vapidKey: FirebaseMessagingConfig.webVapidKey,
+      );
+      if (token != null && token.isNotEmpty) {
+        log('Web FCM token ready (len=${token.length})');
+        debugPrint('Web FCM token for Firebase Console test: $token');
+        await DeviceTokenSync.persistFirebaseToken(token);
+        unawaited(DeviceTokenSync.syncAfterLogin());
+      } else {
+        log('Web FCM token missing — push may fail; poll fallback active');
+      }
+    } catch (e, st) {
+      log('Web FCM getToken failed', error: e, stackTrace: st);
+    }
+  }
+
   static Future<void> _initializeWebMessaging() async {
     try {
+      await registerFcmServiceWorker();
+
       final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
+      log('Web FCM auth status: ${settings.authorizationStatus}');
+
+      await _resolveAndPersistWebToken();
+
+      if (_webListenersBound) return;
+      _webListenersBound = true;
+
+      FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+        if (token.isEmpty) return;
+        log('Web FCM onTokenRefresh (len=${token.length})');
+        unawaited(DeviceTokenSync.persistFirebaseToken(token));
+        unawaited(DeviceTokenSync.syncAfterLogin());
+      });
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         logRemoteMessage('WEB FOREGROUND (onMessage)', message);
-        showNotificationForeground(message);
+        unawaited(showNotificationForeground(message));
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         logRemoteMessage('WEB OPENED_APP (tap)', message);
         if (isBookingCancellation(message)) {
           _handleBookingCancellationNotification(message);
+        } else if (isNewBookingRequest(message)) {
+          unawaited(showNotificationForeground(message));
         }
       });
 
-      log('Web FCM auth status: ${settings.authorizationStatus}');
+      if (!_initialMessageChecked) {
+        _initialMessageChecked = true;
+        final initial = await FirebaseMessaging.instance.getInitialMessage();
+        if (initial != null) {
+          logRemoteMessage('WEB INITIAL (cold start)', initial);
+          if (isBookingCancellation(initial)) {
+            _handleBookingCancellationNotification(initial);
+          }
+        }
+      }
     } catch (e, st) {
       log('Web FCM init failed', error: e, stackTrace: st);
     }
@@ -650,7 +720,8 @@ class NotificationService {
           const iosInit = DarwinInitializationSettings();
           await plugin.initialize(
             const InitializationSettings(iOS: iosInit),
-            onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+            onDidReceiveBackgroundNotificationResponse:
+                notificationTapBackground,
           );
           await _presentLocalNotification(
             plugin: plugin,
@@ -814,6 +885,15 @@ class NotificationService {
 
   /// Background / lock-screen Rapido-style alert with Accept & Pass actions.
   static Future<void> _handleWebForegroundMessage(RemoteMessage message) async {
+    final title = message.notification?.title ??
+        message.data['title']?.toString() ??
+        'POP Driver';
+    final body = message.notification?.body ??
+        message.data['body']?.toString() ??
+        message.data['message']?.toString() ??
+        '';
+    showWebBrowserNotification(title: title, body: body);
+
     if (isNewBookingRequest(message)) {
       if (!BookingRingManager.canRingFromControllers()) {
         try {
@@ -823,6 +903,10 @@ class NotificationService {
         }
         return;
       }
+      final bookingId = BookingCancellationDialog.extractBookingId(message);
+      await BookingRingManager.onNewBookingDetected(
+        bookingId: bookingId.isNotEmpty ? bookingId : null,
+      );
       try {
         await Get.find<BookingController>().rideNowBooking();
       } catch (_) {
@@ -860,7 +944,8 @@ class NotificationService {
     if (offer.isNotEmpty) bodyLines.add('Offer \$$offer');
     if (distance.isNotEmpty) bodyLines.add('$distance km');
     if (pickup.isNotEmpty) bodyLines.add(pickup);
-    final body = bodyLines.isEmpty ? 'Tap Accept or Pass' : bodyLines.join(' • ');
+    final body =
+        bodyLines.isEmpty ? 'Tap Accept or Pass' : bodyLines.join(' • ');
 
     final androidDetails = AndroidNotificationDetails(
       _kBookingChannelId,
@@ -871,7 +956,8 @@ class NotificationService {
       importance: Importance.max,
       icon: '@mipmap/ic_launcher',
       playSound: true,
-      sound: const RawResourceAndroidNotificationSound(_kBookingAndroidRawSound),
+      sound:
+          const RawResourceAndroidNotificationSound(_kBookingAndroidRawSound),
       ongoing: true,
       autoCancel: false,
       category: AndroidNotificationCategory.call,
@@ -912,7 +998,8 @@ class NotificationService {
 
   static void _handleBookingCancellationNotification(RemoteMessage message) {
     BookingRingManager.stopImmediate();
-    BookingCancelPlayer.playFiveSeconds();
+    // Cancel sound + UI reset happen in handleUserSideCancellationShowDialog
+    // (also used by API poll fallback when web FCM misses).
 
     final bookingId = BookingCancellationDialog.extractBookingId(message);
     try {
@@ -932,6 +1019,7 @@ class NotificationService {
       log('booking cancellation handled — id: $bookingId');
     } catch (e, st) {
       log('booking cancellation handler failed', error: e, stackTrace: st);
+      unawaited(BookingCancelPlayer.playFiveSeconds());
       if (bookingId.isNotEmpty) {
         BookingCancellationDialog.show(bookingId);
       }

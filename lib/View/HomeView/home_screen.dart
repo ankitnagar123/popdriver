@@ -78,8 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
     print("-----------message");
     log("onOff------------Direct ${contoller.onOff.value}");
 
-    getData();
-    // Web (esp. Safari): never auto-prompt GPS — only Online tap.
+    // Web (esp. Safari): never auto-prompt GPS — only Online / Enable tap.
     // Android / iOS: keep existing auto location start.
     if (!kIsWeb) {
       contrl.getCurrentPosition();
@@ -88,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
       contoller.tryAttachLocationIfAlreadyGranted();
     }
     controller.adminApprove();
-    controller.userAcceptBooking();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       contoller.arriveDriver.value = Get.arguments["ArriveDriver"];
@@ -99,6 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       BookingIncomingService.instance.processPendingWhenReady();
     });
+
+    // Restore active trip first, then decide Online/GPS (avoids Offline art
+    // while switch shows Online / trip is still live).
+    getData();
   }
 
   /* Timer? timer1;
@@ -107,16 +109,29 @@ class _HomeScreenState extends State<HomeScreen> {
   RouteController routeController = Get.put(RouteController());
 
   void getData() async {
-    if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true) {
-      if (contoller.canGoOnline(showMessage: false)) {
+    // Restore ongoing ride before toggling online prefs — API sets onOff/hide.
+    await controller.userAcceptBooking();
+
+    if (await sp.getBoolValue(sp.DRIVER_ONLINE_STATUS) == true ||
+        contoller.hide.value ||
+        contoller.driverArriveValue.value) {
+      if (contoller.canGoOnline(showMessage: false) ||
+          contoller.hide.value ||
+          contoller.driverArriveValue.value) {
         if (kIsWeb) {
-          // Safari page reload: cannot get GPS without a tap. Stay offline
-          // until driver toggles Online (Chrome with prior Allow still resumes).
+          // Safari page reload: cannot get GPS without a tap.
           final alreadyGranted =
               await contoller.tryAttachLocationIfAlreadyGranted();
+          final onTrip = contoller.hide.value ||
+              contoller.driverArriveValue.value;
           if (!alreadyGranted) {
-            await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
-            contoller.onOff.value = false;
+            if (onTrip) {
+              // Keep Online + trip state; placeholder asks for location tap.
+              contoller.onOff.value = true;
+            } else {
+              await sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+              contoller.onOff.value = false;
+            }
           } else {
             contoller.onOff.value = true;
             await contoller.goOnlineAndSyncLocation(context);
@@ -132,8 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
           await contoller.goOnlineAndSyncLocation(context);
           var loginKey =
               await sp.getStringValue(sp.LOGIN_DEVICE_KEY.toString());
-          var accessToken =
-              await sp.getStringValue(sp.ACCESS_TOKEN.toString());
+          var accessToken = await sp.getStringValue(sp.ACCESS_TOKEN.toString());
           authController.loginCheck(loginKey.toString(), accessToken, context);
         }
       } else {
@@ -141,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
         contoller.onOff.value = false;
       }
     }
-    setState(() {});
+    if (mounted) setState(() {});
     ctr.fetchDriverDetail();
   }
 
@@ -196,6 +210,139 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _goOffline(BuildContext context) {
+    contoller.clearPenaltyAutoRestore();
+    contoller.onOff.value = false;
+    sp.setBoolValue(sp.DRIVER_ONLINE_STATUS, false);
+    contoller.onDriverOnlineStatusChanged(false);
+    contoller.updateDriverLatLong(
+      '0',
+      '0',
+      '0',
+      'UnAvailable',
+      context: context,
+    );
+  }
+
+  /// Switch.onChanged is not a browser user-gesture on Flutter web, so GPS
+  /// never prompts. Capture the pointer tap instead.
+  Widget _webOnlineToggle(BuildContext context) {
+    final online = contoller.onOff.value || contoller.goingOnline.value;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (contoller.hide.value) {
+          customSnackBar("You can't offline until booking completed");
+          return;
+        }
+        if (online) {
+          _goOffline(context);
+        } else {
+          contoller.tryGoOnlineFromUserGesture(context);
+        }
+      },
+      child: IgnorePointer(
+        child: Switch(
+          value: online,
+          activeColor: online ? Colors.green : Colors.grey,
+          onChanged: (_) {},
+        ),
+      ),
+    );
+  }
+
+  /// When Online/trip is restored but web GPS is missing, do not show the
+  /// offline "Go ON DUTY" art — that looked like a stuck bug next to Online.
+  Widget _buildNoMapPlaceholder(BuildContext context) {
+    final online = contoller.onOff.value;
+    final onTrip =
+        contoller.hide.value || contoller.driverArriveValue.value;
+    final needLocation = kIsWeb && online && !contoller.hasValidLocation.value;
+
+    final title = !online
+        ? 'Go ON DUTY to start earning '
+        : onTrip
+            ? 'Ongoing ride — enable location'
+            : 'Enable location to go on duty map';
+    final subtitle = !online
+        ? 'Good ${getTimeOfDayGreeting()} '
+        : onTrip
+            ? 'Your trip is active. Allow location to open the map and continue.'
+            : 'You are Online. Allow location so the map and new rides can load.';
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image(
+              image: const AssetImage('assets/images/offline.png'),
+              width: 230,
+            ),
+            const SizedBox(height: 15),
+            if (!online)
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  letterSpacing: 1.0,
+                  fontSize: 16,
+                  color: Colors.grey,
+                ),
+              ),
+            if (!online) const SizedBox(height: 6),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                letterSpacing: 1.0,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            if (needLocation) ...[
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyColors.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  final ok =
+                      await contoller.tryGoOnlineFromUserGesture(context);
+                  if (!ok || !mounted) return;
+                  await controller.userAcceptBooking();
+                  await controller.rideNowBooking();
+                },
+                icon: const Icon(Icons.my_location),
+                label: Text(
+                  onTrip ? 'Enable location & continue' : 'Enable location',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     print("-----------message");
@@ -207,8 +354,11 @@ class _HomeScreenState extends State<HomeScreen> {
       contoller.mapPolylineEpoch.value;
       contoller.markers.length;
       contoller.onOff.value;
+      contoller.goingOnline.value;
       contoller.mapFollowDriver.value;
       contoller.hasValidLocation.value;
+      contoller.hide.value;
+      contoller.driverArriveValue.value;
       // Web/Safari: never show map at LatLng(0,0) — look like West Africa.
       final showMap = contoller.onOff.value &&
           (!kIsWeb || contoller.hasValidLocation.value);
@@ -260,95 +410,46 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 style: TextStyle(
                                                     fontFamily: "Poppins",
                                                     fontSize: 18,
-                                                    fontWeight: FontWeight.bold))
+                                                    fontWeight:
+                                                        FontWeight.bold))
                                             : Text(
                                                 "Home".tr,
                                                 style: TextStyle(
                                                     fontFamily: "Poppins",
                                                     fontSize: 18,
-                                                    fontWeight: FontWeight.bold),
+                                                    fontWeight:
+                                                        FontWeight.bold),
                                               ),
                               ),
                             ),
                             _buildHomeInfoButton(),
                             Row(
                               children: [
-                                Text(contoller.onOff.value == true
-                                    ? "Online".tr
-                                    : "Offline".tr),
+                                Text(
+                                    (contoller.onOff.value ||
+                                            contoller.goingOnline.value)
+                                        ? "Online".tr
+                                        : "Offline".tr),
                                 contoller.hide.value == false
-                                    ?
-                                    /*  Switch(
-                              value: contoller.onOff.value,
-                              activeColor: contoller.onOff.value == true
-                                  ? Colors.green
-                                  : Colors.grey,
-                              onChanged: (value) {
-                                if (value == true) {
-                                  contoller.onOff.value = value;
-
-                                  // Get.to(() => SelfieScreen());
-                                     sp.setBoolValue(
-                                  sp.DRIVER_ONLINE_STATUS, true);
-                              controller.rideNowBooking();
-                                  */ /* timer1 = Timer.periodic(
-                                      Duration(seconds: 5), (timer) {
-                                    controller.rideNowBooking();
-                                  });*/ /*
-                                  */ /*startStreaming();*/ /*
-                                } else {
-                                  contoller.onOff.value = value;
-
-                                  sp.setBoolValue(
-                                      sp.DRIVER_ONLINE_STATUS, false);
-                                  contoller.updateDriverLatLong("0",
-                                      "0", "0", "UnAvailable");
-                                  */ /* timer1!.cancel();
-                                  timer2!.cancel();*/ /*
-                                }
-                              })*/
-                                    Switch(
-                                        value: contoller.onOff.value,
-                                        activeColor:
-                                            contoller.onOff.value == true
-                                                ? Colors.green
-                                                : Colors.grey,
-                                        onChanged: (value) async {
-                                          if (value) {
-                                            if (!contoller.canGoOnline()) {
-                                              return;
-                                            }
-                                            // Safari: ask GPS in the same tap
-                                            // before flipping Online / API calls.
-                                            if (kIsWeb &&
-                                                !contoller
-                                                    .hasValidLocation.value) {
-                                              final located = await contoller
-                                                  .ensureLocationFromUserGesture();
-                                              if (!located) return;
-                                            }
-                                            contoller.onOff.value = true;
-                                            await sp.setBoolValue(
-                                                sp.DRIVER_ONLINE_STATUS, true);
-                                            await contoller
-                                                .goOnlineAndSyncLocation(
-                                                    context);
-                                          } else {
-                                            contoller.clearPenaltyAutoRestore();
-                                            contoller.onOff.value = false;
-                                            sp.setBoolValue(
-                                                sp.DRIVER_ONLINE_STATUS, false);
-                                            await contoller
-                                                .onDriverOnlineStatusChanged(
-                                                    false);
-                                            contoller.updateDriverLatLong(
-                                                '0',
-                                                '0',
-                                                '0',
-                                                'UnAvailable',
-                                                context: context);
-                                          }
-                                        })
+                                    ? (kIsWeb
+                                        ? _webOnlineToggle(context)
+                                        : Switch(
+                                            value: contoller.onOff.value ||
+                                                contoller.goingOnline.value,
+                                            activeColor:
+                                                contoller.onOff.value == true
+                                                    ? Colors.green
+                                                    : Colors.grey,
+                                            onChanged: (value) async {
+                                              if (value) {
+                                                await contoller
+                                                    .tryGoOnlineFromUserGesture(
+                                                        context);
+                                              } else {
+                                                _goOffline(context);
+                                              }
+                                            },
+                                          ))
                                     : Switch(
                                         value: contoller.onOff.value,
                                         activeTrackColor: Colors.green,
@@ -366,32 +467,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       height: 30,
                     ),
-                    Center(
-                        child: Image(
-                      image: AssetImage("assets/images/offline.png"),
-                      width: 230,
-                    )),
-                    SizedBox(
-                      height: 15,
-                    ),
-                    Text(
-                      "Good ${getTimeOfDayGreeting()} ",
-                      style: TextStyle(
-                        letterSpacing: 1.0,
-                        fontSize: 16,
-                        color: Colors.grey,
-                        // fontWeight: FontWeight.,
-                      ),
-                    ),
-                    Text(
-                      "Go ON DUTY to start earning ",
-                      style: TextStyle(
-                        letterSpacing: 1.0,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        // fontWeight: FontWeight.,
-                      ),
+                    Expanded(
+                      child: _buildNoMapPlaceholder(context),
                     ),
                   ],
                 ),
@@ -425,7 +502,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (WebDriverLayout.isMobileLayout(context))
                             InkWell(
                               onTap: () {
-                                Get.to(() => MtaaniSidebar(), arguments: "Home");
+                                Get.to(() => MtaaniSidebar(),
+                                    arguments: "Home");
                               },
                               child: Icon(
                                 Icons.menu,
@@ -492,10 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           contoller.onDriverOnlineStatusChanged(
                                               false);
                                           contoller.updateDriverLatLong(
-                                              '0',
-                                              '0',
-                                              '0',
-                                              'UnAvailable',
+                                              '0', '0', '0', 'UnAvailable',
                                               context: context);
                                         }
                                       })
@@ -618,9 +693,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       : contoller.onOff.value == true
                           ? Positioned(
                               top: 80,
-                              left: WebDriverLayout.isWidePanel(context) ? null : 5,
-                              right: WebDriverLayout.isWidePanel(context) ? 20 : 15,
-                              bottom: WebDriverLayout.isWidePanel(context) ? 20 : null,
+                              left: WebDriverLayout.isWidePanel(context)
+                                  ? null
+                                  : 5,
+                              right: WebDriverLayout.isWidePanel(context)
+                                  ? 20
+                                  : 15,
+                              bottom: WebDriverLayout.isWidePanel(context)
+                                  ? 20
+                                  : null,
                               width: WebDriverLayout.isWidePanel(context)
                                   ? WebDriverLayout.panelWidth
                                   : null,
@@ -670,9 +751,8 @@ class _HomeScreenState extends State<HomeScreen> {
       time: controller.useracceptmodel.duration,
       callCallback: () {},
       msgCallBack: () {
-        Get.toNamed(RouteHelper.getMessageScreenRout(), arguments: {
-          "userId": controller.useracceptmodel.userId
-        });
+        Get.toNamed(RouteHelper.getMessageScreenRout(),
+            arguments: {"userId": controller.useracceptmodel.userId});
       },
       cancelCallBack: () {
         showCustomDialog(context, controller.useracceptmodel.bookingId);
@@ -718,231 +798,231 @@ class _HomeScreenState extends State<HomeScreen> {
               bottom: WebDriverLayout.isWidePanel(context) ? 12 : 0,
             ),
             child: Card(
-            elevation: WebDriverLayout.isWidePanel(context) ? 6 : 3,
-            shadowColor: Colors.black26,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                WebDriverLayout.isWidePanel(context) ? 16 : 15,
+              elevation: WebDriverLayout.isWidePanel(context) ? 6 : 3,
+              shadowColor: Colors.black26,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  WebDriverLayout.isWidePanel(context) ? 16 : 15,
+                ),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          list.userName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: MyColors.black,
-                          ),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            "#${list.bookingId}",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          Text(
-                            "${list.rideDate} • ${list.rideTime}",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.local_offer_outlined,
-                              size: 16, color: Colors.green),
-                          SizedBox(width: 4),
-                          Row(
-                            children: [
-                              Text(
-                                "Offer \$ ${list.userOfferPrice}",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 7),
-
-                  // Price & Distance Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Wrap(
-                        children: [
-                          _buildInfoBadge(
-                            icon: Icons.directions_car,
-                            value: "${list.distance}",
-                            color: MyColors.primary,
-                          ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          _buildInfoBadge(
-                            icon: Icons.access_time,
-                            value: list.duration,
-                            color: Colors.blue,
-                          ),
-                        ],
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          showMoreInfo();
-                        },
-                        child: Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.info,
-                                  size: 25, color: Colors.red.shade400),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: 9,
-                  ),
-                  // In the Price & Distance Row section, replace with:
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildInfoBadge1(
-
-                        icon: Icons.local_taxi,
-                        value: "Taxi \$ ${list.taxiPrice}",
-                        color: Colors.red,
-                      ),
-                      _buildInfoBadge1(
-                        icon: Icons.people,
-                        value: "R/S \$ ${list.sharePrice}",
-                        color: Colors.black,
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 16),
-
-                  // Location Section
-                  _buildLocationRow(
-                    icon: Icons.location_pin,
-                    iconColor: Colors.green,
-                    title: "Pickup Point".tr,
-                    address: list.sourceAdd,
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(left: 12),
-                    child: Divider(
-                      color: Colors.grey[300],
-                      height: 20,
-                      thickness: 1,
-                    ),
-                  ),
-                  _buildLocationRow(
-                    icon: Icons.flag,
-                    iconColor: MyColors.primary,
-                    title: "Destination Point".tr,
-                    address: list.destinationAdd,
-                  ),
-                  SizedBox(height: 16),
-
-                  // Action Buttons
-                  Obx(() {
-                    bool isLoadingAccept = controller.acceptBookLoader.value &&
-                        contoller.bookingIndex == index;
-                    bool isLoadingPass = controller.cancelBookLoader.value &&
-                        contoller.cancelIndex == index;
-
-                    return Row(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: _buildActionButton(
-                            text: "Accept".tr,
-                            color: MyColors.black,
-                            isLoading: isLoadingAccept,
-                            onPressed: () {
-                              if (list.userOfferPrice == "0" ||
-                                  list.userOfferPrice == 0) {
-                                customSnackBar(
-                                    'your company is not offering this City ride contact your company '
-                                        .tr);
-                              } else {
-                                contoller.bookingIndex = index;
-                                controller.acceptBooking(
-                                  list.bookingId,
-                                  () => Get.toNamed(
-                                      RouteHelper.getReadyForRideScreenRoute()),
-                                );
-                              }
-                            },
+                          child: Text(
+                            list.userName,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: MyColors.black,
+                            ),
                           ),
                         ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: _buildActionButton(
-                            text: "Pass".tr,
-                            color: Colors.grey,
-                            isLoading: isLoadingPass,
-                            isSecondary: true,
-                            onPressed: () {
-                              _showPassConfirmationDialog(
-                                context,
-                                list.bookingId,
-                                index,
-                              );
-                            },
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              "#${list.bookingId}",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              "${list.rideDate} • ${list.rideTime}",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_offer_outlined,
+                                size: 16, color: Colors.green),
+                            SizedBox(width: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  "Offer \$ ${list.userOfferPrice}",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 7),
+
+                    // Price & Distance Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Wrap(
+                          children: [
+                            _buildInfoBadge(
+                              icon: Icons.directions_car,
+                              value: "${list.distance}",
+                              color: MyColors.primary,
+                            ),
+                            SizedBox(
+                              width: 10,
+                            ),
+                            _buildInfoBadge(
+                              icon: Icons.access_time,
+                              value: list.duration,
+                              color: Colors.blue,
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            showMoreInfo();
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.info,
+                                    size: 25, color: Colors.red.shade400),
+                              ],
+                            ),
                           ),
                         ),
                       ],
-                    );
-                  })
-                ],
+                    ),
+                    SizedBox(
+                      height: 9,
+                    ),
+                    // In the Price & Distance Row section, replace with:
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoBadge1(
+                          icon: Icons.local_taxi,
+                          value: "Taxi \$ ${list.taxiPrice}",
+                          color: Colors.red,
+                        ),
+                        _buildInfoBadge1(
+                          icon: Icons.people,
+                          value: "R/S \$ ${list.sharePrice}",
+                          color: Colors.black,
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 16),
+
+                    // Location Section
+                    _buildLocationRow(
+                      icon: Icons.location_pin,
+                      iconColor: Colors.green,
+                      title: "Pickup Point".tr,
+                      address: list.sourceAdd,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(left: 12),
+                      child: Divider(
+                        color: Colors.grey[300],
+                        height: 20,
+                        thickness: 1,
+                      ),
+                    ),
+                    _buildLocationRow(
+                      icon: Icons.flag,
+                      iconColor: MyColors.primary,
+                      title: "Destination Point".tr,
+                      address: list.destinationAdd,
+                    ),
+                    SizedBox(height: 16),
+
+                    // Action Buttons
+                    Obx(() {
+                      bool isLoadingAccept =
+                          controller.acceptBookLoader.value &&
+                              contoller.bookingIndex == index;
+                      bool isLoadingPass = controller.cancelBookLoader.value &&
+                          contoller.cancelIndex == index;
+
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              text: "Accept".tr,
+                              color: MyColors.black,
+                              isLoading: isLoadingAccept,
+                              onPressed: () {
+                                if (list.userOfferPrice == "0" ||
+                                    list.userOfferPrice == 0) {
+                                  customSnackBar(
+                                      'your company is not offering this City ride contact your company '
+                                          .tr);
+                                } else {
+                                  contoller.bookingIndex = index;
+                                  controller.acceptBooking(
+                                    list.bookingId,
+                                    () => Get.toNamed(RouteHelper
+                                        .getReadyForRideScreenRoute()),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: _buildActionButton(
+                              text: "Pass".tr,
+                              color: Colors.grey,
+                              isLoading: isLoadingPass,
+                              isSecondary: true,
+                              onPressed: () {
+                                _showPassConfirmationDialog(
+                                  context,
+                                  list.bookingId,
+                                  index,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    })
+                  ],
+                ),
               ),
             ),
-          ),
           );
         },
       );

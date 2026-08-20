@@ -6,6 +6,7 @@ import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -102,7 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
             child: Image.asset(
-              "assets/images/logo.png",
+              kIsWeb
+                  ? "assets/images/pop_taxi_driver_web_logo.png"
+                  : "assets/images/logo.png",
               height: WebAuthLayout.logoHeight(context),
               filterQuality: FilterQuality.high,
             ),

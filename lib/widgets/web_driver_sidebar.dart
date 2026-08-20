@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../controller/home_screen_controller.dart';
 import '../utils/colors.dart';
 import '../utils/driver_menu_actions.dart';
 import '../utils/web_driver_layout.dart';
@@ -85,8 +86,8 @@ class WebDriverSidebar extends StatelessWidget {
               child: Row(
                 children: [
                   Image.asset(
-                    'assets/images/logo.png',
-                    height: 40,
+                    'assets/images/pop_taxi_driver_web_logo.png',
+                    height: 52,
                     filterQuality: FilterQuality.high,
                   ),
                   const SizedBox(width: 10),
@@ -143,38 +144,52 @@ class WebDriverSidebar extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+              child: Material(
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
                   borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.asset(
-                        'assets/images/trip.png',
-                        height: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Go online to receive rides',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 11,
-                          height: 1.3,
+                  onTap: () {
+                    final home = Get.find<HomeController>();
+                    if (home.onOff.value) return;
+                    home.tryGoOnlineFromUserGesture(context);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Image.asset(
+                            'assets/images/trip.png',
+                            height: 20,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Obx(() {
+                            final home = Get.find<HomeController>();
+                            final online = home.onOff.value;
+                            return Text(
+                              online
+                                  ? 'You are online'
+                                  : 'Go online to receive rides',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.85),
+                                fontSize: 11,
+                                height: 1.3,
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

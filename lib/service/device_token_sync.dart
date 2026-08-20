@@ -9,6 +9,7 @@ import 'package:mtaanidriver/Network/urls.dart';
 import 'package:mtaanidriver/utils/firebase_messaging_config.dart';
 import 'package:mtaanidriver/utils/platform_helper.dart';
 import 'package:mtaanidriver/utils/shared_preferences.dart';
+import 'package:mtaanidriver/utils/web_push_notification.dart';
 
 /// Resolves FCM token and posts it to [URLS.DEVICE_ID_UPDATE].
 /// Pattern aligned with pop_user (retry + persist + single-flight).
@@ -38,8 +39,8 @@ class DeviceTokenSync {
   }
 
   static void attachTokenRefreshListener() {
-    if (_refreshListenerAttached || kIsWeb) return;
-    if (!isMobile) return;
+    if (_refreshListenerAttached) return;
+    if (!kIsWeb && !isMobile) return;
 
     _refreshListenerAttached = true;
     FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
@@ -68,11 +69,11 @@ class DeviceTokenSync {
   static Future<String?> resolveFcmToken({bool forceRefresh = false}) async {
     try {
       if (kIsWeb) {
+        await registerFcmServiceWorker();
         final settings = await FirebaseMessaging.instance.requestPermission();
         final allowed =
             settings.authorizationStatus == AuthorizationStatus.authorized ||
-                settings.authorizationStatus ==
-                    AuthorizationStatus.provisional;
+                settings.authorizationStatus == AuthorizationStatus.provisional;
         if (!allowed) return null;
 
         final token = await FirebaseMessaging.instance.getToken(

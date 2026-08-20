@@ -35,6 +35,16 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZ7GVlxPgOAdYFLQ8j0jJxDN4qPh0tnZk"></script>
 </head>
 <body>
+  <!-- Separate script: browsers ignore inline JS inside a tag that has src= -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('firebase-messaging-sw.js', {
+        scope: '/firebase-cloud-messaging-push-scope',
+      }).catch(function (err) {
+        console.error('[FCM] service worker registration failed:', err);
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
