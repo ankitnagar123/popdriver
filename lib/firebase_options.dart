@@ -56,11 +56,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCB4tv1kgCEMs2qi0IS5eT8E4LNjveVZQw',
-    appId: '1:537584520795:ios:23e0d12463d0b8b6e2797e',
+    appId: '1:537584520795:ios:add384be7bd6b71ae2797e',
     messagingSenderId: '537584520795',
     projectId: 'poptaxi-ae8fd',
     storageBucket: 'poptaxi-ae8fd.firebasestorage.app',
-    iosBundleId: 'com.popdriver.app',
+    iosBundleId: 'com.popdriver.ride',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

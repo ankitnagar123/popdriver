@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.popdriver.app</string>
+	<string>com.popdriver.ride</string>
 	<key>PROJECT_ID</key>
 	<string>poptaxi-ae8fd</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:537584520795:ios:23e0d12463d0b8b6e2797e</string>
+	<string>1:537584520795:ios:add384be7bd6b71ae2797e</string>
 </dict>
 </plist>

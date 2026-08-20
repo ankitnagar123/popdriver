@@ -550,7 +550,7 @@ class NotificationService {
         });
       });
     }
-
+    
     debugPrint('NotificationService: FCM listeners bound');
   }
 
