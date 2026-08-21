@@ -4,9 +4,14 @@ import 'dart:developer';
 import '../../controller/permision_controller.dart';
 import '../../controller/splace_controller.dart';
 import '../../route_helper/route_helper.dart';
+import '../../service/notification_service.dart';
+import '../../utils/colors.dart';
 import '../../utils/platform_helper.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
+import '../../utils/web_geolocation.dart';
+import '../../utils/web_push_notification.dart';
+import '../../utils/web_splash_bootstrap.dart';
 import '../../controller/auth_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +38,8 @@ class _SplashScreenState extends State<SplashScreen> {
   PermissionController? controller;
   AuthController? controllers;
   SplashController splashController = Get.put(SplashController());
+  bool _webPermissionBusy = false;
+  bool _showWebPermissionCard = false;
 
   @override
   void initState() {
@@ -84,27 +91,69 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _startWebSplashFlow() {
-    // Safari: never request geolocation without a user tap (silent deny).
-    // Chrome/Android Online toggle handles permission. Just continue splash.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_prepareWebSplash());
+    });
+  }
+
+  Future<void> _prepareWebSplash() async {
+    final notifOk = isBrowserNotificationPermissionGranted();
+    final locOk = await isBrowserLocationPermissionGranted();
+    if (!mounted) return;
+    if (notifOk && locOk) {
+      unawaited(NotificationService.ensureWebPushReady());
+      getData();
+      return;
+    }
+    setState(() => _showWebPermissionCard = true);
+  }
+
+  Future<void> _onWebAllowPermissions() async {
+    if (_webPermissionBusy) return;
+    setState(() => _webPermissionBusy = true);
+    try {
+      await WebSplashBootstrap.requestPermissionsOnUserGesture();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _webPermissionBusy = false;
+          _showWebPermissionCard = false;
+        });
+        getData();
+      }
+    }
+  }
+
+  void _onWebSkipPermissions() {
+    setState(() => _showWebPermissionCard = false);
     getData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
-        // bottomSheet:  Image.asset("assets/images/splashFooter.png",height: 225,fit: BoxFit.fitWidth,width: double.infinity,),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset(
-                "assets/images/POP DRIVER.gif",
-              ),
-            ],
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Center(
+            child: Image.asset(
+              'assets/images/POP DRIVER.gif',
+            ),
           ),
-        ));
+          if (kIsWeb && _showWebPermissionCard)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 32,
+              child: _WebPermissionCard(
+                busy: _webPermissionBusy,
+                onAllow: _onWebAllowPermissions,
+                onSkip: _onWebSkipPermissions,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _checkRootThenProceed() async {
@@ -312,3 +361,66 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 }
+class _WebPermissionCard extends StatelessWidget {
+  const _WebPermissionCard({
+    required this.busy,
+    required this.onAllow,
+    required this.onSkip,
+  });
+
+  final bool busy;
+  final VoidCallback onAllow;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(16),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Enable location & notifications',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: MyColors.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Allow access so we can show your map location and send new booking alerts.',
+              style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.35),
+            ),
+            const SizedBox(height: 16),
+            if (busy)
+              const Center(child: CircularProgressIndicator())
+            else
+              ElevatedButton(
+                onPressed: onAllow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MyColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Allow'),
+              ),
+            TextButton(
+              onPressed: busy ? null : onSkip,
+              child: const Text('Not now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

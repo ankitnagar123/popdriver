@@ -396,7 +396,9 @@ class NotificationService {
 
   static Future<void> initialize() async {
     if (kIsWeb) {
-      await _initializeWebMessaging();
+      // Listeners only — permission + token require a user tap (splash Allow).
+      await registerFcmServiceWorker();
+      _bindWebFirebaseListeners();
       return;
     }
     if (_serviceInitialized) return;
@@ -554,7 +556,7 @@ class NotificationService {
     debugPrint('NotificationService: FCM listeners bound');
   }
 
-  /// Retry permission + token from a user tap (Online). Safe to call many times.
+  /// Permission + token from a user tap (splash Allow / Online). Safe to call many times.
   static Future<void> ensureWebPushReady() async {
     if (!kIsWeb) return;
     await _initializeWebMessaging();
@@ -562,9 +564,11 @@ class NotificationService {
 
   static Future<void> _resolveAndPersistWebToken() async {
     try {
-      final token = await FirebaseMessaging.instance.getToken(
-        vapidKey: FirebaseMessagingConfig.webVapidKey,
-      );
+      final token = await FirebaseMessaging.instance
+          .getToken(
+            vapidKey: FirebaseMessagingConfig.webVapidKey,
+          )
+          .timeout(const Duration(seconds: 8));
       if (token != null && token.isNotEmpty) {
         log('Web FCM token ready (len=${token.length})');
         debugPrint('Web FCM token for Firebase Console test: $token');
@@ -578,53 +582,60 @@ class NotificationService {
     }
   }
 
+  static void _bindWebFirebaseListeners() {
+    if (_webListenersBound) return;
+    _webListenersBound = true;
+
+    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+      if (token.isEmpty) return;
+      log('Web FCM onTokenRefresh (len=${token.length})');
+      unawaited(DeviceTokenSync.persistFirebaseToken(token));
+      unawaited(DeviceTokenSync.syncAfterLogin());
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      logRemoteMessage('WEB FOREGROUND (onMessage)', message);
+      unawaited(showNotificationForeground(message));
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      logRemoteMessage('WEB OPENED_APP (tap)', message);
+      if (isBookingCancellation(message)) {
+        _handleBookingCancellationNotification(message);
+      } else if (isNewBookingRequest(message)) {
+        unawaited(showNotificationForeground(message));
+      }
+    });
+
+    if (!_initialMessageChecked) {
+      _initialMessageChecked = true;
+      FirebaseMessaging.instance.getInitialMessage().then((initial) {
+        if (initial == null) return;
+        logRemoteMessage('WEB INITIAL (cold start)', initial);
+        if (isBookingCancellation(initial)) {
+          _handleBookingCancellationNotification(initial);
+        }
+      });
+    }
+  }
+
   static Future<void> _initializeWebMessaging() async {
     try {
-      await registerFcmServiceWorker();
+      await registerFcmServiceWorker().timeout(const Duration(seconds: 4));
+      await ensureBrowserNotificationPermission()
+          .timeout(const Duration(seconds: 25));
 
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      final settings = await FirebaseMessaging.instance
+          .requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+          )
+          .timeout(const Duration(seconds: 8));
       log('Web FCM auth status: ${settings.authorizationStatus}');
 
       await _resolveAndPersistWebToken();
-
-      if (_webListenersBound) return;
-      _webListenersBound = true;
-
-      FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-        if (token.isEmpty) return;
-        log('Web FCM onTokenRefresh (len=${token.length})');
-        unawaited(DeviceTokenSync.persistFirebaseToken(token));
-        unawaited(DeviceTokenSync.syncAfterLogin());
-      });
-
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        logRemoteMessage('WEB FOREGROUND (onMessage)', message);
-        unawaited(showNotificationForeground(message));
-      });
-
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        logRemoteMessage('WEB OPENED_APP (tap)', message);
-        if (isBookingCancellation(message)) {
-          _handleBookingCancellationNotification(message);
-        } else if (isNewBookingRequest(message)) {
-          unawaited(showNotificationForeground(message));
-        }
-      });
-
-      if (!_initialMessageChecked) {
-        _initialMessageChecked = true;
-        final initial = await FirebaseMessaging.instance.getInitialMessage();
-        if (initial != null) {
-          logRemoteMessage('WEB INITIAL (cold start)', initial);
-          if (isBookingCancellation(initial)) {
-            _handleBookingCancellationNotification(initial);
-          }
-        }
-      }
+      _bindWebFirebaseListeners();
     } catch (e, st) {
       log('Web FCM init failed', error: e, stackTrace: st);
     }

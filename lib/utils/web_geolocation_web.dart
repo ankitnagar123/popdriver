@@ -1,7 +1,21 @@
 import 'dart:async';
 import 'dart:html' as html;
 
+import 'package:flutter/foundation.dart';
+
 import 'web_geolocation_fix.dart';
+
+Future<bool> isBrowserLocationPermissionGrantedImpl() async {
+  try {
+    final permApi = html.window.navigator.permissions;
+    if (permApi == null) return false;
+    final status = await permApi.query({'name': 'geolocation'});
+    return status.state == 'granted';
+  } catch (e) {
+    debugPrint('Web location permission query failed: $e');
+    return false;
+  }
+}
 
 Future<WebLatLngFix> getBrowserLocationImpl({
   Duration timeout = const Duration(seconds: 10),

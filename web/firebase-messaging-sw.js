@@ -43,10 +43,13 @@ function isBookingCancellation(payload) {
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw] background message', payload);
-  const n = payload.notification || {};
+  // FCM already shows a system banner when `notification` is in the payload.
+  if (payload.notification) {
+    return Promise.resolve();
+  }
   const d = payload.data || {};
-  const title = n.title || d.title || 'POP Driver';
-  const body = n.body || d.body || d.message || '';
+  const title = d.title || 'POP Driver';
+  const body = d.body || d.message || '';
   const options = {
     body: body,
     icon: '/icons/Icon-192.png',

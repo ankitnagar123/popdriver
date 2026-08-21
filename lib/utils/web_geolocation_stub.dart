@@ -5,3 +5,5 @@ Future<WebLatLngFix> getBrowserLocationImpl({
 }) {
   throw UnsupportedError('Browser geolocation is web-only');
 }
+
+Future<bool> isBrowserLocationPermissionGrantedImpl() async => false;

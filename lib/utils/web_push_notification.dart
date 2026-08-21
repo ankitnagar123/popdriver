@@ -3,6 +3,12 @@ import 'web_push_notification_stub.dart'
 
 Future<void> registerFcmServiceWorker() => registerFcmServiceWorkerImpl();
 
+Future<bool> ensureBrowserNotificationPermission() =>
+    ensureBrowserNotificationPermissionImpl();
+
+bool isBrowserNotificationPermissionGranted() =>
+    isBrowserNotificationPermissionGrantedImpl();
+
 void showWebBrowserNotification({
   required String title,
   String body = '',

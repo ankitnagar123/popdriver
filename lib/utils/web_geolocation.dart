@@ -6,3 +6,6 @@ Future<WebLatLngFix> getBrowserLocation({
   Duration timeout = const Duration(seconds: 10),
 }) =>
     getBrowserLocationImpl(timeout: timeout);
+
+Future<bool> isBrowserLocationPermissionGranted() =>
+    isBrowserLocationPermissionGrantedImpl();
