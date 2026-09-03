@@ -20,6 +20,8 @@ class SharedPreferencesCrDriver{
   String PASSWORD = "PASSWORD";
   String FLAG = "FLAG";
   String COUNTRY_CODE = "COUNTRY_CODE";
+  String INSTALLATION_ID = "INSTALLATION_ID";
+  String TOKEN_EXPIRES_AT = "TOKEN_EXPIRES_AT";
 
 
 
@@ -32,6 +34,7 @@ class SharedPreferencesCrDriver{
       PASSWORD,
       FLAG,
       COUNTRY_CODE,
+      INSTALLATION_ID,
     ];
 
     // Get all saved keys
@@ -114,6 +117,12 @@ class SecureStorageService {
       return;
     }
     await _storage.delete(key: key);
+  }
+
+  Future<bool> hasSession() async {
+    final token = await readData(Token) ?? '';
+    final id = await readData(user_id) ?? '';
+    return token.isNotEmpty && id.isNotEmpty;
   }
 
   Future<void> deleteAllData() async {

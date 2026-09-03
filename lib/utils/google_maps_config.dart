@@ -5,7 +5,7 @@ class GoogleMapsConfig {
   GoogleMapsConfig._();
 
   static const String androidApiKey = 'AIzaSyBRpd4WXkL8oX2TFYnVigpI7vq2e2YE5GY';
-  static const String iosApiKey = 'AIzaSyCcprS9RpevBbo6bTsbazyhtR1QT_Cd_ys';
+  static const String iosApiKey = 'AIzaSyBRpd4WXkL8oX2TFYnVigpI7vq2e2YE5GY';
   static const String directionsApiKey = 'AIzaSyBl3QyASJ6PHcxGWf5i4hSXieIywYloOl0';
 
   /// Used in [web/index.html] — enable "Maps JavaScript API" for this key in Google Cloud.

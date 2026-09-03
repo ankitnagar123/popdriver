@@ -78,6 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
     print("-----------message");
     log("onOff------------Direct ${contoller.onOff.value}");
 
+    contoller.startAvailabilityPolling();
+    controller.startRideListAutoRefresh();
+    controller.startActiveBookingPoll();
+
     // Web (esp. Safari): never auto-prompt GPS — only Online / Enable tap.
     // Android / iOS: keep existing auto location start.
     if (!kIsWeb) {

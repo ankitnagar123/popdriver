@@ -11,6 +11,7 @@ import 'package:mtaanidriver/utils/snackBar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'Network/api_service.dart';
 import 'Network/urls.dart';
 
 class SelfieController extends GetxController {
@@ -37,6 +38,7 @@ class SelfieController extends GetxController {
 
   final SecureStorageService secure = SecureStorageService();
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
+  final ApiService apiService = ApiService();
 
   var sendSelfieLoader = true.obs;
   var sendSelfieLoader1 = false.obs;
@@ -73,9 +75,9 @@ class SelfieController extends GetxController {
     log("parameter ------ ${formdata.fields}");
 
     try {
-      final response = await dioClient.post(
-        URLS.api(URLS.UPDATE_DRIVER_SELFIE),
-        data: formdata,
+      final response = await apiService.multiPartFile(
+        URLS.UPDATE_DRIVER_SELFIE,
+        formdata,
       );
 
       final jsonString = jsonDecode(response.data);

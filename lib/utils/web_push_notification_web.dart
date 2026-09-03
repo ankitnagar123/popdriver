@@ -1,18 +1,8 @@
-import 'dart:async';
 import 'dart:html' as html;
 
-Future<void> registerFcmServiceWorkerImpl() async {
-  try {
-    final sw = html.window.navigator.serviceWorker;
-    if (sw == null) return;
-    await sw.register(
-      '/firebase-messaging-sw.js',
-      {'scope': '/firebase-cloud-messaging-push-scope'},
-    ).timeout(const Duration(seconds: 4));
-  } catch (_) {
-    /* FlutterFire also auto-registers this file */
-  }
-}
+/// FlutterFire registers `/firebase-messaging-sw.js` on the default scope.
+/// Do not register the custom FCM push scope — that breaks `getToken`.
+Future<void> registerFcmServiceWorkerImpl() async {}
 
 Future<bool> ensureBrowserNotificationPermissionImpl() async {
   if (!html.Notification.supported) return false;

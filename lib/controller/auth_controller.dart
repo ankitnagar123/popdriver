@@ -8,14 +8,15 @@ import 'package:mtaanidriver/controller/profile_controller.dart';
 import '../../Network/api_service.dart';
 import '../../Network/urls.dart';
 import '../../utils/shared_preferences.dart';
+import '../../utils/session_auth.dart';
 import '../../utils/snackBar.dart';
 import '../service/device_token_sync.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../Model/TaxiFetchCompanyModel.dart';
 import '../Model/membership_model.dart';
-import '../Network/urls.dart';
 import '../View/HomeView/membership_view/membership_screen.dart';
 import '../route_helper/route_helper.dart';
 import 'package:http/http.dart' as http;
@@ -247,33 +248,60 @@ class AuthController extends GetxController {
       flag,
       contact,
       String password,
-      String login_device_key,
-      String access_token,
+      String installationId,
+      String platform,
+      String fcmToken,
       bool isChecked,
       context) async {
     loginLoader.value = true;
-    Map<String, dynamic> loginParameter = {
+    Map<String, String> loginParameter = {
       "country_code": country_code,
-      "contact": contact,
+      "contact": contact.toString(),
       "password": password,
-      "status": "1",
-      "login_device_key": login_device_key,
-      "access_token": access_token,
+      "platform": platform,
+      "installation_id": installationId,
+      "fcm_token": fcmToken,
     };
     log("parameter-------$loginParameter");
     log("parameter-------${URLS.DRIVER_LOGIN}");
 
+    if (kIsWeb && !await apiService.canBrowserReadApi()) {
+      loginLoader.value = false;
+      customSnackBar(
+        'Web login is blocked from this address (CORS). '
+        'Open the app on poptaxi.com.au, or run Chrome with '
+        '--disable-web-security. Your other device was not logged out.'
+            .tr,
+        context: context,
+      );
+      return;
+    }
+
     try {
       final response =
-          await http.post(Uri.parse(URLS.api(URLS.DRIVER_LOGIN)), body: loginParameter);
+          await apiService.postData(URLS.DRIVER_LOGIN, loginParameter);
+      final raw = response.body.trim();
+      if (raw.isEmpty || raw.startsWith('<')) {
+        loginLoader.value = false;
+        customSnackBar("Login failed. Please try again".tr, context: context);
+        return;
+      }
 
-      var jsonString = jsonDecode(response.body);
+      var jsonString = jsonDecode(raw);
+      if (jsonString is! Map) {
+        loginLoader.value = false;
+        customSnackBar("Login failed. Please try again".tr, context: context);
+        return;
+      }
 
       log("login response--------$jsonString");
-      var result = jsonString["result"];
+      final result = jsonString["result"]?.toString() ?? '';
+      final resultLc = result.toLowerCase();
+      final message = jsonString["message"]?.toString() ?? '';
       var driverId = jsonString["driver_id"];
       var inviteCode = jsonString["invite_code"];
       var driverName = jsonString["name"];
+
       if (result == 'Success') {
         if (isChecked) {
           log("-----isChecked");
@@ -300,20 +328,35 @@ class AuthController extends GetxController {
         } catch (e) {
           log('clearSessionStateForNewLogin: $e');
         }
-        await secure.writeData(secure.Token, jsonString['token']);
-        await sp.setStringValue(sp.INVITE_CODE, inviteCode.toString());
-        await sp.setStringValue(
-            sp.LOGIN_DEVICE_KEY, login_device_key.toString());
-        await sp.setStringValue(sp.ACCESS_TOKEN, access_token.toString());
-        await secure.writeData(secure.user_name, driverName.toString());
+        await secure.writeData(secure.Token, jsonString['token']?.toString() ?? '');
+        final expiresAt = jsonString['expires_at']?.toString() ?? '';
+        if (expiresAt.isNotEmpty) {
+          await sp.setStringValue(sp.TOKEN_EXPIRES_AT, expiresAt);
+        }
+        if (jsonString['session_replaced'] == true) {
+          log('session_replaced=true — previous device session ended');
+        }
+        await sp.setStringValue(sp.INVITE_CODE, inviteCode?.toString() ?? '');
+        await sp.setStringValue(sp.INSTALLATION_ID, installationId);
+        await sp.setStringValue(sp.LOGIN_DEVICE_KEY, installationId);
+        await sp.setStringValue(sp.ACCESS_TOKEN, installationId);
+        await secure.writeData(secure.user_name, driverName?.toString() ?? '');
         await secure.writeData(secure.user_id, driverId.toString());
         await sp.setBoolValue(sp.LOGIN_KEY, true);
         await sp.setBoolValue(sp.ON_BOARDING_KEY, true);
+        DeviceTokenSync.allowSyncAfterLogin();
         updateDeviceId();
         loginLoader.value = false;
         Get.offNamed(RouteHelper.getHomeScreenScreenRoute(),
             arguments: {"ArriveDriver": ""});
         customSnackBar("Login successful".tr);
+      } else if (resultLc == 'membership_required' ||
+          result == "You Don't have any active membership") {
+        loginLoader.value = false;
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => MemberShipScreen(type: "signup")));
       } else if (result == "You Are Already Logged-in In Other Device") {
         secure.writeData(secure.user_id, driverId.toString());
         loginLoader.value = false;
@@ -336,7 +379,6 @@ class AuthController extends GetxController {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title
                     Text(
                       "Session Alert".tr,
                       style: TextStyle(
@@ -345,18 +387,12 @@ class AuthController extends GetxController {
                         color: Colors.grey[800],
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Divider
                     Divider(
                       height: 1,
                       color: Colors.grey[300],
                     ),
-
                     const SizedBox(height: 20),
-
-                    // Message
                     Text(
                       "You are already logged in on another device. Do you want to logout from that device?"
                           .tr,
@@ -366,10 +402,7 @@ class AuthController extends GetxController {
                         color: Colors.grey[700],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -424,21 +457,48 @@ class AuthController extends GetxController {
             );
           },
         );
-      } else if (result == "You Don't have any active membership") {
-        loginLoader.value = false;
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => MemberShipScreen(type: "signup")));
       } else {
         loginLoader.value = false;
-        customSnackBar(result.toString(), context: context);
+        customSnackBar(
+          _loginErrorMessage(
+            resultLc: resultLc,
+            result: result,
+            message: message,
+            statusCode: response.statusCode,
+          ),
+          context: context,
+        );
       }
     } catch (e) {
       customSnackBar("something went wrong", context: context);
       loginLoader.value = false;
       log("Exception-----", error: e.toString());
     }
+  }
+
+  String _loginErrorMessage({
+    required String resultLc,
+    required String result,
+    required String message,
+    required int statusCode,
+  }) {
+    if (resultLc == 'invalid_credentials') {
+      return 'Invalid mobile number or password'.tr;
+    }
+    if (resultLc == 'account_inactive') {
+      return 'Your account is inactive'.tr;
+    }
+    if (resultLc == 'invalid_request') {
+      return message.isNotEmpty ? message : 'Login request is invalid'.tr;
+    }
+    if (resultLc == 'login_failed') {
+      return 'Login failed. Please try again'.tr;
+    }
+    if (result.isNotEmpty) return result;
+    if (message.isNotEmpty) return message;
+    if (statusCode == 401) return 'Invalid mobile number or password'.tr;
+    if (statusCode >= 500) return 'Login failed. Please try again'.tr;
+    return 'Login failed'.tr;
   }
 
   void forgetPassword(String email) async {
@@ -498,6 +558,30 @@ class AuthController extends GetxController {
       setPasswordLoader.value = false;
       log("Exception -----", error: e.toString());
     }
+  }
+
+  /// 401 `session_replaced` (and other session errors) — wipe local session and
+  /// send the driver to [LoginScreen]. Does not call logout API.
+  Future<void> forceLogoutToLogin({String? message}) async {
+    DeviceTokenSync.blockSyncForLogout();
+    try {
+      Get.find<HomeController>().stopAvailabilityPolling();
+    } catch (_) {}
+    try {
+      Get.find<HomeController>().streamSubscription.cancel();
+    } catch (_) {}
+
+    await _clearLocalDriverSession('');
+
+    final loginRoute = RouteHelper.getLoginScreenRoute();
+    if (Get.currentRoute != loginRoute) {
+      Get.offAllNamed(loginRoute);
+    }
+
+    final text = (message != null && message.trim().isNotEmpty)
+        ? message.trim()
+        : 'This account was signed in on another device.';
+    customSnackBar(text.tr);
   }
 
   /// Clears JWT, driver id, prefs (except saved login fields), booking timers, etc.
@@ -574,48 +658,36 @@ class AuthController extends GetxController {
 
   void loginCheck(String loginDeviceKey, accessToken, context) async {
     reCheckLoader.value = true;
-    String Tokan = await secure.readData(secure.Token) ?? "";
     Map<String, dynamic> check = {
       "driver_id": await secure.readData(secure.user_id),
       "login_device_key": loginDeviceKey,
-      "access_token": accessToken
+      "access_token": accessToken,
+      "installation_id":
+          (await sp.getStringValue(sp.INSTALLATION_ID)) ?? loginDeviceKey,
     };
 
     log("login Check parameter----->:$check");
 
     try {
-      final response = await http.post(
-          Uri.parse(URLS.api(URLS.DRIVER_LOGIN_CHECK)),
-          headers: {
-            'Authorization': 'Bearer $Tokan',
-            // Pass the JWT token in the headers
-          },
-          body: check);
+      final response =
+          await apiService.postData(URLS.DRIVER_LOGIN_CHECK, check);
 
       var jsonString = jsonDecode(response.body);
 
       log('login Check response--------->:${response.body}');
-      var result = jsonString['result'];
+      var result = jsonString['result']?.toString() ?? '';
       log('response login--------->:$result');
-      if (jsonString['result'] == "You Are Already Logged-in In Other Device") {
-        await driverLogout("", () {});
-        Future.delayed(Duration.zero, () {
-          Get.find<HomeController>().streamSubscription.cancel();
-        });
-        /* customSnackBar(result.toString());*/
-        Get.offAllNamed(RouteHelper.getLoginScreenRoute());
+      final message = jsonString['message']?.toString() ?? '';
+      if (SessionAuth.isSessionResult(result) ||
+          result == "You Are Already Logged-in In Other Device" ||
+          result == "Token has expired") {
         reCheckLoader.value = false;
-      } else if (jsonString['result'] == "Success") {
+        await forceLogoutToLogin(
+          message: message.isNotEmpty ? message : result,
+        );
+      } else if (result == "Success") {
         reCheckLoader.value = false;
-      } else if (jsonString['result'] == "Token has expired") {
-        await driverLogout("", () {});
-        Future.delayed(Duration.zero, () {
-          Get.find<HomeController>().streamSubscription.cancel();
-        });
-        customSnackBar(result.toString());
-        Get.offAllNamed(RouteHelper.getLoginScreenRoute());
-        reCheckLoader.value = false;
-      } else {}
+      }
     } catch (e) {
       reCheckLoader.value = false;
       log("Exception------->:loginCheck", error: e.toString());
@@ -657,11 +729,13 @@ class AuthController extends GetxController {
     memberShipLoader.value = true;
 
     try {
-      final response = await dioClient.get(URLS.api(URLS.fetch_membership_list));
+      final response = await apiService.getData(URLS.fetch_membership_list);
 
       log("response ----", error: response.data);
 
-      memberShipList.value = memberShipModelFromJson(response.data);
+      memberShipList.value = memberShipModelFromJson(
+        response.data is String ? response.data : json.encode(response.data),
+      );
 
       memberShipLoader.value = false;
     } catch (e) {

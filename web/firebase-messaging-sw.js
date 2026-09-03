@@ -15,14 +15,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
 function _lc(v) {
   return (v || '').toString().toLowerCase();
 }
@@ -41,6 +33,18 @@ function isBookingCancellation(payload) {
   );
 }
 
+function buildLaunchUrl(data) {
+  const params = new URLSearchParams();
+  params.set('fcm_click', '1');
+  Object.keys(data || {}).forEach(function (key) {
+    const value = data[key];
+    if (value !== undefined && value !== null && String(value).length > 0) {
+      params.set(key, String(value));
+    }
+  });
+  return '/?' + params.toString();
+}
+
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw] background message', payload);
   // FCM already shows a system banner when `notification` is in the payload.
@@ -50,29 +54,61 @@ messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
   const title = d.title || 'POP Driver';
   const body = d.body || d.message || '';
+  const notificationData = Object.assign({}, d, {
+    title: title,
+    body: body,
+  });
   const options = {
     body: body,
     icon: '/icons/Icon-192.png',
     badge: '/icons/Icon-192.png',
-    data: d,
+    data: notificationData,
     tag: isBookingCancellation(payload) ? 'booking-cancel' : 'booking',
     renotify: true,
   };
   return self.registration.showNotification(title, options);
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function (event) {
+  console.log('[firebase-messaging-sw] Notification click', event.notification);
   event.notification.close();
+
+  const data = event.notification.data || {};
+  const title = data.title || event.notification.title || '';
+  const body = data.body || event.notification.body || '';
+  const message = {
+    type: 'FIREBASE_NOTIFICATION_CLICK',
+    title: title,
+    body: body,
+    data: data,
+  };
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          return client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (new URL(client.url).origin === self.location.origin) {
+          client.postMessage(message);
+          if ('focus' in client) {
+            return client.focus();
+          }
+          return undefined;
         }
       }
+
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow(buildLaunchUrl(data)).then(function (newClient) {
+          if (!newClient) return undefined;
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              newClient.postMessage(message);
+              resolve();
+            }, 2500);
+          });
+        });
       }
-    }),
+
+      return undefined;
+    })
   );
 });

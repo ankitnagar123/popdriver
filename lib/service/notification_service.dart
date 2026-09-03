@@ -20,6 +20,7 @@ import '../utils/firebase_messaging_config.dart';
 import '../utils/platform_helper.dart';
 import '../utils/polyline_handler.dart';
 import '../utils/shared_preferences.dart';
+import '../utils/web_fcm_bridge.dart';
 import '../utils/web_push_notification.dart';
 import 'booking_incoming_service.dart';
 import 'device_token_sync.dart';
@@ -316,6 +317,7 @@ class NotificationService {
 
   static bool _mobileListenersBound = false;
   static bool _webListenersBound = false;
+  static bool _webClickHandlerBound = false;
   static bool _initialMessageChecked = false;
   static bool _serviceInitialized = false;
 
@@ -396,9 +398,10 @@ class NotificationService {
 
   static Future<void> initialize() async {
     if (kIsWeb) {
-      // Listeners only — permission + token require a user tap (splash Allow).
-      await registerFcmServiceWorker();
+      // Listeners only — permission + token require a user tap (splash / login).
       _bindWebFirebaseListeners();
+      _bindWebClickHandlerOnce();
+      debugPrint('Web FCM listeners bound (permissions deferred to user tap)');
       return;
     }
     if (_serviceInitialized) return;
@@ -493,8 +496,20 @@ class NotificationService {
       sound: true,
     );
 
+    try {
+      await DeviceTokenSync.waitForApnsIfNeeded();
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      debugPrint('FCM token saved (length=${fcmToken?.length ?? 0})');
+      if (fcmToken != null && fcmToken.isNotEmpty) {
+        await DeviceTokenSync.persistFirebaseToken(fcmToken);
+        debugPrint('FCM token for Firebase Console test: $fcmToken');
+      }
+    } catch (e) {
+      debugPrint('FCM getToken: $e');
+    }
+
     if (isIOS) {
-      // pop_user pattern: never auto-show FCM banner in foreground (prevents double alert).
+      // Foreground: only flutter_local_notifications banner (avoid double alert).
       await FirebaseMessaging.instance
           .setForegroundNotificationPresentationOptions(
         alert: false,
@@ -516,7 +531,7 @@ class NotificationService {
       );
     }
 
-    // Bind on all mobile platforms — some OEMs deliver before status is "authorized".
+    DeviceTokenSync.attachTokenRefreshListener();
     _bindFirebaseListeners();
 
     log('FCM auth status: ${settings.authorizationStatus}');
@@ -556,29 +571,73 @@ class NotificationService {
     debugPrint('NotificationService: FCM listeners bound');
   }
 
-  /// Permission + token from a user tap (splash Allow / Online). Safe to call many times.
-  static Future<void> ensureWebPushReady() async {
+  /// Native permission prompt only — must run from a user tap (splash / login).
+  /// Does not await [getToken] (can hang until the SW is ready).
+  /// [syncDeviceToApi] only after a saved login session — never before login.
+  static Future<void> requestWebPermissionOnUserGesture({
+    bool syncDeviceToApi = false,
+  }) async {
     if (!kIsWeb) return;
-    await _initializeWebMessaging();
+
+    try {
+      final browserOk = await ensureBrowserNotificationPermission();
+      debugPrint('Web browser notification permission: $browserOk');
+
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('Web FCM permission: ${settings.authorizationStatus}');
+
+      _bindWebFirebaseListeners();
+      _bindWebClickHandlerOnce();
+    } catch (e, stack) {
+      debugPrint('Web FCM permission error: $e\n$stack');
+    }
+
+    unawaited(_fetchPersistAndSyncWebToken(syncDeviceToApi: syncDeviceToApi));
   }
 
-  static Future<void> _resolveAndPersistWebToken() async {
+  /// Splash Allow / Online toggle — permission + background token, like pop_user.
+  static Future<void> ensureWebPushReady() async {
+    if (!kIsWeb) return;
+    await requestWebPermissionOnUserGesture(syncDeviceToApi: true);
+  }
+
+  static const Duration _webGetTokenTimeout = Duration(seconds: 8);
+
+  static Future<String?> fetchWebTokenWithTimeout() async {
+    if (!kIsWeb) return null;
     try {
       final token = await FirebaseMessaging.instance
-          .getToken(
-            vapidKey: FirebaseMessagingConfig.webVapidKey,
-          )
-          .timeout(const Duration(seconds: 8));
+          .getToken(vapidKey: FirebaseMessagingConfig.webVapidKey)
+          .timeout(_webGetTokenTimeout);
       if (token != null && token.isNotEmpty) {
-        log('Web FCM token ready (len=${token.length})');
-        debugPrint('Web FCM token for Firebase Console test: $token');
         await DeviceTokenSync.persistFirebaseToken(token);
-        unawaited(DeviceTokenSync.syncAfterLogin());
-      } else {
-        log('Web FCM token missing — push may fail; poll fallback active');
+        debugPrint('FCM Web Token (length=${token.length}): $token');
       }
-    } catch (e, st) {
-      log('Web FCM getToken failed', error: e, stackTrace: st);
+      return token;
+    } on TimeoutException {
+      debugPrint(
+        'Web FCM getToken timed out after ${_webGetTokenTimeout.inSeconds}s',
+      );
+      return null;
+    } catch (e) {
+      debugPrint('Web FCM getToken: $e');
+      return null;
+    }
+  }
+
+  static Future<void> _fetchPersistAndSyncWebToken({
+    bool syncDeviceToApi = false,
+  }) async {
+    await fetchWebTokenWithTimeout();
+    if (!syncDeviceToApi) return;
+    try {
+      await DeviceTokenSync.syncAfterLogin(force: true);
+    } catch (e) {
+      debugPrint('Web FCM token sync: $e');
     }
   }
 
@@ -619,25 +678,36 @@ class NotificationService {
     }
   }
 
-  static Future<void> _initializeWebMessaging() async {
-    try {
-      await registerFcmServiceWorker().timeout(const Duration(seconds: 4));
-      await ensureBrowserNotificationPermission()
-          .timeout(const Duration(seconds: 25));
+  static void _bindWebClickHandlerOnce() {
+    if (_webClickHandlerBound) return;
+    _webClickHandlerBound = true;
+    setupWebFcmNotificationClickHandler((title, body, data) {
+      unawaited(handleWebNotificationClick(
+        title: title,
+        body: body,
+        data: data,
+      ));
+    });
+  }
 
-      final settings = await FirebaseMessaging.instance
-          .requestPermission(
-            alert: true,
-            badge: true,
-            sound: true,
-          )
-          .timeout(const Duration(seconds: 8));
-      log('Web FCM auth status: ${settings.authorizationStatus}');
-
-      await _resolveAndPersistWebToken();
-      _bindWebFirebaseListeners();
-    } catch (e, st) {
-      log('Web FCM init failed', error: e, stackTrace: st);
+  /// Service-worker / launch-URL tap — same booking handling as opened-app.
+  static Future<void> handleWebNotificationClick({
+    required String title,
+    required String body,
+    Map<String, String> data = const {},
+  }) async {
+    debugPrint('🔔 WEB TAP title="$title" body="$body" data=$data');
+    final message = RemoteMessage(
+      data: data,
+      notification: RemoteNotification(
+        title: title.isNotEmpty ? title : (data['title'] ?? ''),
+        body: body.isNotEmpty ? body : (data['body'] ?? ''),
+      ),
+    );
+    if (isBookingCancellation(message)) {
+      _handleBookingCancellationNotification(message);
+    } else if (isNewBookingRequest(message)) {
+      unawaited(showNotificationForeground(message));
     }
   }
 

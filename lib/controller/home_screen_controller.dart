@@ -232,7 +232,7 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    startAvailabilityPolling();
+    // Availability polling starts from HomeScreen after a real JWT session.
   }
 
   @override
@@ -316,6 +316,7 @@ class HomeController extends GetxController {
     if (_availabilityFetchInFlight) return;
     _availabilityFetchInFlight = true;
     try {
+      if (!await secure.hasSession()) return;
       final driverId = await _resolveDriverId();
       if (driverId == null || driverId.isEmpty) return;
 

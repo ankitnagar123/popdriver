@@ -15,18 +15,14 @@ import UIKit
     }
 
     if let mapsApiKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
-      !mapsApiKey.isEmpty
-    {
+       !mapsApiKey.isEmpty {
       GMSServices.provideAPIKey(mapsApiKey)
     }
 
-    // Firebase is initialized from Dart (main.dart). Register plugins here so
-    // firebase_messaging can hook APNS before Dart calls getToken (pop_user pattern).
+    // Firebase is initialized from Dart (main.dart) via Firebase.initializeApp().
+    // Do NOT call FirebaseApp.configure() here — it causes duplicate-app conflict
+    // with the FlutterFire plugin's method-channel initialization.
     GeneratedPluginRegistrant.register(with: self)
-    let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    DispatchQueue.main.async {
-      application.registerForRemoteNotifications()
-    }
-    return result
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

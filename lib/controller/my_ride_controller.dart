@@ -104,6 +104,14 @@ class MyRidesController extends GetxController {
 
       log("ride history response-------${response.body}");
 
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map &&
+          decoded['result']?.toString().toLowerCase() ==
+              'authentication_required') {
+        historyLoader.value = false;
+        return;
+      }
+
       historyList.value = driverRideHistoryModelFromJson(response.body);
 
       historyLoader.value = false;
@@ -141,6 +149,10 @@ class MyRidesController extends GetxController {
   }
 
   void rideLaterScreenBooking(String start_date, String end_date) async {
+    if (!await secure.hasSession()) {
+      rideLaterScreenLoader.value = false;
+      return;
+    }
     rideLaterScreenLoader.value = true;
     Map<String, dynamic> booking = {
       "driver_id": await secure.readData(secure.user_id),
@@ -156,8 +168,21 @@ class MyRidesController extends GetxController {
 
       log("ride later booking screen response-----${response.body}");
 
+      final body = response.body.trim();
+      if (body.isEmpty ||
+          body.startsWith('<') ||
+          response.statusCode != 200) {
+        rideLaterScreenLoader.value = false;
+        return;
+      }
+      final decoded = jsonDecode(body);
+      if (decoded is! List) {
+        rideLaterScreenLoader.value = false;
+        return;
+      }
+
       rideLaterScreenList.value =
-          rideLaterScreenBookingModelFromJson(response.body);
+          rideLaterScreenBookingModelFromJson(body);
 
       startDate.value = "";
       endDate.value = "";

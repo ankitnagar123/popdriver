@@ -9,7 +9,6 @@ import 'package:mtaanidriver/Network/urls.dart';
 import 'package:mtaanidriver/utils/firebase_messaging_config.dart';
 import 'package:mtaanidriver/utils/platform_helper.dart';
 import 'package:mtaanidriver/utils/shared_preferences.dart';
-import 'package:mtaanidriver/utils/web_push_notification.dart';
 
 /// Resolves FCM token and posts it to [URLS.DEVICE_ID_UPDATE].
 /// Pattern aligned with pop_user (retry + persist + single-flight).
@@ -58,31 +57,57 @@ class DeviceTokenSync {
     await _sp.setStringValue(_firebaseTokenKey, token);
   }
 
-  /// iOS: never call [getToken] until APNS is registered (avoids crash/log spam).
-  static Future<bool> _isIosApnsReady() async {
-    if (!isIOS) return true;
-    final apns = await FirebaseMessaging.instance.getAPNSToken();
-    return apns != null && apns.isNotEmpty;
+  static Future<String> cachedFcmToken() async {
+    return await _sp.getStringValue(_firebaseTokenKey) ?? '';
+  }
+
+  /// iOS: FCM [getToken] needs APNs first — wait like pop_user.
+  static Future<void> waitForApnsIfNeeded() async {
+    if (kIsWeb || !isIOS) return;
+
+    const maxAttempts = 25;
+    const step = Duration(milliseconds: 350);
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final apns = await FirebaseMessaging.instance.getAPNSToken();
+        if (apns != null && apns.isNotEmpty) {
+          log('DeviceTokenSync: APNS ready (len=${apns.length})');
+          return;
+        }
+      } catch (e) {
+        log('DeviceTokenSync: getAPNSToken attempt $attempt: $e');
+      }
+      await Future<void>.delayed(step);
+    }
+    log(
+      'DeviceTokenSync: APNS still null after '
+      '${maxAttempts * step.inMilliseconds}ms — trying getToken anyway',
+    );
   }
 
   /// Fetch latest FCM token (cached first on mobile, then refresh).
+  /// Web: always `getToken(vapid)` like pop_user — FlutterFire owns the SW.
   static Future<String?> resolveFcmToken({bool forceRefresh = false}) async {
     try {
       if (kIsWeb) {
-        await registerFcmServiceWorker();
         final settings = await FirebaseMessaging.instance.requestPermission();
         final allowed =
             settings.authorizationStatus == AuthorizationStatus.authorized ||
                 settings.authorizationStatus == AuthorizationStatus.provisional;
         if (!allowed) return null;
 
-        final token = await FirebaseMessaging.instance.getToken(
-          vapidKey: FirebaseMessagingConfig.webVapidKey,
-        );
-        if (token != null && token.isNotEmpty) {
-          await persistFirebaseToken(token);
+        try {
+          final token = await FirebaseMessaging.instance
+              .getToken(vapidKey: FirebaseMessagingConfig.webVapidKey)
+              .timeout(const Duration(seconds: 8));
+          if (token != null && token.isNotEmpty) {
+            await persistFirebaseToken(token);
+          }
+          return token ?? await _sp.getStringValue(_firebaseTokenKey);
+        } on TimeoutException {
+          log('DeviceTokenSync: web getToken timed out — using cache');
+          return await _sp.getStringValue(_firebaseTokenKey);
         }
-        return token ?? await _sp.getStringValue(_firebaseTokenKey);
       }
 
       if (!forceRefresh) {
@@ -93,11 +118,7 @@ class DeviceTokenSync {
         }
       }
 
-      if (isIOS && !await _isIosApnsReady()) {
-        log('DeviceTokenSync: APNS not ready — skip getToken');
-        return await _sp.getStringValue(_firebaseTokenKey);
-      }
-
+      await waitForApnsIfNeeded();
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await persistFirebaseToken(token);
@@ -127,6 +148,11 @@ class DeviceTokenSync {
     }
     if (userId.isEmpty) {
       log('DeviceTokenSync: skip — empty userId');
+      return false;
+    }
+    final jwt = await _secure.readData(_secure.Token) ?? '';
+    if (jwt.isEmpty) {
+      log('DeviceTokenSync: skip — no JWT session');
       return false;
     }
 
@@ -201,8 +227,14 @@ class DeviceTokenSync {
   }
 
   /// Call after login / home open — retries like pop_user.
-  static Future<void> syncAfterLogin({String? userId}) async {
-    allowSyncAfterLogin();
+  static Future<void> syncAfterLogin({
+    String? userId,
+    bool force = false,
+  }) async {
+    _syncBlocked = false;
+    if (force) {
+      _lastUploadedToken = null;
+    }
 
     final id = userId ?? await _secure.readData(_secure.user_id) ?? '';
     if (id.isEmpty) {
@@ -210,21 +242,13 @@ class DeviceTokenSync {
       return;
     }
 
-    final attempts = isIOS ? 8 : 4;
+    const attempts = 4;
     for (var i = 0; i < attempts; i++) {
       if (_syncBlocked) return;
 
-      if (isIOS && i > 0) {
-        final apns = await FirebaseMessaging.instance.getAPNSToken();
-        if (apns == null || apns.isEmpty) {
-          log('DeviceTokenSync: waiting for APNS (attempt ${i + 1})');
-          await Future.delayed(Duration(milliseconds: 800 * (i + 1)));
-        }
-      }
-
       final synced = await syncDeviceToken(
         userId: id,
-        force: i > 0,
+        force: force || i > 0,
       );
       if (synced) {
         log('DeviceTokenSync: syncAfterLogin OK (attempt ${i + 1})');

@@ -1,13 +1,11 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import 'web_driver_map.dart';
-
 typedef DriverMapCreated = void Function(GoogleMapController controller);
 
-/// Native Google Map on Android; [WebDriverMap] on iOS when Google Maps tiles
-/// fail to load (misconfigured `GMSApiKey` / Maps SDK for iOS in GCP).
+/// Native Google Map on Android and iOS (same pattern as pop_user).
 Widget buildDriverHomeMap({
   required Set<Marker> markers,
   required Set<Polyline> polylines,
@@ -17,15 +15,7 @@ Widget buildDriverHomeMap({
   required DriverMapCreated onMapCreated,
   VoidCallback? onCameraMoveStarted,
 }) {
-  if (defaultTargetPlatform == TargetPlatform.iOS) {
-    return WebDriverMap(
-      markers: markers,
-      polylines: polylines,
-      center: initialTarget,
-      zoom: initialZoom,
-      topPadding: topPadding,
-    );
-  }
+  final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
   return GoogleMap(
     key: const ValueKey('driver_home_map'),
@@ -40,8 +30,8 @@ Widget buildDriverHomeMap({
     compassEnabled: true,
     indoorViewEnabled: false,
     mapToolbarEnabled: false,
-    rotateGesturesEnabled: true,
-    tiltGesturesEnabled: true,
+    rotateGesturesEnabled: !isIOS,
+    tiltGesturesEnabled: !isIOS,
     liteModeEnabled: false,
     minMaxZoomPreference: const MinMaxZoomPreference(3, 20),
     markers: markers,

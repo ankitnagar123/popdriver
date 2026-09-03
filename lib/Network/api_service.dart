@@ -5,12 +5,39 @@ import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:mtaanidriver/Network/urls.dart';
+import '../utils/session_auth.dart';
 import '../utils/shared_preferences.dart';
 
 class ApiService extends GetxService {
   DIO.Dio dioClient = DIO.Dio();
   final int timeoutInSecond = 30;
   final DIO.LogInterceptor logInterceptor = DIO.LogInterceptor();
+
+  ApiService() {
+    dioClient.interceptors.add(
+      DIO.InterceptorsWrapper(
+        onResponse: (response, handler) {
+          _maybeHandleSession(
+            endpoint: response.requestOptions.uri.path,
+            statusCode: response.statusCode ?? 0,
+            body: _responseBody(response.data),
+          );
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          final res = error.response;
+          if (res != null) {
+            _maybeHandleSession(
+              endpoint: res.requestOptions.uri.path,
+              statusCode: res.statusCode ?? 0,
+              body: _responseBody(res.data),
+            );
+          }
+          handler.next(error);
+        },
+      ),
+    );
+  }
 
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
   SecureStorageService secure = SecureStorageService();
@@ -139,6 +166,62 @@ class ApiService extends GetxService {
     return data.toString();
   }
 
+  static const _publicEndpoints = {
+    URLS.DRIVER_LOGIN,
+    URLS.DRIVER_SIGNUP,
+    URLS.DRIVER_SIGNUP_CHECK,
+    URLS.DRIVER_FORGET_PASSWORD,
+    URLS.send_otp,
+    URLS.verify_driver_otp,
+    URLS.DRIVER_SET_PASSWORD,
+  };
+
+  bool _isPublic(String endpoint) {
+    final path = endpoint.split('/').last;
+    return _publicEndpoints.contains(path) ||
+        _publicEndpoints.contains(endpoint);
+  }
+
+  void _maybeHandleSession({
+    required String endpoint,
+    required int statusCode,
+    required String body,
+  }) {
+    if (_isPublic(endpoint)) return;
+    SessionAuth.handleUnauthorized(statusCode: statusCode, body: body);
+  }
+
+  Future<Map<String, String>> _headersFor(
+    String endpoint, {
+    Map<String, String> extra = const {},
+  }) async {
+    final headers = Map<String, String>.from(extra);
+    if (_isPublic(endpoint)) return headers;
+
+    final jwtToken = await secure.readData(secure.Token) ?? '';
+    if (jwtToken.isEmpty) return headers;
+
+    headers['Authorization'] = 'Bearer $jwtToken';
+    headers.putIfAbsent('Accept', () => 'application/json');
+    return headers;
+  }
+
+  /// True when the browser can read API responses (CORS allow-origin).
+  /// Localhost is not on the API allowlist — a failed probe must not POST
+  /// login, or the server still replaces the mobile session.
+  Future<bool> canBrowserReadApi() async {
+    if (!kIsWeb) return true;
+    try {
+      final response = await http
+          .get(Uri.parse(URLS.api(URLS.DRIVER_FAQ)))
+          .timeout(Duration(seconds: timeoutInSecond));
+      return response.body.isNotEmpty;
+    } catch (e) {
+      log('Web CORS probe failed: $e');
+      return false;
+    }
+  }
+
   /// Web-safe form body — avoids `null is not a subtype of String` on http.post.
   String _encodeFormBody(Map<String, dynamic> body) {
     return body.entries
@@ -151,9 +234,12 @@ class ApiService extends GetxService {
 
   Future<http.Response> postData(String url, Map<String, dynamic> body) async {
     final fullUrl = URLS.api(url);
-    final headers = const {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    };
+    final headers = await _headersFor(
+      url,
+      extra: const {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    );
 
     _logRequest(
       method: 'POST',
@@ -179,6 +265,11 @@ class ApiService extends GetxService {
         statusCode: response.statusCode,
         body: response.body,
       );
+      _maybeHandleSession(
+        endpoint: url,
+        statusCode: response.statusCode,
+        body: response.body,
+      );
       return response;
     } catch (e, stack) {
       _logError(
@@ -200,11 +291,8 @@ class ApiService extends GetxService {
 
   Future<DIO.Response> postDatas(String url, Map<String, dynamic> body) async {
     final fullUrl = URLS.api(url);
-    final jwtToken = await secure.readData(secure.Token) ?? '';
     final formData = DIO.FormData.fromMap(body);
-    final headers = {
-      'Authorization': 'Bearer $jwtToken',
-    };
+    final headers = await _headersFor(url);
 
     _logRequest(
       method: 'POST',
@@ -252,12 +340,14 @@ class ApiService extends GetxService {
   ) async {
     final fullUrl = URLS.api(url);
     final formData = DIO.FormData.fromMap(body);
+    final headers = await _headersFor(url);
 
     _logRequest(
       method: 'POST',
       endpoint: url,
       fullUrl: fullUrl,
       body: body,
+      headers: headers,
     );
 
     try {
@@ -267,6 +357,7 @@ class ApiService extends GetxService {
             data: formData,
             options: DIO.Options(
               responseType: DIO.ResponseType.plain,
+              headers: headers,
             ),
           )
           .timeout(Duration(seconds: timeoutInSecond));
@@ -293,12 +384,13 @@ class ApiService extends GetxService {
 
   Future<DIO.Response> getData(String url) async {
     final fullUrl = URLS.api(url);
-    final jwtToken = await secure.readData(secure.Token) ?? '';
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $jwtToken',
-    };
+    final headers = await _headersFor(
+      url,
+      extra: const {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
 
     _logRequest(
       method: 'GET',
@@ -343,12 +435,13 @@ class ApiService extends GetxService {
     DIO.FormData formData,
   ) async {
     final fullUrl = URLS.api(url);
-    final jwtToken = await secure.readData(secure.Token) ?? '';
-    final headers = {
-      'Content-Type': 'multipart/form-data',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer $jwtToken',
-    };
+    final headers = await _headersFor(
+      url,
+      extra: const {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json',
+      },
+    );
     final body = <String, dynamic>{
       for (final field in formData.fields) field.key: field.value,
       for (final file in formData.files)

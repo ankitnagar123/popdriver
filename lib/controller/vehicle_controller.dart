@@ -42,9 +42,11 @@ class VehicleController extends GetxController{
     vehicleFetchLoader.value = true;
    try{
 
-     final response = await dioClient.get(URLS.api(URLS.VEHICLE_FETCH),);
+     final response = await apiService.getData(URLS.VEHICLE_FETCH);
      log("vehicle fetch response -------${response.data}");
-     vehicleList.value = vehicleFetchModelFromJson(json.encode(response.data));
+     vehicleList.value = vehicleFetchModelFromJson(
+       response.data is String ? response.data : json.encode(response.data),
+     );
 
      // vehicleList.value = vehicleFetchModelFromJson(response.data);
      vehicleFetchLoader.value = false;

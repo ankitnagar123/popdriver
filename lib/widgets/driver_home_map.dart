@@ -5,7 +5,7 @@ import 'driver_home_map_mobile.dart'
     if (dart.library.html) 'driver_home_map_web.dart' as map_impl;
 
 /// Home-screen map widget.
-/// - **Mobile (Android/iOS):** native [GoogleMap]
+/// - **Android / iOS:** native [GoogleMap]
 /// - **Web:** [GoogleMap] via Maps JavaScript API ([web/index.html])
 class DriverHomeMap extends StatefulWidget {
   const DriverHomeMap({

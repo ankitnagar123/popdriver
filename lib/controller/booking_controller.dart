@@ -69,9 +69,7 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   void onInit() {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
-    userAcceptBooking(() {});
-    startRideListAutoRefresh();
-    startActiveBookingPoll();
+    // Booking APIs start from HomeScreen after login — not on splash/login.
   }
 
   @override
@@ -95,11 +93,12 @@ class BookingController extends GetxController with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      refreshData();
+      unawaited(refreshData());
     }
   }
 
   Future<void> refreshData() async {
+    if (!await secure.hasSession()) return;
     await rideNowBooking();
     await userAcceptBooking(() {});
     Get.find<MyRidesController>().rideLaterScreenBooking("", '');
@@ -190,6 +189,10 @@ class BookingController extends GetxController with WidgetsBindingObserver {
       final driverId = await secure.readData(secure.user_id);
       if (driverId == null || driverId.isEmpty) {
         _logBooking('skipped — driver_id missing');
+        return;
+      }
+      if (!await secure.hasSession()) {
+        _logBooking('skipped — no JWT session');
         return;
       }
 
@@ -441,6 +444,10 @@ class BookingController extends GetxController with WidgetsBindingObserver {
 
   Future<void> userAcceptBooking([VoidCallback? callback]) async {
     if (_userAcceptFetchInFlight) {
+      callback?.call();
+      return;
+    }
+    if (!await secure.hasSession()) {
       callback?.call();
       return;
     }

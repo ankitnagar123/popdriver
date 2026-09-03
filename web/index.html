@@ -17,8 +17,8 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="POP Driver — safe, convenient driver portal for POP Ride.">
 
   <!-- iOS meta tags & icons -->
@@ -35,13 +35,20 @@
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBZ7GVlxPgOAdYFLQ8j0jJxDN4qPh0tnZk"></script>
 </head>
 <body>
-  <!-- Separate script: browsers ignore inline JS inside a tag that has src= -->
   <script>
+    // FlutterFire registers /firebase-messaging-sw.js with the default scope.
+    // Unregister the old custom FCM scope so getToken does not hit a dead SW.
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/firebase-cloud-messaging-push-scope',
-      }).catch(function (err) {
-        console.error('[FCM] service worker registration failed:', err);
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (reg) {
+            if (String(reg.scope).indexOf('firebase-cloud-messaging-push-scope') !== -1) {
+              reg.unregister().then(function () {
+                console.log('[FCM] Unregistered legacy push scope', reg.scope);
+              });
+            }
+          });
+        });
       });
     }
   </script>

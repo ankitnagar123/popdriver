@@ -1,17 +1,17 @@
 import 'dart:developer';
 import '../../controller/auth_controller.dart';
 import '../../route_helper/route_helper.dart';
+import '../../service/device_token_sync.dart';
+import '../../service/notification_service.dart';
 import '../../utils/colors.dart';
-import '../../utils/platform_helper.dart';
+import '../../utils/device_utils.dart';
 import '../../utils/shared_preferences.dart';
 import '../../utils/snackBar.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../utils/text_field.dart';
 import '../../utils/web_auth_layout.dart';
@@ -31,26 +31,15 @@ class _LoginScreenState extends State<LoginScreen> {
   String countryCode = "+61";
   bool? _checked = false;
 
-  DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-
   SharedPreferencesCrDriver sp = SharedPreferencesCrDriver();
 
   bool isHide = true;
 
-  var deviseName = "";
-  String accessToken = "";
-
-  var uuid = Uuid();
-/// /
   @override
   void initState() {
     phoneCtr.text = "4";
 
-    info();
     setValue();
-    accessToken = uuid.v1();
-    print("uuid ------- >:$accessToken");
-    sp.setStringValue(sp.UU_ID, accessToken.toString());
     super.initState();
   }
 
@@ -273,17 +262,42 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (valid()) {
+                          onPressed: () async {
+                            if (!valid()) return;
+                            if (controller.loginLoader.value) return;
+                            controller.loginLoader.value = true;
+                            try {
+                              if (kIsWeb) {
+                                await NotificationService
+                                    .requestWebPermissionOnUserGesture(
+                                  syncDeviceToApi: false,
+                                );
+                              }
+                              final installationId = await DeviceUtils
+                                  .instance
+                                  .getInstallationId();
+                              final platform =
+                                  await DeviceTokenSync.resolveDeviceType();
+                              final fcmToken =
+                                  await DeviceTokenSync.resolveFcmToken() ?? '';
+                              if (!mounted) return;
                               controller.driverLogin(
                                 countryCode.toString(),
                                 countryFlag.toString(),
                                 phoneCtr.text,
                                 passwordCtr.text.toString(),
-                                deviseName.toString(),
-                                accessToken.toString(),
+                                installationId,
+                                platform,
+                                fcmToken,
                                 _checked!,
                                 context,
+                              );
+                            } catch (e) {
+                              controller.loginLoader.value = false;
+                              if (!mounted) return;
+                              customSnackBar(
+                                "something went wrong",
+                                context: context,
                               );
                             }
                           },
@@ -346,22 +360,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return true;
     }
     return false;
-  }
-
-  void info() async {
-    if (isWeb) {
-      deviseName = 'Web';
-      return;
-    }
-    if (isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      deviseName = androidInfo.model;
-      print('Android devise info $deviseName');
-    } else if (isIOS) {
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      deviseName = iosInfo.utsname.machine;
-      print('IOS devise info $deviseName');
-    }
   }
 
   Future<void> setValue() async {
